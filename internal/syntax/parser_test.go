@@ -304,6 +304,30 @@ end`)
 	}
 }
 
+func TestParseNestedShorthandOnOneLine(t *testing.T) {
+	chunk, errs := parseText(t, "if (x) if (y) z=1")
+	if len(errs) != 0 {
+		t.Fatalf("errors = %v", errs)
+	}
+	outer := chunk.Block.Stmts[0].(*IfStmt)
+	if !outer.SingleLine || len(outer.Branches[0].Body.Stmts) != 1 {
+		t.Fatalf("outer = %+v", outer)
+	}
+	inner, ok := outer.Branches[0].Body.Stmts[0].(*IfStmt)
+	if !ok || !inner.SingleLine {
+		t.Fatalf("inner = %T/%+v", outer.Branches[0].Body.Stmts[0], inner)
+	}
+
+	chunk, errs = parseText(t, "while (x) if (y) z=1")
+	if len(errs) != 0 {
+		t.Fatalf("errors = %v", errs)
+	}
+	while := chunk.Block.Stmts[0].(*WhileStmt)
+	if !while.SingleLine || len(while.Body.Stmts) != 1 {
+		t.Fatalf("while = %+v", while)
+	}
+}
+
 func TestParseShorthandWhile(t *testing.T) {
 	stmt := oneStmt(t, "while (x) y=1")
 	while := stmt.(*WhileStmt)

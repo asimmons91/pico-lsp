@@ -421,7 +421,7 @@ func (p *parser) parseIf(lineBound bool) Stmt {
 	}
 
 	if !p.check("then") {
-		if _, ok := cond.(*ParenExpr); ok && !lineBound {
+		if _, ok := cond.(*ParenExpr); ok {
 			return p.parseShorthandIf(ifTok, cond)
 		}
 		if lineBound {
@@ -509,7 +509,7 @@ func (p *parser) parseWhile(lineBound bool) Stmt {
 		return nil
 	}
 	if !p.check("do") {
-		if _, ok := cond.(*ParenExpr); ok && !lineBound {
+		if _, ok := cond.(*ParenExpr); ok {
 			return p.parseShorthandWhile(whileTok, cond)
 		}
 		if lineBound {
