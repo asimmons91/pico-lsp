@@ -69,7 +69,15 @@ func (m *CartManager) provider() cart.Provider {
 	return cart.ProviderFuncs{
 		ReadFunc: m.readFile,
 		ListFunc: m.listDir,
+		SizeFunc: m.fileSize,
 	}
+}
+
+func (m *CartManager) fileSize(u uri.URI) (int64, error) {
+	if text, ok := m.docs.Text(u); ok {
+		return int64(len(text)), nil
+	}
+	return cart.DiskProvider{}.Size(u)
 }
 
 func (m *CartManager) readFile(u uri.URI) ([]byte, error) {
@@ -113,24 +121,35 @@ func (m *CartManager) listDir(u uri.URI) ([]uri.URI, error) {
 // Analyze resolves the owning cart for u, reloads it, and publishes
 // diagnostics for every file in the cart.
 func (m *CartManager) Analyze(ctx context.Context, u uri.URI) {
-	m.analyze(ctx, u, true)
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+	invalidate := isCartURI(u)
+	root := m.analyzeLocked(ctx, u, invalidate)
+	m.refreshAfterLocked(ctx, u, invalidate, root)
 }
 
 // AnalyzeChange re-analyzes u after an edit. Ownership only depends on `.p8`
 // include lists, so editing a `.lua` file does not invalidate the resolver's
 // cached ownership.
 func (m *CartManager) AnalyzeChange(ctx context.Context, u uri.URI) {
-	invalidate := strings.HasSuffix(strings.ToLower(u.Path()), ".p8")
-	m.analyze(ctx, u, invalidate)
-}
-
-func (m *CartManager) analyze(ctx context.Context, u uri.URI, invalidate bool) {
 	m.analyzeMu.Lock()
 	defer m.analyzeMu.Unlock()
-	m.analyzeLocked(ctx, u, invalidate)
+	invalidate := isCartURI(u)
+	root := m.analyzeLocked(ctx, u, invalidate)
+	m.refreshAfterLocked(ctx, u, invalidate, root)
 }
 
-func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate bool) {
+func isCartURI(u uri.URI) bool {
+	return strings.HasSuffix(strings.ToLower(u.Path()), ".p8")
+}
+
+func (m *CartManager) analyze(ctx context.Context, u uri.URI, invalidate bool) uri.URI {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+	return m.analyzeLocked(ctx, u, invalidate)
+}
+
+func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate bool) uri.URI {
 	m.mu.Lock()
 	resolver := m.resolver
 	m.mu.Unlock()
@@ -145,7 +164,7 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 		previous := m.byRoot[root]
 		m.mu.Unlock()
 		m.handleLoadError(ctx, u, root, previous, err)
-		return
+		return root
 	}
 
 	entry := &cartEntry{
@@ -169,6 +188,7 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 	m.mu.Unlock()
 
 	m.publish(ctx, snap, previous)
+	return root
 }
 
 // AnalyzeOpen re-analyzes every open document. It is used after the
@@ -176,7 +196,7 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 // and diagnostics are intentionally gated until initialization completes.
 func (m *CartManager) AnalyzeOpen(ctx context.Context) {
 	for _, u := range m.docs.List() {
-		m.analyze(ctx, u, false)
+		_ = m.analyze(ctx, u, false)
 	}
 }
 
@@ -220,11 +240,74 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 					m.diags.Clear(ctx, file)
 				}
 			}
-			m.diags.Clear(ctx, u)
+			m.refreshAfterLocked(ctx, u, isCartURI(u), "")
 			return
 		}
 	}
-	m.analyzeLocked(ctx, u, false)
+	root = m.analyzeLocked(ctx, u, false)
+	m.refreshAfterLocked(ctx, u, isCartURI(u), root)
+}
+
+// refreshAfterLocked updates analyses that depended on a changed document.
+// The caller must hold analyzeMu.
+func (m *CartManager) refreshAfterLocked(ctx context.Context, changed uri.URI, cartChanged bool, analyzedRoot uri.URI) {
+	if cartChanged {
+		// A cart's include list can change which open .lua files it owns.
+		for _, u := range m.docs.List() {
+			if strings.HasSuffix(strings.ToLower(u.Path()), ".lua") {
+				m.analyzeLocked(ctx, u, false)
+			}
+		}
+	}
+	m.refreshDependentsLocked(ctx, changed, analyzedRoot)
+}
+
+const maxDependentRefreshes = 64
+
+// refreshDependentsLocked reloads cached roots whose flattened snapshot
+// includes changed, then walks newly updated roots the same way. The caller
+// must hold analyzeMu.
+func (m *CartManager) refreshDependentsLocked(ctx context.Context, changed, analyzedRoot uri.URI) {
+	queue := []uri.URI{changed}
+	seen := map[uri.URI]bool{changed: true}
+	if analyzedRoot != "" && analyzedRoot != changed && !seen[analyzedRoot] {
+		seen[analyzedRoot] = true
+		queue = append(queue, analyzedRoot)
+	}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, root := range m.dependents(cur) {
+			if seen[root] {
+				continue
+			}
+			seen[root] = true
+			if len(seen) > maxDependentRefreshes {
+				m.log.Warn("stopping dependent cart refresh", "file", changed.String(), "limit", maxDependentRefreshes)
+				return
+			}
+			m.analyzeLocked(ctx, root, false)
+			queue = append(queue, root)
+		}
+	}
+}
+
+func (m *CartManager) dependents(u uri.URI) []uri.URI {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []uri.URI
+	for root, entry := range m.byRoot {
+		if root == u {
+			continue
+		}
+		for _, include := range entry.snap.Cart.Includes {
+			if include.ResolvedURI == u {
+				out = append(out, root)
+				break
+			}
+		}
+	}
+	return out
 }
 
 func (m *CartManager) handleLoadError(ctx context.Context, u, root uri.URI, previous *cartEntry, err error) {
@@ -320,7 +403,7 @@ func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapsho
 		}
 	}
 	if entry == nil {
-		m.analyze(ctx, u, false)
+		_ = m.analyze(ctx, u, false)
 		m.mu.Lock()
 		entry = m.byRoot[root]
 		m.mu.Unlock()

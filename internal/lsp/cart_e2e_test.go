@@ -724,3 +724,65 @@ until x
 	}
 	h.exit(t, true)
 }
+
+func TestEndToEndIncludedP8ChangeRefreshesParent(t *testing.T) {
+	dir := t.TempDir()
+	rootText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"other.p8\"\n"
+	root := writeTemp(t, dir, "root.p8", rootText)
+	otherText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nfunction one()\nend\n"
+	other := writeTemp(t, dir, "other.p8", otherText)
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	openDoc(t, h, ctx, root, rootText)
+	openDoc(t, h, ctx, other, otherText)
+
+	rootFlat := func() string {
+		snap, _, ok := h.srv.carts.SnapshotFor(ctx, root)
+		if !ok {
+			t.Fatal("missing root snapshot")
+		}
+		return string(snap.Cart.Flat)
+	}
+	if !strings.Contains(rootFlat(), "function one") {
+		t.Fatalf("root flat = %q, want function one", rootFlat())
+	}
+
+	changedText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nfunction two()\nend\n"
+	if err := h.server.DidChange(ctx, &protocol.DidChangeTextDocumentParams{
+		TextDocument: protocol.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: other},
+			Version:                2,
+		},
+		ContentChanges: []protocol.TextDocumentContentChangeEvent{
+			&protocol.TextDocumentContentChangeWholeDocument{Text: changedText},
+		},
+	}); err != nil {
+		t.Fatalf("didChange: %v", err)
+	}
+	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
+		t.Fatalf("barrier: %v", err)
+	}
+	flat := rootFlat()
+	if !strings.Contains(flat, "function two") || strings.Contains(flat, "function one") {
+		t.Fatalf("root flat after include edit = %q, want two", flat)
+	}
+
+	if err := h.server.DidClose(ctx, &protocol.DidCloseTextDocumentParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: other},
+	}); err != nil {
+		t.Fatalf("didClose: %v", err)
+	}
+	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
+		t.Fatalf("barrier: %v", err)
+	}
+	flat = rootFlat()
+	if !strings.Contains(flat, "function one") || strings.Contains(flat, "function two") {
+		t.Fatalf("root flat after include close = %q, want disk version one", flat)
+	}
+
+	h.exit(t, true)
+}
