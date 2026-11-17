@@ -165,6 +165,13 @@ func TestInitializeCapabilities(t *testing.T) {
 		t.Fatal("includeText should be false")
 	}
 
+	if _, ok := res.Capabilities.DocumentSymbolProvider.(protocol.Boolean); !ok {
+		t.Fatalf("documentSymbolProvider = %T, want Boolean", res.Capabilities.DocumentSymbolProvider)
+	}
+	if _, ok := res.Capabilities.FoldingRangeProvider.(protocol.Boolean); !ok {
+		t.Fatalf("foldingRangeProvider = %T, want Boolean", res.Capabilities.FoldingRangeProvider)
+	}
+
 	if res.Capabilities.Workspace == nil ||
 		res.Capabilities.Workspace.WorkspaceFolders == nil ||
 		res.Capabilities.Workspace.WorkspaceFolders.Supported == nil ||

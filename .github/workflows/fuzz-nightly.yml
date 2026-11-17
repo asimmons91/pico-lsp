@@ -1,0 +1,42 @@
+name: Nightly fuzz
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-fuzz
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: nightly fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GOFLAGS: -mod=readonly
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Fuzz lexer
+        run: go test -fuzz=FuzzLexer -fuzztime=60s ./internal/syntax
+
+      - name: Fuzz parser
+        run: go test -fuzz=FuzzParser -fuzztime=60s ./internal/syntax
+
+      - name: Fuzz include flattening
+        run: go test -fuzz=FuzzIncludeFlatten -fuzztime=60s ./internal/cart

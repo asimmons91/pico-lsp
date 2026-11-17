@@ -19,6 +19,7 @@ func (s *Server) DidOpen(ctx context.Context, params *protocol.DidOpenTextDocume
 	}
 
 	s.docs.Open(doc.URI, string(doc.LanguageID), doc.Version, doc.Text)
+	s.carts.Analyze(ctx, doc.URI)
 	s.log.Debug("document opened",
 		"uri", doc.URI.String(),
 		"languageId", doc.LanguageID,
@@ -49,6 +50,7 @@ func (s *Server) DidChange(ctx context.Context, params *protocol.DidChangeTextDo
 		return nil
 	}
 
+	s.carts.AnalyzeChange(ctx, u)
 	s.log.Debug("document changed",
 		"uri", u.String(),
 		"version", params.TextDocument.Version,
@@ -70,6 +72,7 @@ func (s *Server) DidSave(ctx context.Context, params *protocol.DidSaveTextDocume
 	}
 
 	if s.docs.Save(u, params.Text) {
+		s.carts.Analyze(ctx, u)
 		s.log.Debug("document saved with text", "uri", u.String(), "bytes", len(*params.Text))
 	} else {
 		s.log.Debug("ignoring save text for unopened document", "uri", u.String())
@@ -86,6 +89,7 @@ func (s *Server) DidClose(ctx context.Context, params *protocol.DidCloseTextDocu
 
 	u := params.TextDocument.URI
 	if s.docs.Close(u) {
+		s.carts.Closed(ctx, u)
 		s.log.Debug("document closed", "uri", u.String())
 	} else {
 		s.log.Debug("closed document was not open", "uri", u.String())

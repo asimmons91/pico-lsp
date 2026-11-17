@@ -157,6 +157,25 @@ func (s *DocumentStore) Get(u uri.URI) (Document, bool) {
 	return doc, ok
 }
 
+// Text returns the current text for an open document.
+func (s *DocumentStore) Text(u uri.URI) (string, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	doc, ok := s.docs[u]
+	return doc.Text, ok
+}
+
+// List returns the URIs of all open documents.
+func (s *DocumentStore) List() []uri.URI {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]uri.URI, 0, len(s.docs))
+	for u := range s.docs {
+		out = append(out, u)
+	}
+	return out
+}
+
 // Count returns the number of open documents.
 func (s *DocumentStore) Count() int {
 	s.mu.RLock()

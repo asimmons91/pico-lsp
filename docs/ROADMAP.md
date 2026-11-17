@@ -58,7 +58,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | ID | Milestone | Outcome | Depends on | Status |
 |---|---|---|---|---|
 | M0 | Foundation & Walking Skeleton | Server starts, speaks LSP, syncs documents, maps positions correctly | — | Done |
-| M1 | Cart Model & Syntax Front-End | Understands `.p8`, includes, tabs, and the PICO-8 grammar; reports syntax errors | M0 | Planned |
+| M1 | Cart Model & Syntax Front-End | Understands `.p8`, includes, tabs, and the PICO-8 grammar; reports syntax errors | M0 | Done |
 | M2 | Semantic Core & Navigation | Scopes, symbols, PICO-8 built-ins, definitions, references, rename | M1 | Planned |
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Planned |
 | M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Planned |
