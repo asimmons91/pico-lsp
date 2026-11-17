@@ -47,14 +47,19 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 	}
 
 	var code []lineRef
+	trimFinalTerminator := false
 	if strings.HasSuffix(strings.ToLower(rootURI.Path()), ".p8") {
 		sections, codeLines, version := parseSections(text)
 		cart.Sections = sections
 		cart.Version = version
 		cart.Tabs = buildTabs(text, sections, codeLines, root.Index)
 		code = codeLines
+		trimFinalTerminator = luaFollowedBySection(sections)
 	} else {
 		code = splitLines(text)
+		if len(code) > 0 && strings.HasPrefix(text, "\ufeff") {
+			code[0].start += len("\ufeff")
+		}
 	}
 
 	f := &flattener{
@@ -63,14 +68,14 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 		files:   cart.Files,
 		byURI:   map[uri.URI]source.FileID{rootURI: 0},
 	}
-	f.appendLines(text, code, 0)
+	f.appendLines(text, code, 0, trimFinalTerminator)
 
 	cart.Files = f.files
 	cart.Flat = f.flat
 	cart.Segments = f.segments
 	cart.Includes = f.includes
 	cart.Diagnostics = append(cart.Diagnostics, f.diags...)
-	cart.Chars = assembledChars(cart.Flat, cart.Sections)
+	cart.Chars = CountChars(cart.Flat)
 
 	lexed := syntax.Lex(cart.Flat, cart.Span)
 	cart.Tokens = CountTokens(lexed.Tokens)
@@ -90,20 +95,17 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 	}, nil
 }
 
-func assembledChars(flat []byte, sections []Section) int {
-	chars := CountChars(flat)
-	// shrinko8 (and PICO-8's editor count) joins code lines with newlines and
-	// does not include the final terminator when __lua__ is followed by another
-	// section. Match that convention so fixtures agree.
-	if len(flat) > 0 && flat[len(flat)-1] == '\n' {
-		for i, section := range sections {
-			if section.Name == "lua" && i+1 < len(sections) {
-				chars--
-				break
-			}
+// luaFollowedBySection reports whether the __lua__ section is followed by
+// another section. PICO-8 joins root code lines with newlines, so the final
+// line terminator before a following section is not part of the assembled
+// program's character count.
+func luaFollowedBySection(sections []Section) bool {
+	for i, section := range sections {
+		if section.Name == "lua" {
+			return i+1 < len(sections)
 		}
 	}
-	return chars
+	return false
 }
 
 func (l *Loader) emptySnapshot(rootURI uri.URI, text, message string) *Snapshot {

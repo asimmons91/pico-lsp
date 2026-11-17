@@ -15,7 +15,15 @@ import (
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
-const MaxFileSize = 1 << 20
+const (
+	// MaxFileSize bounds one cart or included file.
+	MaxFileSize = 1 << 20
+	// MaxFlatSize bounds the assembled program. It is far above PICO-8's
+	// 65535-character limit but stops repeated includes from exhausting memory.
+	MaxFlatSize = 1 << 20
+	// MaxIncludes bounds the number of directives in one cart.
+	MaxIncludes = 512
+)
 
 // Severity is the default severity for a cart-level diagnostic.
 type Severity int
@@ -147,6 +155,13 @@ func (p ProviderFuncs) List(u uri.URI) ([]uri.URI, error) {
 type DiskProvider struct{}
 
 func (DiskProvider) Read(u uri.URI) ([]byte, error) {
+	info, err := os.Stat(u.FsPath())
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("not a regular file")
+	}
 	return os.ReadFile(u.FsPath())
 }
 
@@ -171,6 +186,8 @@ type Loader struct {
 	Encoding    protocol.PositionEncodingKind
 	Log         interface{ Debug(string, ...any) }
 	MaxFileSize int
+	MaxFlatSize int
+	MaxIncludes int
 }
 
 // NewLoader creates a loader. A nil provider uses the local filesystem.
@@ -243,6 +260,14 @@ func (c *Cart) Span(start, end int) source.Span {
 	}
 	fileStart := seg.FileOffset + (start - seg.FlatStart)
 	fileEnd := fileStart + (end - start)
+	if file := c.File(seg.FileID); file != nil {
+		if fileStart > len(file.Text) {
+			fileStart = len(file.Text)
+		}
+		if fileEnd > len(file.Text) {
+			fileEnd = len(file.Text)
+		}
+	}
 	return source.Span{FileID: seg.FileID, Start: fileStart, End: fileEnd}
 }
 

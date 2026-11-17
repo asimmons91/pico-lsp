@@ -15,7 +15,7 @@ func CountTokens(tokens []syntax.Token) int {
 	count := 0
 	for i, tok := range tokens {
 		switch tok.Kind {
-		case syntax.TokenEOF, syntax.TokenComment, syntax.TokenInvalid, syntax.TokenTabMarker:
+		case syntax.TokenEOF, syntax.TokenComment, syntax.TokenInvalid:
 			continue
 		}
 

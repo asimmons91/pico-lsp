@@ -248,5 +248,10 @@
     "path": "testdata/carts/brubsby__tweetcarts/truchet.p8",
     "tokens": 93,
     "chars": 209
+  },
+  {
+    "path": "testdata/carts/jesstelford__pecs/example/particles.p8",
+    "tokens": 1384,
+    "chars": 13776
   }
 ]

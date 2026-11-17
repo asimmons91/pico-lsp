@@ -96,3 +96,15 @@ func TestResolveCacheInvalidation(t *testing.T) {
 		t.Fatalf("owner after invalidation = %s, want game.p8", got)
 	}
 }
+
+func TestResolveIgnoresIncludeInsideContinuedShortString(t *testing.T) {
+	p := projectProvider(map[string]string{
+		"/proj/game.p8":    cartText("s='a\\\n#include \"player.lua\"\\\nb'\n"),
+		"/proj/player.lua": "",
+	})
+	r := NewResolver(NewLoader(p, "", nil))
+	target := uri.File("/proj/player.lua")
+	if got := r.Resolve(target); got != target {
+		t.Fatalf("owner = %s, want standalone", got)
+	}
+}
