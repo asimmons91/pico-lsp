@@ -18,6 +18,7 @@ import (
 
 	"github.com/asimmons91/pico-lsp/internal/config"
 	"github.com/asimmons91/pico-lsp/internal/lsp"
+	"github.com/asimmons91/pico-lsp/internal/p8png"
 	"github.com/asimmons91/pico-lsp/internal/version"
 )
 
@@ -31,6 +32,9 @@ func main() {
 // run wires flags, logging, and the stdio transport. It is separated from main
 // so tests can exercise the complete process without spawning a subprocess.
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "decode" {
+		return runDecode(args[1:], stdout, stderr)
+	}
 	fs := flag.NewFlagSet("pico-lsp", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 
@@ -108,6 +112,38 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	}
 	logger.Info("pico-lsp stopped", "code", code)
 	return code
+}
+
+func runDecode(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("pico-lsp decode", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	output := fs.String("output", "", "write decoded text to `PATH` instead of stdout")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		return 2
+	}
+	if fs.NArg() != 1 {
+		_, _ = fmt.Fprintln(stderr, "usage: pico-lsp decode [--output PATH] CART.p8.png")
+		return 2
+	}
+	result, err := p8png.DecodeFile(fs.Arg(0))
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "pico-lsp decode: %v\n", err)
+		return 1
+	}
+	if *output == "" {
+		if _, err := io.WriteString(stdout, result.Text); err != nil {
+			return 1
+		}
+		return 0
+	}
+	if err := os.WriteFile(*output, []byte(result.Text), 0o644); err != nil {
+		_, _ = fmt.Fprintf(stderr, "pico-lsp decode: write output: %v\n", err)
+		return 1
+	}
+	return 0
 }
 
 // exitCause records which channel ended the server loop.

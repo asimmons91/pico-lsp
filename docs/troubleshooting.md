@@ -30,8 +30,9 @@
 
 - Confirm the editor sent `initialize` and `initialized`. Features are disabled
   until initialization completes.
-- Confirm the file is a text `.p8` cart or a `.lua` file. `.p8.png` carts are
-  unsupported in v1.
+- Confirm the file is a text `.p8` cart or a `.lua` file. For `.p8.png`, use
+  `:Pico8OpenPng` in Neovim or `pico-lsp decode` to open the decoded virtual
+  text; opening the binary directly is not supported.
 - If the file is outside the workspace, some include features use the cart
   directory as the workspace boundary. Open the project root or configure
   workspace folders.
@@ -88,10 +89,17 @@ several carts in the same directory include the file, the server chooses
 deterministically and logs the others at debug level. Rename or move carts to
 make ownership unambiguous.
 
-## `.p8.png` carts are unsupported
+## `.p8.png` carts
 
-v1 reads text `.p8` carts and standalone `.lua` files. Export the cart as text
-`.p8` from PICO-8 before opening it. `.p8.png` support is post-v1.
+Read-only PNG carts open as decoded virtual documents. In Neovim, use
+`:Pico8OpenPng path/to/cart.p8.png`; the buffer is intentionally not modifiable.
+Use `:Pico8ReloadPng` after replacing the PNG. Helix and other editors can use
+`pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png` and open the decoded
+text file.
+
+Editing a PNG cart is not supported; export a text `.p8` from PICO-8 when you
+need to modify it. Corrupt, truncated, or non-standard PNG images are reported
+as decode errors.
 
 ## Formatter and code actions
 

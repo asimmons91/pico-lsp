@@ -1,7 +1,7 @@
 # PICO-8 LSP API
 
-pico-lsp exposes two PICO-8-specific entry points in addition to the standard
-LSP methods.
+pico-lsp exposes PICO-8-specific entry points in addition to the standard LSP
+methods.
 
 ## `pico8/cartInfo`
 
@@ -13,8 +13,9 @@ Custom request for statusline and tooling integrations.
 }
 ```
 
-The request accepts the root cart or any included file. Included files resolve
-to their owning cart.
+The request accepts the root cart, an included file, a `.p8.png` source URI, or
+an open `pico8-cart:/...` virtual document. Included files resolve to their
+owning cart.
 
 The result:
 
@@ -44,6 +45,39 @@ numbering.
 
 If no cart can be found, the request fails with JSON-RPC error code `-32001`
 and message `cart-not-found`.
+
+## `pico8/decodeCart`
+
+Decodes a read-only `.p8.png` cart for an editor helper. The request accepts the
+PNG source URI and never writes to disk:
+
+```json
+{
+  "textDocument": { "uri": "file:///path/to/cart.p8.png" }
+}
+```
+
+The result:
+
+```json
+{
+  "sourceUri": "file:///path/to/cart.p8.png",
+  "virtualUri": "pico8-cart:/path/to/cart.p8",
+  "text": "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n...",
+  "version": 42,
+  "tabs": [],
+  "includes": []
+}
+```
+
+The returned `text` can be opened in a `pico8-cart:` virtual buffer and sent to
+the server with `textDocument/didOpen`. Virtual documents are read-only;
+`textDocument/didChange`, formatting, and editing code actions do not modify the
+PNG. The same transform is available from the CLI:
+
+```sh
+pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
+```
 
 ## `pico8.showCartInfo`
 

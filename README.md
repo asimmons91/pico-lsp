@@ -33,6 +33,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
   inference with `off`, `basic`, and `strict` checking.
 - AST-guided `textDocument/formatting` that preserves shorthand, comments,
   annotations, includes, and non-code cart sections.
+- Read-only `.p8.png` support through a decoded virtual document, `:Pico8OpenPng`
+  in Neovim, and the `pico-lsp decode` CLI command.
 - Cart token/character budget code lens, `pico8/cartInfo`, and limit warnings.
 - Include diagnostics and quick fixes, generated annotations, and diagnostic
   suppression.
@@ -134,8 +136,8 @@ the code lens. Both are documented in [docs/api.md](docs/api.md).
 
 ## Known limitations
 
-- `.p8.png` carts are not supported yet. Read-only PNG carts are planned as
-  [M8](docs/M8-p8png.md) for v1.1.0; until then, export a text `.p8`.
+- `.p8.png` carts are supported read-only. Edit and save an exported text `.p8`
+  when you need to change the cart; the server never writes PNG carts.
 - VS Code and Zed clients remain in the
   [post-v1 backlog](docs/post-v1-backlog.md). The server remains
   editor-agnostic.

@@ -65,12 +65,12 @@ These decisions were made before milestone specs were written. Changing one requ
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Done |
 | M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Done |
 | M7 | AST-Aware Formatter | Shorthand-safe formatting with comments and annotations preserved | M6 | Done |
-| M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Planned |
+| M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Done |
 | M9 | Type System I | Inheritance, exact classes, metatable inference, stronger narrowing | M8 | Planned |
 | M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Planned |
 
-M7–M10 are scheduled to ship together as **v1.1.0**, in that order. M7 is
-implemented; M8–M10 remain planned. Each milestone is independently mergeable,
+M7–M10 are scheduled to ship together as **v1.1.0**, in that order. M7 and M8
+are implemented; M9–M10 remain planned. Each milestone is independently mergeable,
 but the release is cut only after all four meet their exit criteria.
 
 Each milestone has a detailed spec:

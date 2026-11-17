@@ -20,6 +20,10 @@ func (s *Server) Formatting(ctx context.Context, params *protocol.DocumentFormat
 		return nil, nil
 	}
 	u := params.TextDocument.URI
+	if isVirtualCartURI(u) {
+		return nil, jsonrpc2.Errorf(requestFailedCode,
+			"cannot format read-only decoded .p8.png carts")
+	}
 	lower := strings.ToLower(u.Path())
 	if strings.HasSuffix(lower, ".p8.png") {
 		return nil, jsonrpc2.Errorf(requestFailedCode,

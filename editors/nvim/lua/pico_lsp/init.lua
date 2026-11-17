@@ -9,6 +9,8 @@
 
 local M = {}
 
+M.png_buffers = {}
+
 local default_settings = {
   pico8 = {
     apiVersion = "0.2.7",
@@ -117,6 +119,128 @@ local function resolved_config(opts)
   return config
 end
 
+
+local function ensure_client(root_dir, bufnr)
+  local attached = vim.lsp.get_clients({ name = "pico_lsp", bufnr = bufnr })
+  if #attached > 0 then
+    return attached[1]
+  end
+  local existing = vim.lsp.get_clients({ name = "pico_lsp" })
+  if #existing > 0 then
+    pcall(vim.lsp.buf_attach_client, bufnr, existing[1].id)
+    attached = vim.lsp.get_clients({ name = "pico_lsp", bufnr = bufnr })
+    if #attached > 0 then
+      return attached[1]
+    end
+  end
+  local config = resolved_config(M.opts)
+  config.root_dir = root_dir
+  local started = vim.lsp.start(config, { bufnr = bufnr })
+  if not started then
+    return nil
+  end
+  vim.wait(5000, function()
+    return #vim.lsp.get_clients({ name = "pico_lsp" }) > 0
+  end, 50)
+  return vim.lsp.get_clients({ name = "pico_lsp" })[1] or started
+end
+
+local function decode_png(path)
+  local source = vim.uri_from_fname(path)
+  local root_dir = vim.fs.dirname(path)
+  local request_buf = vim.api.nvim_get_current_buf()
+  if vim.api.nvim_buf_get_name(request_buf):lower():match("%.p8%.png$") then
+    request_buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_current_buf(request_buf)
+  end
+  local client = ensure_client(root_dir, request_buf)
+  if not client then
+    return nil, "could not start pico_lsp"
+  end
+  local responses = vim.lsp.buf_request_sync(request_buf, "pico8/decodeCart", {
+    textDocument = { uri = source },
+  }, 5000)
+  local response = responses and responses[client.id]
+  if not response then
+    return nil, "timed out waiting for pico8/decodeCart"
+  end
+  if response.err then
+    return nil, vim.inspect(response.err)
+  end
+  local result = response.result
+  if type(result) ~= "table" or not result.text or not result.virtualUri then
+    return nil, "invalid pico8/decodeCart response"
+  end
+  return result, nil
+end
+
+local function open_virtual(result)
+  local buf = vim.api.nvim_create_buf(true, true)
+  vim.api.nvim_buf_set_name(buf, result.virtualUri)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.text, "\n", { plain = true }))
+  vim.bo[buf].filetype = "pico8"
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "hide"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].modified = false
+  vim.api.nvim_set_current_buf(buf)
+  return buf
+end
+
+function M.open_png(path)
+  if M.disabled then
+    return
+  end
+  path = path or vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    notify("Pico8OpenPng needs a .p8.png path")
+    return
+  end
+  local result, err = decode_png(path)
+  if err then
+    notify(err, vim.log.levels.ERROR)
+    return
+  end
+  local buf = open_virtual(result)
+  local config = resolved_config(M.opts)
+  config.root_dir = vim.fs.dirname(path)
+  vim.lsp.start(config, { bufnr = buf })
+  M.png_buffers[buf] = {
+    source = result.sourceUri,
+    virtual = result.virtualUri,
+    version = tonumber(result.version) or 1,
+  }
+end
+
+function M.reload_png()
+  local buf = vim.api.nvim_get_current_buf()
+  local info = M.png_buffers[buf]
+  if not info then
+    notify("current buffer is not a decoded .p8.png cart")
+    return
+  end
+  local path = vim.uri_to_fname(info.source)
+  local result, err = decode_png(path)
+  if err then
+    notify(err, vim.log.levels.ERROR)
+    return
+  end
+  vim.bo[buf].modifiable = true
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.text, "\n", { plain = true }))
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].modified = false
+  info.version = info.version + 1
+  vim.lsp.buf_notify(buf, "textDocument/didOpen", {
+    textDocument = {
+      uri = info.virtual,
+      languageId = "pico8",
+      version = info.version,
+      text = result.text,
+    },
+  })
+end
+
 local function attach(bufnr)
   if M.disabled or not vim.api.nvim_buf_is_valid(bufnr) then
     return
@@ -200,6 +324,16 @@ function M.setup(opts)
     pattern = "*.p8",
     callback = attach_loaded_lua_buffers,
   })
+  vim.api.nvim_create_autocmd("BufWipeout", {
+    group = M.group,
+    callback = function(args)
+      M.png_buffers[args.buf] = nil
+    end,
+  })
+  vim.api.nvim_create_user_command("Pico8OpenPng", function(args)
+    M.open_png(args.args ~= "" and args.args or nil)
+  end, { nargs = "?" })
+  vim.api.nvim_create_user_command("Pico8ReloadPng", M.reload_png, { nargs = 0 })
 
   attach_loaded_lua_buffers()
 end

@@ -105,6 +105,27 @@ If you prefer not to use the helper, attach manually from the cart root:
 
 Avoid running `lua_ls` and `pico-lsp` on the same cart-owned `.lua` buffer.
 
+## Read-only `.p8.png` carts
+
+The helper defines two commands for PNG carts:
+
+```vim
+:Pico8OpenPng path/to/cart.p8.png
+:Pico8ReloadPng
+```
+
+`Pico8OpenPng` requests `pico8/decodeCart`, opens a `pico8-cart:` virtual buffer,
+marks it `nomodifiable`, and attaches the existing `pico_lsp` client. Use
+`Pico8ReloadPng` after replacing the PNG file. Navigation, diagnostics,
+completion, hover, and `pico8/cartInfo` work on the virtual buffer; formatting
+and edits are refused because the PNG is read-only.
+
+If you do not use the helper, decode to a text file for a static fallback:
+
+```sh
+pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
+```
+
 ## Syntax highlighting
 
 Add the runtime path as above. The included `ftdetect` sets `filetype=pico8`

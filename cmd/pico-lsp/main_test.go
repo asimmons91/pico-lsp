@@ -7,6 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"net"
 	"os"
@@ -476,5 +479,75 @@ func TestRunLogFile(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "pico-lsp started") {
 		t.Fatalf("log file = %q, want startup message", data)
+	}
+}
+
+func writeTestP8PNG(t *testing.T, code string) string {
+	t.Helper()
+	payload := make([]byte, 160*205)
+	copy(payload[0x4300:], []byte(code))
+	img := image.NewNRGBA(image.Rect(0, 0, 160, 205))
+	for y := 0; y < 205; y++ {
+		for x := 0; x < 160; x++ {
+			b := payload[y*160+x]
+			img.SetNRGBA(x, y, color.NRGBA{
+				R: 0xfc | (b>>4)&3,
+				G: 0xfc | (b>>2)&3,
+				B: 0xfc | b&3,
+				A: 0xfc | (b>>6)&3,
+			})
+		}
+	}
+	path := filepath.Join(t.TempDir(), "cart.p8.png")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	if err := png.Encode(file, img); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func TestRunDecodePNG(t *testing.T) {
+	path := writeTestP8PNG(t, "x=1\nfunction f()\nend\n")
+	var stdout, stderr bytes.Buffer
+	code := runWithTimeout(t, context.Background(), []string{"decode", path}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "function f()") || !strings.Contains(stdout.String(), "__lua__") {
+		t.Fatalf("decoded stdout = %q", stdout.String())
+	}
+
+	out := filepath.Join(t.TempDir(), "decoded.p8")
+	stdout.Reset()
+	stderr.Reset()
+	code = runWithTimeout(t, context.Background(), []string{"decode", "--output", out, path}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("output decode exit code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "function f()") {
+		t.Fatalf("decoded file = %q", data)
+	}
+}
+
+func TestRunDecodeRejectsInvalidPNG(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bad.p8.png")
+	if err := os.WriteFile(path, []byte("bad"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var stdout, stderr bytes.Buffer
+	code := runWithTimeout(t, context.Background(), []string{"decode", path}, strings.NewReader(""), &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1; stderr = %q", code, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q", stdout.String())
 	}
 }

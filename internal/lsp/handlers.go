@@ -13,7 +13,7 @@ func (s *Server) DidOpen(ctx context.Context, params *protocol.DidOpenTextDocume
 	}
 
 	doc := params.TextDocument
-	if !doc.URI.IsFile() {
+	if !doc.URI.IsFile() && !isVirtualCartURI(doc.URI) {
 		s.log.Warn("ignoring non-file document", "uri", doc.URI.String())
 		return nil
 	}
@@ -36,6 +36,10 @@ func (s *Server) DidChange(ctx context.Context, params *protocol.DidChangeTextDo
 	}
 
 	u := params.TextDocument.URI
+	if isVirtualCartURI(u) {
+		s.log.Debug("ignoring change for read-only virtual cart", "uri", u.String())
+		return nil
+	}
 	if !u.IsFile() {
 		s.log.Warn("ignoring change for non-file document", "uri", u.String())
 		return nil
@@ -66,8 +70,8 @@ func (s *Server) DidSave(ctx context.Context, params *protocol.DidSaveTextDocume
 	}
 
 	u := params.TextDocument.URI
-	if !u.IsFile() {
-		s.log.Warn("ignoring save for non-file document", "uri", u.String())
+	if isVirtualCartURI(u) || !u.IsFile() {
+		s.log.Debug("ignoring save for read-only or non-file document", "uri", u.String())
 		return nil
 	}
 
@@ -89,7 +93,12 @@ func (s *Server) DidClose(ctx context.Context, params *protocol.DidCloseTextDocu
 
 	u := params.TextDocument.URI
 	if s.docs.Close(u) {
-		s.carts.Closed(ctx, u)
+		if isVirtualCartURI(u) {
+			s.carts.Forget(ctx, u)
+			s.carts.RemoveVirtualText(u)
+		} else {
+			s.carts.Closed(ctx, u)
+		}
 		s.log.Debug("document closed", "uri", u.String())
 	} else {
 		s.log.Debug("closed document was not open", "uri", u.String())
