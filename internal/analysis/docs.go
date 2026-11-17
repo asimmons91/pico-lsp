@@ -281,13 +281,13 @@ func docCommentsFor(file *cart.File, comments []syntax.Comment, offset int) []sy
 		return nil
 	}
 	last := docs[len(docs)-1]
-	if !onlyWhitespace(file.Text[last.Span.End:lineStart]) {
+	if !docCommentAdjacent(file.Text, last.Span.End, lineStart) {
 		return nil
 	}
 	block := []syntax.Comment{last}
 	for i := len(docs) - 2; i >= 0; i-- {
 		comment := docs[i]
-		if !onlyWhitespace(file.Text[comment.Span.End:block[0].Span.Start]) {
+		if !docCommentAdjacent(file.Text, comment.Span.End, block[0].Span.Start) {
 			break
 		}
 		block = append([]syntax.Comment{comment}, block...)
@@ -304,6 +304,16 @@ func onlyWhitespace(text string) bool {
 		}
 	}
 	return true
+}
+
+// docCommentAdjacent reports whether a doc-comment block is contiguous with
+// the text that follows it. A blank line breaks the block.
+func docCommentAdjacent(text string, from, to int) bool {
+	if from < 0 || to < from || to > len(text) {
+		return false
+	}
+	gap := text[from:to]
+	return onlyWhitespace(gap) && strings.Count(gap, "\n") == 1
 }
 
 // AnnotationNames returns shallow class and alias names from `---@class` and
@@ -332,7 +342,7 @@ func AnnotationNames(comments []syntax.Comment) []string {
 		}
 		switch fields[0] {
 		case "@class", "@alias":
-			add(fields[1])
+			add(strings.TrimSuffix(fields[1], ":"))
 		}
 	}
 	return out

@@ -58,6 +58,33 @@ func annotationCompletions(nav *navContext, offset int, linePrefix string) []pro
 	return []protocol.CompletionItem{}
 }
 
+// annotationSnippetItems offers the M3 doc-block snippets when the cursor is
+// on a bare `---@` prefix. They replace the annotation prefix so clients never
+// end up with a doubled `---@`.
+func annotationSnippetItems(nav *navContext, offset int, linePrefix string) []protocol.CompletionItem {
+	trimmed := strings.TrimLeft(linePrefix, " \t")
+	if !strings.HasPrefix(trimmed, "---@") || strings.TrimSpace(strings.TrimPrefix(trimmed, "---@")) != "" {
+		return nil
+	}
+	start := offset - len(trimmed)
+	items := make([]protocol.CompletionItem, 0, 2)
+	for _, snippet := range completionSnippets {
+		if snippet.Label != "class annotation" && snippet.Label != "function docs" {
+			continue
+		}
+		items = append(items, protocol.CompletionItem{
+			Label:            snippet.Label,
+			Kind:             protocol.CompletionItemKindSnippet,
+			Detail:           protocol.NewOptional(snippet.Detail),
+			FilterText:       protocol.NewOptional(snippet.Label),
+			SortText:         protocol.NewOptional("5_" + snippet.Label),
+			TextEdit:         &protocol.TextEdit{Range: nav.file.Index.Range(start, offset), NewText: snippet.Insert},
+			InsertTextFormat: protocol.InsertTextFormatSnippet,
+		})
+	}
+	return items
+}
+
 func annotationKeywordItems(nav *navContext, offset int, partial string) []protocol.CompletionItem {
 	start := offset - len(partial)
 	prefix := analysis.CanonicalName(partial)

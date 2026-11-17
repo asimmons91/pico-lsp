@@ -34,9 +34,16 @@ func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*prot
 			return nil, nil
 		case syntax.TokenPunct:
 			switch token.Text {
-			case "?":
-				return hoverResult(nav, token.Span, shorthandMarkdown()), nil
-			case "@", "%", "$":
+			case "?", "@", "%", "$":
+				// tokenAt also matches the end boundary of a token. When an
+				// identifier starts immediately after one of these operators,
+				// the identifier's docs take precedence at its first byte.
+				if occ := nav.occurrenceAt(offset); occ != nil && occ.Symbol != nil {
+					return hoverResult(nav, occ.Span, symbolMarkdown(nav, occ.Symbol)), nil
+				}
+				if token.Text == "?" {
+					return hoverResult(nav, token.Span, shorthandMarkdown()), nil
+				}
 				return hoverResult(nav, token.Span, peekMarkdown(token.Text)), nil
 			}
 		}

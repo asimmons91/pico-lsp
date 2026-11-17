@@ -496,10 +496,79 @@ func TestIncludeCompletionNavigatesUpWithinWorkspace(t *testing.T) {
 	}
 }
 
+func TestCompletionReviewRegressions(t *testing.T) {
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", m3CompletionCart)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, m3CompletionCart)
+
+	pos := positionAt(t, m3CompletionCart, "  player:step(1)", 2)
+	items := completionItems(t, h, ctx, root, pos)
+	for _, label := range []string{"function declaration", "while loop"} {
+		if findCompletion(items, label) == nil {
+			t.Errorf("snippet %q is unreachable at a statement boundary", label)
+		}
+	}
+
+	deprecated := findCompletion(items, "old")
+	if deprecated == nil {
+		t.Fatal("missing deprecated completion")
+	}
+	before := *deprecated
+	resolved, err := h.server.CompletionResolve(ctx, &before)
+	if err != nil {
+		t.Fatalf("resolve deprecated: %v", err)
+	}
+	if len(resolved.Tags) != 1 || resolved.Tags[0] != protocol.CompletionItemTagDeprecated {
+		t.Fatalf("deprecated tags after resolve = %v, want one", resolved.Tags)
+	}
+
+	// Resolve data that no longer matches the symbol at its index must not
+	// attach another symbol's documentation.
+	var data completionData
+	if err := json.Unmarshal(deprecated.Data, &data); err != nil {
+		t.Fatalf("completion data: %v", err)
+	}
+	data.Name = "renamed"
+	stale, _ := json.Marshal(data)
+	staleItem := *deprecated
+	staleItem.Data = protocol.LSPAny(stale)
+	staleResolved, err := h.server.CompletionResolve(ctx, &staleItem)
+	if err != nil {
+		t.Fatalf("resolve stale: %v", err)
+	}
+	if staleResolved.Documentation != nil {
+		t.Fatal("stale resolve data attached documentation")
+	}
+
+	// Doc-block snippets are available in a bare ---@ context.
+	annotationText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n---@\nlocal x = 1\n"
+	annotationRoot := writeTemp(t, dir, "annotations.p8", annotationText)
+	openDoc(t, h, ctx, annotationRoot, annotationText)
+	annotationPos := positionAt(t, annotationText, "---@", len("---@"))
+	annotationItems := completionItems(t, h, ctx, annotationRoot, annotationPos)
+	for _, label := range []string{"class annotation", "function docs"} {
+		item := findCompletion(annotationItems, label)
+		if item == nil {
+			t.Fatalf("missing annotation snippet %q", label)
+		}
+		if item.InsertTextFormat != protocol.InsertTextFormatSnippet {
+			t.Fatalf("%s format = %v, want snippet", label, item.InsertTextFormat)
+		}
+		edit := itemTextEdit(t, *item)
+		if !strings.HasPrefix(edit.NewText, "---") {
+			t.Fatalf("%s insert = %q, want a doc block", label, edit.NewText)
+		}
+	}
+}
+
 func TestCompletionSnippetSetCoversM3Idioms(t *testing.T) {
 	required := []string{
-		"if then", "if else", "for numeric", "for generic", "while",
-		"function", "anonymous function", "_init", "_update", "_update60",
+		"if then", "if else", "for numeric", "for generic", "while loop",
+		"function declaration", "anonymous function", "_init", "_update", "_update60",
 		"_draw", "class annotation", "function docs", "#include",
 	}
 	seen := make(map[string]bool)

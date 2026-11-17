@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func largeCartText() string {
 		fmt.Fprintf(&b, "value_%03d = %d + circfill(%d, 2, 3, 4)\n", i, i, i)
 	}
 	b.WriteString("-- ")
-	for b.Len() < 60*1024 {
+	for b.Len() < 64*1024 {
 		b.WriteString("padding padding padding padding padding padding ")
 	}
 	b.WriteString("\nfunction _update()\n  local speed = 1\n  \nend\n")
@@ -29,8 +30,8 @@ func TestPerformanceTargets(t *testing.T) {
 		t.Skip("timing targets are not meaningful under the race detector")
 	}
 	text := largeCartText()
-	if len(text) < 60*1024 {
-		t.Fatalf("cart size = %d, want at least 60 KB", len(text))
+	if len(text) < 64*1024 {
+		t.Fatalf("cart size = %d, want at least 64 KB", len(text))
 	}
 	dir := t.TempDir()
 	root := writeTemp(t, dir, "cart.p8", text)
@@ -53,16 +54,19 @@ func TestPerformanceTargets(t *testing.T) {
 
 	measure := func(name string, target time.Duration, fn func()) time.Duration {
 		const iterations = 10
-		start := time.Now()
+		samples := make([]time.Duration, 0, iterations)
 		for i := 0; i < iterations; i++ {
+			start := time.Now()
 			fn()
+			samples = append(samples, time.Since(start))
 		}
-		elapsed := time.Since(start) / iterations
-		t.Logf("%s: %v (target %v)", name, elapsed, target)
-		if elapsed > target {
-			t.Errorf("%s took %v, target %v", name, elapsed, target)
+		sort.Slice(samples, func(i, j int) bool { return samples[i] < samples[j] })
+		median := samples[len(samples)/2]
+		t.Logf("%s: median %v across %d runs (target %v)", name, median, iterations, target)
+		if median > target {
+			t.Errorf("%s median %v exceeds target %v", name, median, target)
 		}
-		return elapsed
+		return median
 	}
 
 	measure("completion 64 KB", 5*time.Millisecond, func() {

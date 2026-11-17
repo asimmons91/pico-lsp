@@ -114,8 +114,10 @@ func semanticTokensData(nav *navContext) ([]uint32, bool) {
 		case syntax.TokenPunct:
 			kind = stOperator
 		case syntax.TokenInclude:
-			kind = stString
-			mods = smDocumentation
+			// Root #include directives are consumed by the flattener, so the
+			// authoritative source is Cart.Includes below. Nested directives
+			// that survive into the flattened text are emitted there too.
+			continue
 		case syntax.TokenName:
 			if occ := nav.semantics.OccurrenceAt(nav.fileID, token.Span.Start); occ != nil && occ.Symbol != nil {
 				kind, mods = semanticSymbolKind(occ.Symbol, occ.Decl)
@@ -130,6 +132,14 @@ func semanticTokensData(nav *navContext) ([]uint32, bool) {
 			continue
 		}
 		tokens = append(tokens, spansToSemanticTokens(nav, comment.Span, stComment, 0)...)
+	}
+	for _, include := range nav.snap.Cart.Includes {
+		if include.DirectiveSpan.FileID != nav.fileID {
+			continue
+		}
+		if span, ok := includePathSpan(nav.file.Text, include.DirectiveSpan); ok {
+			tokens = append(tokens, spansToSemanticTokens(nav, span, stString, smDocumentation)...)
+		}
 	}
 
 	sort.SliceStable(tokens, func(i, j int) bool {
@@ -201,6 +211,37 @@ func semanticSymbolKind(sym *analysis.Symbol, declaration bool) (uint32, uint32)
 		mods |= smDeprecated
 	}
 	return kind, mods
+}
+
+// includePathSpan narrows a `#include "path"` directive span to the path text
+// so only the path is highlighted as a documented string.
+func includePathSpan(text string, directive source.Span) (source.Span, bool) {
+	if directive.IsEmpty() || directive.Start < 0 || directive.End > len(text) {
+		return source.Span{}, false
+	}
+	i := directive.Start
+	if !strings.HasPrefix(text[i:directive.End], "#include") {
+		return source.Span{}, false
+	}
+	i += len("#include")
+	for i < directive.End && (text[i] == ' ' || text[i] == '\t') {
+		i++
+	}
+	quoted := i < directive.End && (text[i] == '"' || text[i] == '\'')
+	if quoted {
+		i++
+	}
+	start := i
+	for i < directive.End && text[i] != '\r' && text[i] != '\n' {
+		if quoted && (text[i] == '"' || text[i] == '\'') {
+			break
+		}
+		i++
+	}
+	if i <= start {
+		return source.Span{}, false
+	}
+	return source.Span{FileID: directive.FileID, Start: start, End: i}, true
 }
 
 func spansToSemanticTokens(nav *navContext, span source.Span, kind, mods uint32) []semanticToken {

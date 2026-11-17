@@ -52,6 +52,28 @@ func TestDocsDoNotLeakAcrossInterveningCode(t *testing.T) {
 	}
 }
 
+func TestDocsDoNotMergeAcrossBlankLines(t *testing.T) {
+	text := "--- First docs.\n\n--- Second docs.\nfunction f() end\n"
+	result, _ := analyzeText(t, text)
+	f := result.Table.Globals["f"]
+	if f == nil || f.Doc == nil {
+		t.Fatal("missing docs for f")
+	}
+	if f.Doc.Summary != "Second docs." {
+		t.Fatalf("summary = %q, want only the contiguous block", f.Doc.Summary)
+	}
+}
+
+func TestAnnotationNamesTrimInheritance(t *testing.T) {
+	comments := []syntax.Comment{
+		{Kind: syntax.CommentDoc, Text: "---@class Player: Base", Line: 0},
+	}
+	names := AnnotationNames(comments)
+	if len(names) != 1 || names[0] != "Player" {
+		t.Fatalf("annotation names = %v, want [Player]", names)
+	}
+}
+
 func TestAnnotationNamesAreUnique(t *testing.T) {
 	comments := []syntax.Comment{
 		{Kind: syntax.CommentDoc, Text: "---@class Player", Line: 0},

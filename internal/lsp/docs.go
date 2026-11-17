@@ -139,7 +139,7 @@ func symbolDocumentation(sym *analysis.Symbol) string {
 			}
 			if param.Doc != "" {
 				b.WriteString(": ")
-				b.WriteString(param.Doc)
+				b.WriteString(markdownInline(param.Doc))
 			}
 		}
 	}
@@ -173,7 +173,7 @@ func truncateMarkdown(value string) string {
 	for limit > 0 && !utf8.RuneStart(value[limit]) {
 		limit--
 	}
-	return value[:limit] + "\n\n*(truncated)*"
+	return value[:limit] + "\n\nSee the [PICO-8 manual](https://www.lexaloffle.com/pico-8.php?page=manual) for the full documentation.\n\n*(truncated)*"
 }
 
 func builtinMarkdown(name builtin.Name) string {

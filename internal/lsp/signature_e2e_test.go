@@ -118,6 +118,28 @@ func markupText(value any) string {
 	}
 }
 
+func TestSignatureHelpCallbackBodyComma(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\ncircfill(function() return 1, 2 end, 2)\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	// The cursor is on the comma inside the callback body. It is not an
+	// argument separator of circfill, so the active parameter stays at 0.
+	pos := positionAt(t, text, "return 1, 2", len("return 1,"))
+	help := signatureHelp(t, h, ctx, root, pos)
+	if help == nil {
+		t.Fatal("signature help is nil")
+	}
+	if active := activeParameter(t, help); active != 0 {
+		t.Fatalf("active parameter = %d, want 0 (callback comma ignored)", active)
+	}
+}
+
 func TestEndToEndSignatureHelp(t *testing.T) {
 	dir := t.TempDir()
 	root := writeTemp(t, dir, "cart.p8", m3SignatureCart)

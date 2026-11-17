@@ -181,13 +181,44 @@ func TestEndToEndHover(t *testing.T) {
 	}
 }
 
+func TestHoverOperatorFollowedByIdentifier(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nlocal addr = 0x5f00\n?circfill(1, 2, 3)\nx = @addr\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	cases := []struct {
+		name string
+		find string
+		want string
+	}{
+		{"print shorthand", "?circfill", "Draw a filled circle"},
+		{"peek operator", "@addr", "local addr"},
+	}
+	for _, tc := range cases {
+		// Offset 1 lands on the first byte of the identifier after the operator.
+		pos := positionAt(t, text, tc.find, 1)
+		got := hoverMarkup(t, h, ctx, root, pos)
+		if !strings.Contains(got, tc.want) {
+			t.Errorf("%s hover at first identifier byte = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 func TestTruncateMarkdownIsUTF8Safe(t *testing.T) {
 	value := strings.Repeat("é", maxHoverMarkdown)
 	got := truncateMarkdown(value)
 	if !strings.HasSuffix(got, "*(truncated)*") {
 		t.Fatalf("truncated markdown suffix = %q", got[len(got)-20:])
 	}
-	if len(got) > maxHoverMarkdown+len("\n\n*(truncated)*") {
+	if !strings.Contains(got, "[PICO-8 manual]") {
+		t.Fatal("truncated markdown is missing the manual link")
+	}
+	if len(got) > maxHoverMarkdown+len("\n\nSee the [PICO-8 manual](https://www.lexaloffle.com/pico-8.php?page=manual) for the full documentation.\n\n*(truncated)*") {
 		t.Fatalf("truncated length = %d", len(got))
 	}
 	for _, r := range got {

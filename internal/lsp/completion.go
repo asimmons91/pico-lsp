@@ -74,9 +74,6 @@ func (s *Server) CompletionResolve(ctx context.Context, item *protocol.Completio
 		if doc := builtinMarkdown(name); doc != "" {
 			item.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
 		}
-		if name.Docs != nil && name.Docs.Deprecated {
-			item.Tags = append(item.Tags, protocol.CompletionItemTagDeprecated)
-		}
 	case "symbol":
 		nav, ok := s.navigationFor(ctx, uri.URI(data.URI))
 		if !ok {
@@ -86,7 +83,9 @@ func (s *Server) CompletionResolve(ctx context.Context, item *protocol.Completio
 			return item, nil
 		}
 		sym := nav.semantics.Table.Symbols[data.ID]
-		if sym == nil {
+		// Resolve data can outlive the document that produced it. If the
+		// symbol at this index has been replaced, return the item unchanged.
+		if sym == nil || sym.Canonical != analysis.CanonicalName(data.Name) {
 			return item, nil
 		}
 		item.Detail = protocol.NewOptional(symbolCode(sym))
@@ -99,9 +98,6 @@ func (s *Server) CompletionResolve(ctx context.Context, item *protocol.Completio
 		}
 		if doc != "" {
 			item.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
-		}
-		if sym.Doc != nil && sym.Doc.Deprecated {
-			item.Tags = append(item.Tags, protocol.CompletionItemTagDeprecated)
 		}
 	}
 	return item, nil
@@ -120,11 +116,13 @@ func (s *Server) completions(nav *navContext, offset int) ([]protocol.Completion
 	}
 
 	lineStart, linePrefix := nav.linePrefix(offset)
-	if nav.inComment(offset) || strings.HasPrefix(strings.TrimLeft(linePrefix, " \t"), "---@") {
-		return annotationCompletions(nav, offset, linePrefix), false
-	}
 	if nav.inString(offset) {
 		return nil, false
+	}
+	if nav.inComment(offset) || strings.HasPrefix(strings.TrimLeft(linePrefix, " \t"), "---@") {
+		items := annotationCompletions(nav, offset, linePrefix)
+		items = append(items, annotationSnippetItems(nav, offset, linePrefix)...)
+		return items, false
 	}
 	if isIncludeKeywordContext(linePrefix) {
 		return s.includeKeywordCompletions(nav, offset, linePrefix), false
@@ -267,7 +265,7 @@ func (s *Server) makeSymbolItem(nav *navContext, sym *analysis.Symbol, start, en
 }
 
 func (s *Server) makeSymbolItemWithKind(nav *navContext, sym *analysis.Symbol, start, end int, kind protocol.CompletionItemKind) protocol.CompletionItem {
-	data, _ := json.Marshal(completionData{Kind: "symbol", ID: sym.ID, URI: nav.file.URI.String()})
+	data, _ := json.Marshal(completionData{Kind: "symbol", ID: sym.ID, Name: sym.Name, URI: nav.file.URI.String()})
 	item := s.makeTextItem(nav, sym.Name, kind, symbolCode(sym), sym.Name, false, start, end)
 	item.Data = protocol.LSPAny(data)
 	item.FilterText = protocol.NewOptional(sym.Name)
@@ -328,8 +326,8 @@ var completionSnippets = []completionSnippet{
 	{Label: "if else", Detail: "if/else statement", Insert: "if ${1:condition} then\n\t${2:-- then}\nelse\n\t$0\nend"},
 	{Label: "for numeric", Detail: "numeric for loop", Insert: "for ${1:i}=${2:1},${3:n} do\n\t$0\nend"},
 	{Label: "for generic", Detail: "generic for loop", Insert: "for ${1:x} in all(${2:t}) do\n\t$0\nend"},
-	{Label: "while", Detail: "while loop", Insert: "while ${1:condition} do\n\t$0\nend"},
-	{Label: "function", Detail: "function declaration", Insert: "function ${1:name}(${2})\n\t$0\nend"},
+	{Label: "while loop", Detail: "while loop", Insert: "while ${1:condition} do\n\t$0\nend"},
+	{Label: "function declaration", Detail: "function declaration", Insert: "function ${1:name}(${2})\n\t$0\nend"},
 	{Label: "anonymous function", Detail: "anonymous function", Insert: "function(${1})\n\t$0\nend"},
 	{Label: "_init", Detail: "init callback", Insert: "function _init()\n\t$0\nend"},
 	{Label: "_update", Detail: "update callback", Insert: "function _update()\n\t$0\nend"},

@@ -229,7 +229,15 @@ func workspaceContainer(snap *cart.Snapshot, root uri.URI, span source.Span) str
 		return base
 	}
 	file := snap.Cart.File(span.FileID)
-	if file == nil || !strings.HasSuffix(strings.ToLower(file.URI.Path()), ".p8") {
+	if file == nil {
+		return base
+	}
+	if !strings.HasSuffix(strings.ToLower(file.URI.Path()), ".p8") {
+		// Included .lua files are part of the cart; show their path relative
+		// to the cart directory rather than only the cart name.
+		if rel, err := filepath.Rel(filepath.Dir(root.FsPath()), file.URI.FsPath()); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			return filepath.ToSlash(rel)
+		}
 		return base
 	}
 	line := 0

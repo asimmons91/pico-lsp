@@ -653,15 +653,6 @@ function split(str, separator, convert_numbers) end
 ---@param val any
 function type(val) end
 
---- Convert a value to a string using Lua's tostring semantics.
----@param val any
-function tostring(val) end
-
---- Convert a value to a number using Lua's tonumber semantics.
----@param val any
----@param base? number
-function tonumber(val, base) end
-
 -- Cart data ----------------------------------------------------------------
 
 --- Open the persistent cart-data area.
@@ -721,7 +712,7 @@ function cocreate(func) end
 function coresume(c, p0, p1) end
 
 --- Return a coroutine's status.
----@param c number
+---@param c thread
 function costatus(c) end
 
 --- Yield from a coroutine.

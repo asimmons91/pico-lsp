@@ -3,7 +3,6 @@ package lsp
 import (
 	"context"
 	"strings"
-	"unicode/utf8"
 
 	"go.lsp.dev/protocol"
 
@@ -16,6 +15,7 @@ type callSite struct {
 	open   source.Span
 	close  source.Span
 	callee *analysis.Symbol
+	args   []source.Span
 }
 
 // SignatureHelp implements textDocument/signatureHelp.
@@ -49,7 +49,7 @@ func (n *navContext) innermostCall(offset int) *callSite {
 			if !n.callContains(call.Open, call.Close, offset) {
 				return true
 			}
-			site := &callSite{open: call.Open, close: call.Close}
+			site := &callSite{open: call.Open, close: call.Close, args: exprSpans(call.Args)}
 			switch fn := call.Func.(type) {
 			case *syntax.NameExpr:
 				site.callee = n.symbolAtSpan(fn.Span())
@@ -63,7 +63,7 @@ func (n *navContext) innermostCall(offset int) *callSite {
 			if !n.callContains(call.Open, call.Close, offset) {
 				return true
 			}
-			site := &callSite{open: call.Open, close: call.Close}
+			site := &callSite{open: call.Open, close: call.Close, args: exprSpans(call.Args)}
 			if call.Method != nil {
 				site.callee = n.symbolAtSpan(call.Method.Span())
 			}
@@ -108,7 +108,7 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 		params = append(params, param)
 	}
 
-	active := topLevelCommaCount(nav, call.open.End, offset)
+	active := activeParameterIndex(call.args, offset)
 	if len(params) > 0 && active >= len(params) {
 		active = len(params) - 1
 	}
@@ -160,62 +160,31 @@ func docSummary(sym *analysis.Symbol) string {
 	return markdownInline(strings.TrimSpace(sym.Doc.Summary))
 }
 
-func topLevelCommaCount(nav *navContext, start, offset int) int {
-	if nav == nil || nav.file == nil || start >= offset || offset > len(nav.file.Text) {
-		return 0
-	}
-	text := nav.file.Text
-	skip := nav.skipSpans()
-	count := 0
-	depth := 0
-	for i := start; i < offset; {
-		for _, span := range skip {
-			if span.FileID == nav.fileID && i >= span.Start && i < span.End {
-				i = span.End
-				break
-			}
+func exprSpans(exprs []syntax.Expr) []source.Span {
+	spans := make([]source.Span, 0, len(exprs))
+	for _, expr := range exprs {
+		if expr == nil {
+			continue
 		}
-		if i >= offset {
-			break
-		}
-		if i < 0 || i >= len(text) {
-			break
-		}
-		switch text[i] {
-		case '(', '[', '{':
-			depth++
-		case ')', ']', '}':
-			if depth > 0 {
-				depth--
-			}
-		case ',':
-			if depth == 0 {
-				count++
-			}
-		}
-		_, size := utf8.DecodeRuneInString(text[i:])
-		if size <= 0 {
-			size = 1
-		}
-		i += size
-	}
-	return count
-}
-
-func (n *navContext) skipSpans() []source.Span {
-	if n == nil || n.snap == nil {
-		return nil
-	}
-	spans := make([]source.Span, 0)
-	for _, token := range n.snap.Tokens {
-		if token.Span.FileID == n.fileID && token.Kind == syntax.TokenString {
-			spans = append(spans, token.Span)
-		}
-	}
-	for _, comment := range n.snap.Comments {
-		if comment.Span.FileID == n.fileID {
-			spans = append(spans, comment.Span)
-		}
+		spans = append(spans, expr.Span())
 	}
 	return spans
+}
+
+// activeParameterIndex derives the active argument from parsed argument spans
+// rather than raw text. A text-only comma scan miscounts commas inside nested
+// function bodies, which are not argument separators of the enclosing call.
+func activeParameterIndex(args []source.Span, offset int) int {
+	active := 0
+	for i, span := range args {
+		if span.IsEmpty() {
+			continue
+		}
+		if offset <= span.End {
+			active = i
+			break
+		}
+		active = i + 1
+	}
+	return active
 }

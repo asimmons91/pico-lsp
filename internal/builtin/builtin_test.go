@@ -46,7 +46,7 @@ func TestStubHasNoStandardLibrary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	forbidden := []string{"require", "string", "table", "math", "io", "os", "coroutine", "package", "utf8", "debug"}
+	forbidden := []string{"require", "string", "table", "math", "io", "os", "coroutine", "package", "utf8", "debug", "tostring", "tonumber"}
 	for _, name := range forbidden {
 		if _, ok := api.Lookup(name); ok {
 			t.Errorf("stub defines standard-library name %q", name)
@@ -86,6 +86,10 @@ func TestStubMetadata(t *testing.T) {
 	callback, ok := api.Lookup("_update")
 	if !ok || callback.Docs == nil || strings.TrimSpace(callback.Docs.Summary) == "" {
 		t.Fatalf("_update = %+v, want docs", callback)
+	}
+	costatus, ok := api.Lookup("costatus")
+	if !ok || costatus.Docs == nil || len(costatus.Docs.Params) != 1 || costatus.Docs.Params[0].Type != "thread" {
+		t.Fatalf("costatus param docs = %+v, want thread", costatus)
 	}
 }
 

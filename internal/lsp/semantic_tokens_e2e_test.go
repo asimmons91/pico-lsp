@@ -132,6 +132,31 @@ func indexFrom(text, needle string, start int) int {
 	return index
 }
 
+func TestSemanticTokensIncludePath(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib/player.lua\"\nprint(1)\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	writeTemp(t, dir, "lib/player.lua", "function make_player() end\n")
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	tokens := semanticTokens(t, h, ctx, root)
+	path := findSemanticToken(t, tokens, text, protocol.PositionEncodingKindUTF16, "lib/player.lua", 0)
+	if path.Kind != stString || path.Mods != smDocumentation {
+		t.Fatalf("include path token = %+v, want string + documentation", path)
+	}
+	// The directive keyword itself must not be highlighted as a string.
+	keywordPos := positionAt(t, text, "#include", 0)
+	for _, token := range tokens {
+		if token.Line == keywordPos.Line && token.Start == keywordPos.Character {
+			t.Fatalf("unexpected token on #include keyword: %+v", token)
+		}
+	}
+}
+
 func TestSemanticTokenLegendIsStable(t *testing.T) {
 	wantTypes := []string{
 		"namespace", "type", "class", "enum", "interface", "struct", "typeParameter",
