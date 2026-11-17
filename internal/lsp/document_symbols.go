@@ -44,12 +44,7 @@ func (s *Server) documentSymbols(ctx context.Context, u uri.URI) protocol.Docume
 	}
 
 	rootNodes := collectOutline(snap.Chunk.Block, true)
-	filtered := make([]*outlineNode, 0, len(rootNodes))
-	for _, node := range rootNodes {
-		if node.span.FileID == fileID {
-			filtered = append(filtered, node)
-		}
-	}
+	filtered := filterOutlineByFile(rootNodes, fileID)
 
 	modules := make([]*outlineNode, 0)
 	for _, include := range snap.Cart.Includes {
@@ -137,6 +132,25 @@ func (s *Server) documentSymbols(ctx context.Context, u uri.URI) protocol.Docume
 	return protocol.DocumentSymbolSlice(out)
 }
 
+// filterOutlineByFile keeps nodes declared in fileID and prunes children from
+// other files. When a declaration in another file wraps declarations in
+// fileID (for example, an include pasted inside a function), those declarations
+// are promoted to the caller's level so per-file outlines never leak spans
+// across files.
+func filterOutlineByFile(nodes []*outlineNode, fileID source.FileID) []*outlineNode {
+	var out []*outlineNode
+	for _, node := range nodes {
+		if node.span.FileID == fileID {
+			copyNode := *node
+			copyNode.children = filterOutlineByFile(node.children, fileID)
+			out = append(out, &copyNode)
+			continue
+		}
+		out = append(out, filterOutlineByFile(node.children, fileID)...)
+	}
+	return out
+}
+
 func collectOutline(block *syntax.Block, allowLocals bool) []*outlineNode {
 	if block == nil {
 		return nil
@@ -154,7 +168,7 @@ func collectOutline(block *syntax.Block, allowLocals bool) []*outlineNode {
 					out = append(out, &outlineNode{
 						name: name.Text,
 						kind: kind,
-						span: name.Span(),
+						span: st.Span(),
 						sel:  name.Span(),
 					})
 				}
@@ -182,7 +196,7 @@ func collectOutline(block *syntax.Block, allowLocals bool) []*outlineNode {
 			out = append(out, node)
 		case *syntax.AssignStmt:
 			for i, target := range st.Targets {
-				if node := assignmentOutline(target, valueAt(st.Values, i)); node != nil {
+				if node := assignmentOutline(target, valueAt(st.Values, i), st.Span()); node != nil {
 					out = append(out, node)
 				}
 			}
@@ -225,20 +239,20 @@ func functionOutline(name string, sel source.Span, span source.Span, fn *syntax.
 	}
 }
 
-func assignmentOutline(target syntax.Expr, value syntax.Expr) *outlineNode {
+func assignmentOutline(target syntax.Expr, value syntax.Expr, span source.Span) *outlineNode {
 	switch t := target.(type) {
 	case *syntax.NameExpr:
 		kind := protocol.SymbolKindVariable
 		if _, ok := value.(*syntax.FunctionExpr); ok {
 			kind = protocol.SymbolKindFunction
 		}
-		return &outlineNode{name: t.Text, kind: kind, span: t.Span(), sel: t.Span()}
+		return &outlineNode{name: t.Text, kind: kind, span: span, sel: t.Span()}
 	case *syntax.FieldExpr:
 		kind := protocol.SymbolKindField
 		if _, ok := value.(*syntax.FunctionExpr); ok {
 			kind = protocol.SymbolKindMethod
 		}
-		return &outlineNode{name: t.Name.Text, kind: kind, span: t.Span(), sel: t.Name.Span()}
+		return &outlineNode{name: t.Name.Text, kind: kind, span: span, sel: t.Name.Span()}
 	default:
 		return nil
 	}

@@ -459,6 +459,13 @@ end
 			t.Errorf("symbol %q kind = %v, want %v (all=%v)", name, kinds[name], kind, kinds)
 		}
 	}
+	for _, symbol := range symbols {
+		if symbol.Name == "top" {
+			if symbol.Range.Start.Character != 0 || symbol.SelectionRange.Start.Character != 6 {
+				t.Errorf("top ranges = %+v / %+v, want full local declaration / name", symbol.Range, symbol.SelectionRange)
+			}
+		}
+	}
 	h.exit(t, true)
 }
 
@@ -527,5 +534,191 @@ func TestEndToEndDidOpenBeforeInitialized(t *testing.T) {
 		t.Fatal("diagnostics were not published after initialized")
 	}
 
+	h.exit(t, true)
+}
+
+func TestEndToEndSymbolsDoNotLeakAcrossFiles(t *testing.T) {
+	dir := t.TempDir()
+	rootText := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+function outer()
+#include "lib.lua"
+end
+`
+	root := writeTemp(t, dir, "cart.p8", rootText)
+	libText := "function inner()\n  return 1\nend\n"
+	lib := writeTemp(t, dir, "lib.lua", libText)
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, rootText)
+
+	rootResult, err := h.server.DocumentSymbol(ctx, &protocol.DocumentSymbolParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+	})
+	if err != nil {
+		t.Fatalf("root documentSymbol: %v", err)
+	}
+	rootNames := symbolNames(rootResult.(protocol.DocumentSymbolSlice))
+	if !containsString(rootNames, "outer") {
+		t.Fatalf("root symbols = %v, missing outer", rootNames)
+	}
+	if containsString(rootNames, "inner") {
+		t.Fatalf("root symbols = %v, leaked included inner", rootNames)
+	}
+
+	libResult, err := h.server.DocumentSymbol(ctx, &protocol.DocumentSymbolParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: lib},
+	})
+	if err != nil {
+		t.Fatalf("include documentSymbol: %v", err)
+	}
+	libSymbols := libResult.(protocol.DocumentSymbolSlice)
+	libNames := symbolNames(libSymbols)
+	if !containsString(libNames, "inner") {
+		t.Fatalf("include symbols = %v, missing inner", libNames)
+	}
+	for _, symbol := range libSymbols {
+		if symbol.Name == "inner" && symbol.Range.Start.Line != 0 {
+			t.Fatalf("inner range starts at line %d, want 0", symbol.Range.Start.Line)
+		}
+	}
+
+	h.exit(t, true)
+}
+
+func TestEndToEndOwnershipChangeRefreshesSymbols(t *testing.T) {
+	dir := t.TempDir()
+	luaText := "function one()\nend\n"
+	lua := writeTemp(t, dir, "a.lua", luaText)
+	writeTemp(t, dir, "cart.p8", "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n")
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, lua, luaText)
+
+	names := func() []string {
+		result, err := h.server.DocumentSymbol(ctx, &protocol.DocumentSymbolParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: lua},
+		})
+		if err != nil {
+			t.Fatalf("documentSymbol: %v", err)
+		}
+		return symbolNames(result.(protocol.DocumentSymbolSlice))
+	}
+	if !containsString(names(), "one") {
+		t.Fatalf("initial symbols = %v, want one", names())
+	}
+
+	// The cart starts including the lua, then the lua changes.
+	writeTemp(t, dir, "cart.p8", "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"a.lua\"\n")
+	newText := "function two()\nend\n"
+	if err := h.server.DidChange(ctx, &protocol.DidChangeTextDocumentParams{
+		TextDocument: protocol.VersionedTextDocumentIdentifier{
+			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: lua},
+			Version:                2,
+		},
+		ContentChanges: []protocol.TextDocumentContentChangeEvent{
+			&protocol.TextDocumentContentChangeWholeDocument{Text: newText},
+		},
+	}); err != nil {
+		t.Fatalf("didChange: %v", err)
+	}
+
+	// Remove the include again; the stale standalone snapshot must not win.
+	writeTemp(t, dir, "cart.p8", "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n")
+	namesAfter := names()
+	if !containsString(namesAfter, "two") || containsString(namesAfter, "one") {
+		t.Fatalf("symbols after ownership change = %v, want two", namesAfter)
+	}
+
+	h.exit(t, true)
+}
+
+func TestEndToEndClosingUnsavedCartClearsIncludeDiagnostics(t *testing.T) {
+	dir := t.TempDir()
+	include := writeTemp(t, dir, "a.lua", "x = 1 +\n")
+	root := uri.File(filepath.Join(dir, "unsaved.p8"))
+	rootText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"a.lua\"\n"
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, rootText)
+
+	params := waitDiagnostic(t, h.client, include)
+	if len(params.Diagnostics) == 0 {
+		t.Fatal("expected include diagnostics")
+	}
+
+	if err := h.server.DidClose(ctx, &protocol.DidCloseTextDocumentParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+	}); err != nil {
+		t.Fatalf("didClose: %v", err)
+	}
+
+	deadline := time.After(3 * time.Second)
+	for {
+		select {
+		case params := <-h.client.diagnostics:
+			if params.URI == include && len(params.Diagnostics) == 0 {
+				h.exit(t, true)
+				return
+			}
+		case <-deadline:
+			t.Fatal("timed out waiting for include diagnostics to clear")
+		}
+	}
+}
+
+func TestEndToEndFoldingOneStatementBlocks(t *testing.T) {
+	dir := t.TempDir()
+	text := `function f()
+ return 1
+end
+if x then
+ y=1
+end
+while x do
+ y=2
+end
+for i=1,2 do
+ y=i
+end
+do
+ y=3
+end
+repeat
+ y=4
+until x
+`
+	u := writeTemp(t, dir, "blocks.lua", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, u, text)
+
+	folds, err := h.server.FoldingRanges(ctx, &protocol.FoldingRangeParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: u},
+	})
+	if err != nil {
+		t.Fatalf("foldingRanges: %v", err)
+	}
+	starts := map[uint32]bool{}
+	for _, fold := range folds {
+		starts[fold.StartLine] = true
+	}
+	for _, start := range []uint32{0, 3, 6, 9, 12, 15} {
+		if !starts[start] {
+			t.Errorf("folds = %+v, missing block starting at line %d", folds, start)
+		}
+	}
 	h.exit(t, true)
 }

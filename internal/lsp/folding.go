@@ -58,29 +58,29 @@ func (s *Server) foldingRanges(ctx context.Context, u uri.URI) []protocol.Foldin
 	syntax.Walk(snap.Chunk, func(node syntax.Node) bool {
 		switch n := node.(type) {
 		case *syntax.FunctionExpr:
-			addSpan(n.Body.Span(), "")
+			addSpan(n.Span(), "")
 		case *syntax.IfStmt:
 			if n.SingleLine {
 				return true
 			}
 			for _, branch := range n.Branches {
-				addSpan(branch.Body.Span(), "")
+				addSpan(branch.Span().Merge(branch.Body.Span()), "")
 			}
 			if n.Else != nil {
-				addSpan(n.Else.Span(), "")
+				addSpan(source.Span{FileID: n.ElseSpan.FileID, Start: n.ElseSpan.Start, End: n.Else.Span().End}, "")
 			}
 		case *syntax.WhileStmt:
 			if !n.SingleLine {
-				addSpan(n.Body.Span(), "")
+				addSpan(n.Span(), "")
 			}
 		case *syntax.RepeatStmt:
-			addSpan(n.Body.Span(), "")
+			addSpan(n.Span(), "")
 		case *syntax.NumericForStmt:
-			addSpan(n.Body.Span(), "")
+			addSpan(n.Span(), "")
 		case *syntax.GenericForStmt:
-			addSpan(n.Body.Span(), "")
+			addSpan(n.Span(), "")
 		case *syntax.DoStmt:
-			addSpan(n.Body.Span(), "")
+			addSpan(n.Span(), "")
 		case *syntax.TableExpr:
 			addSpan(n.Span(), "")
 		}

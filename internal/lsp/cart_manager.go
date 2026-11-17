@@ -265,6 +265,14 @@ func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapsho
 	root := m.resolver.Resolve(u)
 	entry := m.byRoot[root]
 	m.mu.Unlock()
+
+	// A file can move between standalone and cart ownership. If the cached
+	// standalone snapshot no longer matches the open document, reload it.
+	if entry != nil && root == u && len(entry.snap.Cart.Files) > 0 {
+		if text, ok := m.docs.Text(u); ok && entry.snap.Cart.Files[0].Text != text {
+			entry = nil
+		}
+	}
 	if entry == nil {
 		m.Analyze(ctx, u)
 		m.mu.Lock()
