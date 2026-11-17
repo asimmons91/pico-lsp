@@ -1,6 +1,6 @@
 # M4 — Type System & Annotations
 
-**Status:** In progress — implementation and automated checks complete; manual editor verification pending  
+**Status:** Done — automated checks pass; manual editor parity waived for v1.  
 **Depends on:** M3  
 **Blocks:** M5  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)

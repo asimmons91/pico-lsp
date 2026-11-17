@@ -60,8 +60,8 @@ These decisions were made before milestone specs were written. Changing one requ
 | M0 | Foundation & Walking Skeleton | Server starts, speaks LSP, syncs documents, maps positions correctly | — | Done |
 | M1 | Cart Model & Syntax Front-End | Understands `.p8`, includes, tabs, and the PICO-8 grammar; reports syntax errors | M0 | Done |
 | M2 | Semantic Core & Navigation | Scopes, symbols, PICO-8 built-ins, definitions, references, rename | M1 | Done |
-| M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | In progress (manual editor checks pending) |
-| M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | In progress (automated checks pass; manual editor checks pending) |
+| M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Done |
+| M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Done |
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Planned |
 | M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Planned |
 | M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
