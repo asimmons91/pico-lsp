@@ -433,6 +433,9 @@ func (inf *inferer) inferGenericFor(st *syntax.GenericForStmt, env map[*Symbol]t
 	name := ""
 	if len(st.Values) > 0 {
 		name = callName(st.Values[0])
+		if call, ok := st.Values[0].(*syntax.CallExpr); ok {
+			name = callName(call.Func)
+		}
 	}
 	loopTypes := iteratorLoopTypes(name, iterType)
 	loopEnv := cloneEnv(env)
@@ -1049,9 +1052,14 @@ func (inf *inferer) specialCall(name string, args []syntax.Expr, argTypes []type
 	switch name {
 	case "all", "ipairs":
 		if len(argTypes) > 0 {
-			return types.AnyType, true
+			// Generic-for inference uses the collection type to derive the
+			// loop variable types.
+			return firstType(argTypes[0]), true
 		}
 	case "pairs":
+		if len(argTypes) > 0 {
+			return firstType(argTypes[0]), true
+		}
 		return types.AnyType, true
 	case "count":
 		return types.NumberType, true
@@ -1632,6 +1640,13 @@ func iterElement(t types.Type) types.Type {
 		var out []types.Type
 		for _, field := range types.Fields(value) {
 			out = append(out, field.Type)
+		}
+		// String-keyed fields are not offered as dot members, but iteration
+		// still sees their values.
+		for _, field := range value.Fields {
+			if field != nil && field.StringKey {
+				out = append(out, field.Type)
+			}
 		}
 		if len(out) > 0 {
 			return types.UnionOf(out...)

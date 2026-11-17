@@ -423,6 +423,9 @@ local stringUpper = t["Health"]
 local literal = {["Foo"] = 2}
 local exactString = literal["Foo"]
 local foldedString = literal["foo"]
+for v in all(literal) do
+  local loopValue = v
+end
 `
 	result := analyzeTextMode(t, text, TypeCheckingBasic)
 	for name, want := range map[string]string{
@@ -433,6 +436,7 @@ local foldedString = literal["foo"]
 		"stringUpper":  "any",
 		"exactString":  "number",
 		"foldedString": "any",
+		"loopValue":    "number",
 	} {
 		sym := symbolByName(result, name)
 		if sym == nil {
@@ -599,6 +603,42 @@ func TestM9AnnotationNamesHandleExactAndParents(t *testing.T) {
 	for i := range want {
 		if names[i] != want[i] {
 			t.Fatalf("annotation names = %v, want %v", names, want)
+		}
+	}
+}
+
+func TestM9IteratorLoopTypes(t *testing.T) {
+	text := `---@class Point
+---@field x number
+
+---@type Point[]
+local points = {}
+for pa in all(points) do
+  local pax = pa.x
+end
+for ia, ib in ipairs(points) do
+  local iv = ia
+  local ibx = ib.x
+end
+---@type table<string, number>
+local m = {}
+for ka, va in pairs(m) do
+  local vv = va
+end
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	for name, want := range map[string]string{
+		"pax": "number",
+		"iv":  "number",
+		"ibx": "number",
+		"vv":  "number",
+	} {
+		sym := symbolByName(result, name)
+		if sym == nil {
+			t.Fatalf("missing symbol %s", name)
+		}
+		if got := types.Display(sym.Type); got != want {
+			t.Errorf("%s type = %q, want %q", name, got, want)
 		}
 	}
 }
