@@ -1,5 +1,5 @@
 ```lua
-function move(dx, dy)
+function move(dx?: number, dy?: number): number
 ```
 
 Move the player.

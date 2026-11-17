@@ -2,7 +2,7 @@
   {
     "label": "hp",
     "kind": 5,
-    "detail": "field hp",
+    "detail": "hp: number",
     "filterText": "hp",
     "sortText": "hp",
     "insertTextFormat": 1,
@@ -23,7 +23,7 @@
   {
     "label": "score",
     "kind": 5,
-    "detail": "field score",
+    "detail": "score?: number",
     "filterText": "score",
     "sortText": "score",
     "insertTextFormat": 1,
@@ -44,7 +44,7 @@
   {
     "label": "speed",
     "kind": 5,
-    "detail": "field speed",
+    "detail": "speed: number",
     "filterText": "speed",
     "sortText": "speed",
     "insertTextFormat": 1,
@@ -65,7 +65,7 @@
   {
     "label": "step",
     "kind": 2,
-    "detail": "function player:step(dx)",
+    "detail": "function player:step(dx: number)",
     "filterText": "step",
     "sortText": "step",
     "insertTextFormat": 1,
@@ -86,7 +86,7 @@
   {
     "label": "x",
     "kind": 5,
-    "detail": "field x",
+    "detail": "x: number",
     "filterText": "x",
     "sortText": "x",
     "insertTextFormat": 1,
@@ -107,7 +107,7 @@
   {
     "label": "y",
     "kind": 5,
-    "detail": "field y",
+    "detail": "y: number",
     "filterText": "y",
     "sortText": "y",
     "insertTextFormat": 1,

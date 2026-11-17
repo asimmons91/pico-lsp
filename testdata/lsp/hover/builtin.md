@@ -1,5 +1,5 @@
 ```lua
-function circfill(x, y, r, [col])
+function circfill(x: number, y: number, r: number, col?: number)
 ```
 
 Draw a filled circle.

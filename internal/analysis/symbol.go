@@ -6,8 +6,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/cart"
 	"github.com/asimmons91/pico-lsp/internal/source"
+	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
 // SymbolKind classifies a bound name.
@@ -76,6 +78,11 @@ type Symbol struct {
 	// Function links parameter symbols, including implicit self, to the
 	// function declaration that owns them.
 	Function *Symbol
+	// Type is the declared or inferred LuaCATS type for this symbol.
+	Type types.Type
+	// TypeExplicit is true when Type came from a user annotation rather than
+	// inference.
+	TypeExplicit bool
 
 	// Fields maps canonical field names declared on this value. Owner is set
 	// for field symbols and points at the receiver. Alias links implicit method
@@ -157,8 +164,24 @@ type Result struct {
 	Table       *SymbolTable
 	Diagnostics []Diagnostic
 
-	// Classes holds shallow `---@class` metadata used by M3 member completion.
+	// Classes holds `---@class` metadata used by member completion and type
+	// checking.
 	Classes map[string]*Class
+	// Aliases holds `---@alias` declarations by canonical name.
+	Aliases map[string]*types.Alias
+	// Enums holds `---@enum` declarations by canonical name.
+	Enums map[string]*types.Record
+
+	typeNames   map[string]types.Type
+	aliasRaw    map[string]string
+	funcSymbols map[*syntax.FunctionExpr]*Symbol
+	diagLines   map[Diagnostic]int
+
+	// Casts, AsCasts, and DiagnosticDirectives are parsed annotation directives
+	// used by inference and diagnostic suppression.
+	Casts                []CastDirective
+	AsCasts              []AsDirective
+	DiagnosticDirectives []DiagnosticDirective
 
 	occs       []Occurrence
 	byFile     map[source.FileID][]Occurrence
@@ -224,6 +247,33 @@ func (r *Result) VisibleSymbolsAt(scope *Scope, fileID source.FileID, offset int
 	return scope.visibleSymbolsBefore(func(candidate *Symbol) bool {
 		return r.declarationBefore(candidate.DeclSpan, fileID, offset)
 	})
+}
+
+// TypeNames returns the named types declared in the cart, keyed canonically.
+func (r *Result) TypeNames() map[string]types.Type {
+	if r == nil || len(r.typeNames) == 0 {
+		return nil
+	}
+	out := make(map[string]types.Type, len(r.typeNames))
+	for name, typ := range r.typeNames {
+		out[name] = typ
+	}
+	return out
+}
+
+func (r *Result) lineForSpan(span source.Span) int {
+	if r == nil || r.cart == nil {
+		return -1
+	}
+	file := r.cart.File(span.FileID)
+	if file == nil || file.Index == nil {
+		return -1
+	}
+	pos, err := file.Index.Position(span.Start)
+	if err != nil {
+		return -1
+	}
+	return int(pos.Line)
 }
 
 func (r *Result) declarationBefore(decl source.Span, fileID source.FileID, offset int) bool {

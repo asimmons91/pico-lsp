@@ -1,8 +1,9 @@
 {
-  "label": "function player:step(dx)",
+  "label": "function player:step(dx: number)",
   "parameters": [
     {
-      "label": "dx"
+      "label": "dx",
+      "documentation": "`number`"
     }
   ],
   "activeSignature": 0,

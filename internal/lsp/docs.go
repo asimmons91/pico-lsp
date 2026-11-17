@@ -6,6 +6,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/builtin"
 	"github.com/asimmons91/pico-lsp/internal/cart"
 )
@@ -15,6 +16,14 @@ const maxHoverMarkdown = 8000
 func symbolCode(sym *analysis.Symbol) string {
 	if sym == nil {
 		return ""
+	}
+	if fn, ok := types.AsFunction(sym.Type); ok {
+		return typedFunctionSignature(sym, fn)
+	}
+	if sym.Kind == analysis.SymbolField && sym.Owner != nil {
+		if record, ok := types.Resolve(sym.Owner.Type).(*types.Record); ok && record != nil && record.Name != "" {
+			return record.Name + "." + sym.Name
+		}
 	}
 	if sym.Signature != "" {
 		return sym.Signature
@@ -41,6 +50,66 @@ func symbolCode(sym *analysis.Symbol) string {
 	}
 }
 
+func effectiveSymbolType(sym *analysis.Symbol) types.Type {
+	if sym == nil {
+		return nil
+	}
+	if sym.Type != nil {
+		return sym.Type
+	}
+	if sym.Kind == analysis.SymbolField && sym.Owner != nil && sym.Owner.Type != nil {
+		if fieldType, ok, optional := types.LookupField(sym.Owner.Type, sym.Name); ok {
+			if optional {
+				return types.Optional(fieldType)
+			}
+			return fieldType
+		}
+	}
+	return nil
+}
+
+func namedRecord(t types.Type) *types.Record {
+	record, ok := types.Resolve(t).(*types.Record)
+	if !ok || record == nil || record.Name == "" {
+		return nil
+	}
+	return record
+}
+
+func typedFunctionSignature(sym *analysis.Symbol, fn *types.Function) string {
+	if sym == nil || fn == nil {
+		return ""
+	}
+	name := sym.Name
+	if strings.HasPrefix(sym.Signature, "function ") {
+		if index := strings.Index(sym.Signature, "("); index > len("function ") {
+			name = strings.TrimPrefix(sym.Signature[:index], "function ")
+		}
+	}
+	params := make([]string, 0, len(fn.Params)+1)
+	for _, param := range fn.Params {
+		label := param.Name
+		if label == "" {
+			label = "arg"
+		}
+		if param.Optional {
+			label += "?"
+		}
+		label += ": " + types.Display(param.Type)
+		params = append(params, label)
+	}
+	if fn.Vararg != nil {
+		params = append(params, "...: "+types.Display(fn.Vararg))
+	}
+	signature := "function " + name + "(" + strings.Join(params, ", ") + ")"
+	if len(fn.Returns.Elems) == 1 && fn.Returns.Vararg == nil {
+		signature += ": " + types.Display(fn.Returns.Elems[0])
+	} else if len(fn.Returns.Elems) > 1 {
+		signature += ": " + types.Display(fn.Returns)
+	}
+	return signature
+}
+
 func symbolMarkdown(nav *navContext, sym *analysis.Symbol) string {
 	if sym == nil {
 		return ""
@@ -59,6 +128,33 @@ func symbolMarkdown(nav *navContext, sym *analysis.Symbol) string {
 		b.WriteString("`")
 		if sym.Doc.Optional {
 			b.WriteString(" (optional)")
+		}
+	} else if typ := effectiveSymbolType(sym); typ != nil {
+		if _, isFunction := types.AsFunction(typ); !isFunction {
+			b.WriteString("\n\n**Type:** `")
+			b.WriteString(types.Display(typ))
+			b.WriteString("`")
+		}
+	}
+	if record := namedRecord(effectiveSymbolType(sym)); record != nil {
+		fields := types.Fields(record)
+		if len(fields) > 0 {
+			b.WriteString("\n\n**Fields:**")
+			for i, field := range fields {
+				if i >= 8 {
+					b.WriteString("\n- ...")
+					break
+				}
+				b.WriteString("\n- `")
+				b.WriteString(field.Name)
+				b.WriteString("`: ")
+				b.WriteString("`")
+				b.WriteString(types.Display(field.Type))
+				b.WriteString("`")
+				if field.Optional {
+					b.WriteString(" optional")
+				}
+			}
 		}
 	}
 	if sym.Doc != nil && len(sym.Doc.Params) > 0 {
@@ -108,7 +204,13 @@ func declarationSource(nav *navContext, sym *analysis.Symbol) string {
 }
 
 func symbolDocumentation(sym *analysis.Symbol) string {
-	if sym == nil || sym.Doc == nil {
+	if sym == nil {
+		return ""
+	}
+	if sym.Doc == nil {
+		if typ := effectiveSymbolType(sym); typ != nil && !types.IsAny(typ) {
+			return "**Type:** `" + types.Display(typ) + "`"
+		}
 		return ""
 	}
 	var b strings.Builder
@@ -124,6 +226,15 @@ func symbolDocumentation(sym *analysis.Symbol) string {
 		b.WriteString("`")
 		if sym.Doc.Optional {
 			b.WriteString(" (optional)")
+		}
+	} else if typ := effectiveSymbolType(sym); typ != nil {
+		if _, isFunction := types.AsFunction(typ); !isFunction {
+			if b.Len() > 0 {
+				b.WriteString("\n\n")
+			}
+			b.WriteString("**Type:** `")
+			b.WriteString(types.Display(typ))
+			b.WriteString("`")
 		}
 	}
 	if len(sym.Doc.Params) > 0 {

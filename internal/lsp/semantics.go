@@ -10,6 +10,18 @@ import (
 func analysisOptions(settings config.Settings) analysis.Options {
 	return analysis.Options{
 		UndefinedGlobal: configuredSeverity(settings.Diagnostics.UndefinedGlobal),
+		TypeChecking:    configuredTypeChecking(settings.TypeChecking),
+	}
+}
+
+func configuredTypeChecking(value string) analysis.TypeCheckingMode {
+	switch value {
+	case config.TypeCheckingOff:
+		return analysis.TypeCheckingOff
+	case config.TypeCheckingStrict:
+		return analysis.TypeCheckingStrict
+	default:
+		return analysis.TypeCheckingBasic
 	}
 }
 

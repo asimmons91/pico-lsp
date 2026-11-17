@@ -485,6 +485,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 			WorkspaceSymbolProvider:   protocol.Boolean(true),
 			RenameProvider:            &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
 			SemanticTokensProvider:    semanticTokensOptions(),
+			InlayHintProvider:         protocol.Boolean(true),
 			Workspace: &protocol.WorkspaceOptions{
 				WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
 					Supported:           boolPtr(true),

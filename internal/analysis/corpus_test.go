@@ -60,6 +60,9 @@ func TestCorpusAnalyzes(t *testing.T) {
 		}
 		totalDiagnostics += len(result.Diagnostics)
 		for i, diag := range result.Diagnostics {
+			if isTypeDiagnosticCode(diag.Code) {
+				t.Errorf("%s: unannotated corpus produced type diagnostic %s: %s", path, diag.Code, diag.Message)
+			}
 			if i >= 3 {
 				break
 			}

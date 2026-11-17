@@ -1,5 +1,5 @@
 {
-  "label": "function move(dx, dy)",
+  "label": "function move(dx: number, dy?: number)",
   "parameters": [
     {
       "label": "dx",

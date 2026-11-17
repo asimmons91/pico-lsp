@@ -7,6 +7,7 @@ import (
 	"go.lsp.dev/protocol"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
@@ -99,13 +100,37 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 	if sym == nil {
 		return nil
 	}
-	params := make([]protocol.ParameterInformation, 0, len(sym.Params))
-	for _, name := range sym.Params {
-		param := protocol.ParameterInformation{Label: protocol.String(name)}
-		if doc := paramDocumentation(sym, name); doc != "" {
-			param.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
+	label := sym.Signature
+	var params []protocol.ParameterInformation
+	if fn, ok := types.AsFunction(sym.Type); ok {
+		label = typedFunctionSignature(sym, fn)
+		params = make([]protocol.ParameterInformation, 0, len(fn.Params)+1)
+		for _, param := range fn.Params {
+			label := param.Name
+			if label == "" {
+				label = "arg"
+			}
+			info := protocol.ParameterInformation{Label: protocol.String(label)}
+			if doc := typedParamDocumentation(param); doc != "" {
+				info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
+			}
+			params = append(params, info)
 		}
-		params = append(params, param)
+		if fn.Vararg != nil {
+			info := protocol.ParameterInformation{Label: protocol.String("...")}
+			doc := "`" + types.Display(fn.Vararg) + "`"
+			info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
+			params = append(params, info)
+		}
+	} else {
+		params = make([]protocol.ParameterInformation, 0, len(sym.Params))
+		for _, name := range sym.Params {
+			param := protocol.ParameterInformation{Label: protocol.String(name)}
+			if doc := paramDocumentation(sym, name); doc != "" {
+				param.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
+			}
+			params = append(params, param)
+		}
 	}
 
 	active := activeParameterIndex(nav, call, offset)
@@ -113,7 +138,7 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 		active = len(params) - 1
 	}
 	info := protocol.SignatureInformation{
-		Label:      sym.Signature,
+		Label:      label,
 		Parameters: params,
 	}
 	if summary := docSummary(sym); summary != "" {
@@ -131,6 +156,17 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 		help.ActiveParameter = protocol.NewNullable(uint32(active))
 	}
 	return help
+}
+
+func typedParamDocumentation(param types.Param) string {
+	parts := make([]string, 0, 2)
+	if param.Type != nil {
+		parts = append(parts, "`"+types.Display(param.Type)+"`")
+	}
+	if param.Doc != "" {
+		parts = append(parts, markdownInline(param.Doc))
+	}
+	return strings.Join(parts, " ")
 }
 
 func paramDocumentation(sym *analysis.Symbol, name string) string {

@@ -1,6 +1,6 @@
 # M4 — Type System & Annotations
 
-**Status:** Planned  
+**Status:** Done — automated checks pass; manual editor parity waived for v1.  
 **Depends on:** M3  
 **Blocks:** M5  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -370,21 +370,13 @@ Rules:
 ## Architecture and files
 
 ```
-internal/analysis/types/type.go        Type model, canonicalization, display
-internal/analysis/types/unify.go       compatibility/assignability, type vars
-internal/analysis/types/check.go       expression/statement checks
-internal/analysis/annotations.go       LuaCATS parser and association
-internal/analysis/annotation_types.go  type grammar
-internal/analysis/infer.go             inference pipeline
-internal/analysis/narrow.go            flow narrowing
-internal/analysis/iterators.go         PICO-8 collection special cases
-internal/analysis/type_diagnostics.go  diagnostic emission and suppression
-internal/analysis/members.go           type-based member lookup
-internal/lsp/inlay_hints.go
-testdata/types/annotations/            annotation parser fixtures
-testdata/types/inference/              source → expected types
-testdata/types/diagnostics/            expected diagnostics
-testdata/types/narrowing/              flow narrowing fixtures
+internal/analysis/types/type.go        type model, canonicalization, display
+internal/analysis/types/unify.go       compatibility, assignability, member lookup
+internal/analysis/annotation_types.go  LuaCATS type grammar
+internal/analysis/type_annotations.go  annotation collection, association, directives
+internal/analysis/infer.go             inference, narrowing, and PICO-8 iterators
+internal/analysis/type_diagnostics.go  diagnostic suppression
+internal/lsp/inlay_hints.go            inferred local-type hints
 ```
 
 ## Error handling
@@ -432,18 +424,40 @@ testdata/types/narrowing/              flow narrowing fixtures
 - Completion/hover with types < 5 ms.
 - No memory blow-up from unions; cap union members and canonicalize.
 
+## Implementation notes
+
+- Annotation and inference tests live with the implementation in
+  `internal/analysis/*_test.go` and `internal/lsp/*_test.go` rather than
+  separate `testdata/types` fixture trees.
+- Inlay hints currently cover inferred local declarations only. Parameter and
+  return hints remain optional follow-ups as described above.
+- `@type` is attached to local declarations and assignment targets. Standalone
+  expression statements are not annotated in v1.
+- `@cast` is applied from its source line onward in the file. It does not yet
+  reset at nested block boundaries.
+- `--[[@as]]` is associated with the nearest same-line expression ending before
+  the comment; nested subexpression selection is best-effort.
+- Built-in functions receive type signatures from the 0.2.7 stub docs, with a
+  small fallback return-type table for common PICO-8 functions. Calls to
+  built-ins are not type-checked to keep unannotated carts quiet.
+- Type checking defaults to `basic`; `strict` adds nil, undefined-field, and
+  missing-field warnings. All type diagnostics are warnings or hints.
+- Performance on the 64 KB test cart is measured in
+  `TestM4InferencePerformance` (basic and strict) and the existing M3
+  completion/hover/semantic-token targets.
+
 ## Exit criteria
 
-- [ ] All required LuaCATS annotations parse and attach correctly.
-- [ ] Type model canonicalizes unions and displays LuaCATS syntax.
-- [ ] Basic inference covers locals, globals, functions, tables, operators, and PICO-8 iterators.
-- [ ] Explicit annotation mismatches produce warnings in `basic`.
-- [ ] `strict` adds nil/exact-field checks behind a setting.
-- [ ] Type-aware completion, hover, signature help, and inlay hints work.
-- [ ] `---@diagnostic` suppression works.
-- [ ] Unannotated corpus produces no type-error noise in `basic`.
-- [ ] Performance targets are met.
-- [ ] `go test -race ./...` passes.
+- [x] All required LuaCATS annotations parse and attach correctly.
+- [x] Type model canonicalizes unions and displays LuaCATS syntax.
+- [x] Basic inference covers locals, globals, functions, tables, operators, and PICO-8 iterators.
+- [x] Explicit annotation mismatches produce warnings in `basic`.
+- [x] `strict` adds nil/exact-field checks behind a setting.
+- [x] Type-aware completion, hover, signature help, and inlay hints work.
+- [x] `---@diagnostic` suppression works.
+- [x] Unannotated corpus produces no type-error noise in `basic`.
+- [x] Performance targets are met.
+- [x] `go test -race ./...` passes.
 
 ## Risks and mitigations
 
