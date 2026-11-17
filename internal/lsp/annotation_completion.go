@@ -185,6 +185,10 @@ func annotationClassNames(nav *navContext) []string {
 	}
 	if nav != nil && nav.semantics != nil {
 		for _, typ := range nav.semantics.TypeNames() {
+			if alias, ok := typ.(*types.Alias); ok && alias != nil && alias.Name != "" {
+				add(alias.Name)
+				continue
+			}
 			if record, ok := types.Resolve(typ).(*types.Record); ok && record != nil && record.Name != "" {
 				add(record.Name)
 				continue

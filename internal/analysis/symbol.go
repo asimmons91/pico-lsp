@@ -85,6 +85,9 @@ type Symbol struct {
 	TypeExplicit bool
 	// Overloads holds explicit @overload signatures in declaration order.
 	Overloads []*types.Function
+	// FromClass marks field symbols populated from a class annotation. Their
+	// field types may need substitution for a generic instance receiver.
+	FromClass bool
 
 	// Fields maps canonical field names declared on this value. Owner is set
 	// for field symbols and points at the receiver. Alias links implicit method

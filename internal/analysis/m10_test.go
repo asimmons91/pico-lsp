@@ -94,10 +94,10 @@ local boxed = {}
 local value = boxed.value
 `
 	result := analyzeTextMode(t, text, TypeCheckingBasic)
-	if got := types.Display(symbolByName(result, "boxed").Type); got != "Box<T>" {
+	if got := types.Display(symbolByName(result, "boxed").Type); got != "Box<number>" {
 		t.Fatalf("boxed type = %q", got)
 	}
-	if got := types.Display(symbolByName(result, "value").Type); got != "T" {
+	if got := types.Display(symbolByName(result, "value").Type); got != "number" {
 		t.Fatalf("defaulted field = %q", got)
 	}
 }
@@ -537,5 +537,19 @@ end
 	result := analyzeTextMode(t, text, TypeCheckingBasic)
 	if got := types.Display(symbolByName(result, "red").Type); got != "number" {
 		t.Fatalf("hex tag narrowing = %q", got)
+	}
+}
+
+func TestM10GenericInstanceFieldAssignment(t *testing.T) {
+	text := `---@class Box<T>
+---@field value T
+
+---@type Box<number>
+local boxed = {value = 1}
+boxed.value = "bad"
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if !hasDiagnostic(result, CodeAssignTypeMismatch) {
+		t.Fatalf("generic instance field assignment was not checked: %+v", result.Diagnostics)
 	}
 }

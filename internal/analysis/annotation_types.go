@@ -202,6 +202,21 @@ func (p *typeParser) parsePrimary() (types.Type, error) {
 				}
 				return applied, nil
 			}
+			if record, ok := types.Resolve(typ).(*types.Record); ok && record != nil && len(record.TypeParams) > 0 {
+				allDefaults := true
+				for _, param := range record.TypeParams {
+					if param == nil || param.Default == nil {
+						allDefaults = false
+						break
+					}
+				}
+				if allDefaults {
+					applied, err := types.Apply(typ, nil)
+					if err == nil {
+						return applied, nil
+					}
+				}
+			}
 			return typ, nil
 		}
 	}

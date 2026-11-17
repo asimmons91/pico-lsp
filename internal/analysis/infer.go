@@ -335,9 +335,23 @@ func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env m
 		inf.invalidateFieldBase(t.Base, env)
 		fieldSym := inf.fieldSymbol(t)
 		fieldType := valueType
-		if fieldSym != nil && fieldSym.TypeExplicit && fieldSym.Type != nil {
-			inf.checkAssignment(fieldSym, fieldSym.Type, valueType, valueSpan)
-			fieldType = fieldSym.Type
+		declared := types.Type(nil)
+		if fieldSym != nil && fieldSym.TypeExplicit {
+			declared = fieldSym.Type
+			if fieldSym.FromClass {
+				if baseField, ok, _ := types.LookupField(baseType, t.Name.Text); ok {
+					declared = baseField
+				}
+			}
+		}
+		if declared == nil && fieldSym != nil && namedRecordType(baseType) {
+			if baseField, ok, _ := types.LookupField(baseType, t.Name.Text); ok {
+				declared = baseField
+			}
+		}
+		if declared != nil {
+			inf.checkAssignment(fieldSym, declared, valueType, valueSpan)
+			fieldType = declared
 		}
 		if fieldSym != nil {
 			fieldSym.Type = types.Merge(fieldSym.Type, types.Widen(fieldType))
@@ -802,7 +816,7 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 	var previous types.Type
 	if fieldSym != nil {
 		previous = fieldSym.Type
-		if fieldSym.TypeExplicit && fieldSym.Type != nil {
+		if fieldSym.TypeExplicit && fieldSym.Type != nil && !(fieldSym.FromClass && ok) {
 			fieldType = fieldSym.Type
 			ok = true
 			optional = fieldSym.Doc != nil && fieldSym.Doc.Optional
@@ -1292,6 +1306,11 @@ func missingFields(want, got *types.Record) []string {
 		}
 	}
 	return missing
+}
+
+func namedRecordType(t types.Type) bool {
+	record, ok := types.Resolve(t).(*types.Record)
+	return ok && record != nil && record.Name != ""
 }
 
 func (inf *inferer) addRecordField(base types.Type, name string, fieldType types.Type, optional bool) {

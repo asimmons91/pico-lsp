@@ -567,11 +567,13 @@ func attachClassFields(result *Result) {
 				continue
 			}
 			if existing := sym.Fields[canonical]; existing != nil {
+				existing.FromClass = true
 				applyClassFieldDoc(existing, field)
 				continue
 			}
 			fieldSym := result.Table.NewSymbol(SymbolField, field.Name, field.Span, nil)
 			fieldSym.Owner = sym
+			fieldSym.FromClass = true
 			applyClassFieldDoc(fieldSym, field)
 			sym.Fields[canonical] = fieldSym
 		}
