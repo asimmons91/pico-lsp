@@ -422,6 +422,23 @@ func (p *typeParser) parseNumberLiteral() (any, error) {
 	if p.pos < len(p.input) && (p.input[p.pos] == '-' || p.input[p.pos] == '+') {
 		p.pos++
 	}
+	if p.pos+1 < len(p.input) && p.input[p.pos] == '0' && (p.input[p.pos+1] == 'x' || p.input[p.pos+1] == 'X') {
+		p.pos += 2
+		for p.pos < len(p.input) {
+			c := p.input[p.pos]
+			if (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') {
+				p.pos++
+				continue
+			}
+			break
+		}
+		text := p.input[start:p.pos]
+		value, err := strconv.ParseInt(text, 0, 64)
+		if err != nil {
+			return nil, err
+		}
+		return value, nil
+	}
 	dot := false
 	for p.pos < len(p.input) {
 		c := p.input[p.pos]

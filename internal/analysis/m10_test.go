@@ -519,3 +519,23 @@ local bad = {key = "a", assigned = true}
 		t.Fatalf("missing exact generic parent field was accepted: %+v", result.Diagnostics)
 	}
 }
+
+func TestM10HexTaggedUnion(t *testing.T) {
+	text := `---@class Red
+---@field kind 0x1
+---@field red number
+---@class Blue
+---@field kind 0x2
+---@field blue number
+
+---@type Red | Blue
+local item = {}
+if item.kind == 0x1 then
+  local red = item.red
+end
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if got := types.Display(symbolByName(result, "red").Type); got != "number" {
+		t.Fatalf("hex tag narrowing = %q", got)
+	}
+}

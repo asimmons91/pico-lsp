@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
@@ -29,7 +30,20 @@ func fieldAndLiteral(fieldExpr, literalExpr syntax.Expr) (*syntax.FieldExpr, any
 	case *syntax.StringExpr:
 		return field, literal.Value, true
 	case *syntax.NumberExpr:
-		value, err := strconv.ParseFloat(literal.Text, 64)
+		text := literal.Text
+		if strings.HasPrefix(strings.ToLower(text), "0x") || strings.HasPrefix(strings.ToLower(text), "-0x") {
+			sign := int64(1)
+			if text[0] == '-' {
+				sign = -1
+				text = text[1:]
+			}
+			value, err := strconv.ParseInt(strings.TrimPrefix(strings.ToLower(text), "0x"), 16, 64)
+			if err != nil {
+				return nil, nil, false
+			}
+			return field, sign * value, true
+		}
+		value, err := strconv.ParseFloat(text, 64)
 		if err != nil {
 			return nil, nil, false
 		}
