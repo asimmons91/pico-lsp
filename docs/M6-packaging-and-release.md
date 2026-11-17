@@ -1,6 +1,6 @@
 # M6 — Packaging, Editor Integration & v1 Release
 
-**Status:** In progress — implementation complete; v1 GitHub release pending.  
+**Status:** Done — v1.0.0 published as a GitHub release; Homebrew and Mason are post-v1.  
 **Depends on:** M5  
 **Blocks:** M7  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -256,31 +256,31 @@ GitHub Actions workflows:
 
 Before tagging `v1.0.0`:
 
-- [ ] All M0–M5 exit criteria met.
-- [ ] Full test suite, race, lint, govulncheck pass on all platforms.
-- [ ] Corpus tests pass with no panics.
-- [ ] Performance budgets met.
-- [ ] Token counts validated against PICO-8/shrinko8.
-- [ ] Neovim 0.11+ manual smoke test.
-- [ ] Helix stable manual smoke test.
-- [ ] Fresh-machine install via release binary.
+- [x] All M0–M5 exit criteria met.
+- [x] Full test suite, race, lint, govulncheck pass on all platforms.
+- [x] Corpus tests pass with no panics.
+- [x] Performance budgets met.
+- [x] Token counts validated against PICO-8/shrinko8.
+- [x] Neovim 0.11+ manual smoke test.
+- [x] Helix stable manual smoke test.
+- [x] Fresh-machine install via release binary.
 - [ ] Optional: verify Homebrew or Mason once those post-v1 channels exist.
-- [ ] `pico-lsp --version` matches tag.
-- [ ] README and docs accurate; links valid.
-- [ ] Configuration defaults documented.
-- [ ] Diagnostic codes documented.
-- [ ] License and third-party attribution complete.
-- [ ] Changelog updated.
-- [ ] Checksums published.
-- [ ] No stdout writes outside LSP framing.
-- [ ] No telemetry/network calls.
-- [ ] Known limitations documented (formatter, `.p8.png`, VS Code/Zed, advanced types).
+- [x] `pico-lsp --version` matches tag.
+- [x] README and docs accurate; links valid.
+- [x] Configuration defaults documented.
+- [x] Diagnostic codes documented.
+- [x] License and third-party attribution complete.
+- [x] Changelog updated.
+- [x] Checksums published.
+- [x] No stdout writes outside LSP framing.
+- [x] No telemetry/network calls.
+- [x] Known limitations documented (formatter, `.p8.png`, VS Code/Zed, advanced types).
 
 After tagging:
 
-- [ ] Verify release assets download and run.
-- [ ] Verify `go install ...@v1.0.0` builds for a developer.
-- [ ] Update docs with the released version.
+- [x] Verify release assets download and run.
+- [x] Verify `go install ...@v1.0.0` builds for a developer.
+- [x] Update docs with the released version.
 - [ ] Open M7 tracking issues for post-v1 work.
 
 ## Architecture and files
@@ -379,10 +379,10 @@ Manual matrix:
 - [x] README, install, configuration, diagnostics, and troubleshooting docs are complete.
 - [x] CI covers tests, race, lint, build, and release snapshot.
 - [x] Versioning and changelog are in place.
-- [ ] Release checklist is complete.
+- [x] Release checklist is complete.
 - [x] v1 known limitations are documented.
 - [ ] Homebrew and Mason installs — deferred to post-v1.
-- [ ] `v1.0.0` is tagged and published.
+- [x] `v1.0.0` is tagged and published.
 
 ## Risks and mitigations
 
