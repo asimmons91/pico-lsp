@@ -455,6 +455,9 @@ func TestP8IncludeAllTabs(t *testing.T) {
 	if snap.Cart.Tokens != 6 {
 		t.Fatalf("tokens = %d, want 6", snap.Cart.Tokens)
 	}
+	if snap.Cart.Chars != 13 {
+		t.Fatalf("chars = %d, want 13", snap.Cart.Chars)
+	}
 	if snap.Cart.Includes[0].FileSpan.FileID != 1 || snap.Cart.Includes[0].FileSpan.End == 0 {
 		t.Fatalf("file span = %+v", snap.Cart.Includes[0].FileSpan)
 	}
@@ -474,6 +477,9 @@ func TestP8IncludeSelectedTab(t *testing.T) {
 	}
 	if snap.Cart.Tokens != 9 {
 		t.Fatalf("tokens = %d, want 9", snap.Cart.Tokens)
+	}
+	if snap.Cart.Chars != 12 {
+		t.Fatalf("chars = %d, want 12", snap.Cart.Chars)
 	}
 }
 
