@@ -70,6 +70,7 @@ type Segment struct {
 type Include struct {
 	Path          string
 	ResolvedURI   uri.URI
+	Tab           int // selected zero-based .p8 tab, or -1 for all tabs/non-.p8
 	DirectiveSpan source.Span
 	FileSpan      source.Span
 	Missing       bool

@@ -55,6 +55,17 @@ func TestCorpusAnalyzes(t *testing.T) {
 			continue
 		}
 		result := Analyze(snap, builtins, Options{UndefinedGlobal: SeverityWarning})
+		tokenSum, charSum := 0, 0
+		for _, count := range snap.Cart.FileTokens {
+			tokenSum += count
+		}
+		for _, count := range snap.Cart.FileChars {
+			charSum += count
+		}
+		if tokenSum != snap.Cart.Tokens || charSum != snap.Cart.Chars {
+			t.Errorf("%s: per-file contributions = %d tokens/%d chars, want %d/%d",
+				path, tokenSum, charSum, snap.Cart.Tokens, snap.Cart.Chars)
+		}
 		if elapsed := time.Since(start); elapsed > 2*time.Second {
 			t.Errorf("%s: analyze took %v", path, elapsed)
 		}

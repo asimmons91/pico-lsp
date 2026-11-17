@@ -85,7 +85,7 @@ func (m *CartManager) includeDiagnostics(snap *cart.Snapshot, settings config.Se
 					message:  fmt.Sprintf("include target is not a .lua or .p8 file: %s", include.Path),
 				})
 			}
-			key := filepath.Clean(resolved)
+			key := fmt.Sprintf("%s:%d", filepath.Clean(resolved), include.Tab)
 			if _, exists := seen[key]; exists {
 				if duplicateOK {
 					out = append(out, includeDiagnostic{

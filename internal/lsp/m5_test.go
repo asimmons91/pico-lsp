@@ -149,6 +149,16 @@ func TestCartInfoRequestAndCommand(t *testing.T) {
 		t.Fatalf("cartInfo = %+v", info)
 	}
 
+	var wireInfo CartInfo
+	if _, err := h.clientConn.Call(ctx, RequestCartInfo, map[string]any{
+		"textDocument": map[string]string{"uri": root.String()},
+	}, &wireInfo); err != nil {
+		t.Fatalf("cartInfo over the wire: %v", err)
+	}
+	if wireInfo.RootURI != root || wireInfo.Tokens != info.Tokens {
+		t.Fatalf("wire cartInfo = %+v, want %+v", wireInfo, info)
+	}
+
 	commandArgs, _ := protocol.Marshal(root.String())
 	raw, err := h.server.ExecuteCommand(ctx, &protocol.ExecuteCommandParams{
 		Command:   CommandShowCartInfo,
@@ -251,6 +261,24 @@ move(1, 2)
 	}
 	if !found {
 		t.Fatalf("missing suppression action in %+v", actions)
+	}
+
+	quickfix := []protocol.CodeActionKind{protocol.CodeActionKindQuickFix}
+	actions, err = h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Range:        protocol.Range{Start: protocol.Position{Line: 3}, End: protocol.Position{Line: 3, Character: 4}},
+		Context: protocol.CodeActionContext{
+			Only:        quickfix,
+			Diagnostics: []protocol.Diagnostic{diag},
+		},
+	})
+	if err != nil {
+		t.Fatalf("filtered code action: %v", err)
+	}
+	for _, action := range actions {
+		if candidate, ok := action.(*protocol.CodeAction); ok && strings.Contains(candidate.Title, "annotations") {
+			t.Fatalf("annotation refactor returned for quickfix-only request: %+v", candidate)
+		}
 	}
 }
 
@@ -585,5 +613,58 @@ func TestM5NestedIncludeNotDoubleReported(t *testing.T) {
 	}
 	if containsString(codes, "include-missing") {
 		t.Fatalf("nested directive reported as missing: %v", codes)
+	}
+}
+
+func TestM5WatchedUnknownFileIgnored(t *testing.T) {
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	unknown := uri.File(filepath.Join(t.TempDir(), "unrelated.lua"))
+	if err := h.srv.DidChangeWatchedFiles(ctx, &protocol.DidChangeWatchedFilesParams{
+		Changes: []protocol.FileEvent{{URI: unknown, Type: protocol.FileChangeTypeCreated}},
+	}); err != nil {
+		t.Fatalf("watched files: %v", err)
+	}
+	h.srv.carts.mu.Lock()
+	_, cached := h.srv.carts.byRoot[unknown]
+	h.srv.carts.mu.Unlock()
+	if cached {
+		t.Fatal("unknown watched file was analyzed")
+	}
+}
+
+func TestM5WatchedMissingP8IncludeAppears(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.p8\"\nx = 1\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	snap, _, ok := h.srv.carts.SnapshotFor(ctx, root)
+	if !ok || len(snap.Cart.Includes) != 1 || !snap.Cart.Includes[0].Missing {
+		t.Fatalf("initial includes = %+v", snap.Cart.Includes)
+	}
+
+	libText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nfunction lib() end\n"
+	lib := writeTemp(t, dir, "lib.p8", libText)
+	if err := h.srv.DidChangeWatchedFiles(ctx, &protocol.DidChangeWatchedFilesParams{
+		Changes: []protocol.FileEvent{{URI: lib, Type: protocol.FileChangeTypeCreated}},
+	}); err != nil {
+		t.Fatalf("created watched file: %v", err)
+	}
+	snap, _, ok = h.srv.carts.SnapshotFor(ctx, root)
+	if !ok {
+		t.Fatal("missing snapshot after create")
+	}
+	if snap.Cart.Includes[0].Missing {
+		t.Fatalf("include still missing after create: %+v", snap.Cart.Includes[0])
+	}
+	if snap.Cart.Tokens == 0 || len(snap.Cart.Files) < 2 {
+		t.Fatalf("cart was not reanalyzed: tokens=%d files=%d", snap.Cart.Tokens, len(snap.Cart.Files))
 	}
 }

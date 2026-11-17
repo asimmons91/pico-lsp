@@ -13,7 +13,7 @@ disabled there.
 | `include-unreadable` | Error | Included file is unreadable, binary, or too large. |
 | `include-nested` | Warning | Nested `#include` is pasted literally. |
 | `include-outside-workspace` | Warning | Include resolves outside the workspace boundary. |
-| `include-unusual-type` | Hint | Include target is not `.lua`, `.p8`, or `.p8.png`. |
+| `include-unusual-type` | Hint | Include target is not `.lua` or `.p8`. |
 | `include-duplicate` | Off | Same include target appears more than once. |
 | `token-limit` | Error/Warning | Assembled cart is over or near the 8192-token limit. |
 | `char-limit` | Error/Warning | Assembled cart is over or near the 65535-character limit. |

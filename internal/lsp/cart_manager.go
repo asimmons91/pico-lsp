@@ -175,8 +175,26 @@ func (m *CartManager) WatchedChange(ctx context.Context, u uri.URI) {
 	resolver := m.resolver
 	m.mu.Unlock()
 	resolver.Invalidate()
+
+	if resolver.Resolve(u) == u && !m.watchedFileKnown(u) {
+		// Unknown standalone files are ignored, but existing carts may include
+		// the new path or gain a new owner, so refresh dependents.
+		m.refreshAfterLocked(ctx, u, isCartURI(u), "")
+		return
+	}
+
 	root := m.analyzeLocked(ctx, u, false)
 	m.refreshAfterLocked(ctx, u, isCartURI(u), root)
+}
+
+func (m *CartManager) watchedFileKnown(u uri.URI) bool {
+	if _, open := m.docs.Get(u); open {
+		return true
+	}
+	m.mu.Lock()
+	_, known := m.byFile[u]
+	m.mu.Unlock()
+	return known
 }
 
 func isCartURI(u uri.URI) bool {

@@ -97,13 +97,14 @@ func lintDuplicateTableFields(snap *cart.Snapshot, result *Result, severity Seve
 			if !ok {
 				continue
 			}
+			displayKey := key
 			if fold {
 				// PICO-8 folds identifiers, but string keys are case-sensitive.
 				key = CanonicalName(key)
 			}
 			if _, exists := seen[key]; exists {
 				result.addLintDiagnostic(severity, CodeDuplicateTableField,
-					fmt.Sprintf("duplicate table field %q", key), tableFieldKeySpan(field))
+					fmt.Sprintf("duplicate table field %q", displayKey), tableFieldKeySpan(field))
 				continue
 			}
 			seen[key] = struct{}{}

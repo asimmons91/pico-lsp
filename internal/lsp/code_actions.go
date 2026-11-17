@@ -43,7 +43,29 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 			actions = append(actions, action)
 		}
 	}
-	return actions, nil
+	return filterCodeActions(actions, params.Context.Only), nil
+}
+
+func filterCodeActions(actions []protocol.CommandOrCodeAction, only []protocol.CodeActionKind) []protocol.CommandOrCodeAction {
+	if len(only) == 0 {
+		return actions
+	}
+	filtered := actions[:0]
+	for _, action := range actions {
+		candidate, ok := action.(*protocol.CodeAction)
+		if !ok || candidate.Kind == nil {
+			continue
+		}
+		kind := string(*candidate.Kind)
+		for _, requested := range only {
+			wanted := string(requested)
+			if wanted == "" || kind == wanted || strings.HasPrefix(kind, wanted+".") {
+				filtered = append(filtered, action)
+				break
+			}
+		}
+	}
+	return filtered
 }
 
 func diagnosticCode(diag protocol.Diagnostic) string {
