@@ -8,6 +8,18 @@ It is a static Go binary with no runtime dependencies. It is not a generic Lua
 language server: PICO-8 semantics win, including shorthand syntax, token and
 character budgets, and the absence of the Lua standard library.
 
+## AI-assisted development
+
+**This is an AI vibe-coded project.** Most of the code, tests, and documentation
+were produced by AI coding agents working from human direction and written
+milestone specifications. A human maintainer reviews changes, runs the automated
+test suite, and cuts releases, but this is not a traditionally hand-written
+codebase and does not have a large human review team.
+
+Treat it accordingly: inspect the implementation for your use case before
+relying on it in critical workflows, expect occasional rough edges, and report
+bugs with a minimal reproduction so they can be verified and fixed.
+
 ## Features
 
 - Parse and analyze `.p8` carts, tabs, and included `.lua` or `.p8` files as one

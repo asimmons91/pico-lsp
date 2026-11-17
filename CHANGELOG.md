@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Document the project's AI-assisted, AI vibe-coded development process in the
+  README.
+
 ## [1.0.0] - 2026-11-17
 
 ### Added
