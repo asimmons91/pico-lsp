@@ -196,7 +196,7 @@ func (p *prebinder) preStmt(stmt syntax.Stmt, scope *preScope) {
 		}
 		p.preBlock(st.Body, newPreScope(loop))
 	case *syntax.FunctionDeclStmt:
-		if len(st.Names) == 1 {
+		if len(st.Names) == 1 && !scope.has(st.Names[0].Text) {
 			p.addGlobal(st.Names[0], true)
 		}
 		p.preFunction(st.Func, scope, st.Method)
@@ -427,8 +427,11 @@ func (b *binder) bindAssign(st *syntax.AssignStmt, scope *Scope) {
 			b.bindTable(table, b.valueSymbol(targets[i]), scope)
 			continue
 		}
-		if fn, ok := value.(*syntax.FunctionExpr); ok && i < len(targets) && targets[i] != nil && targets[i].Kind == SymbolGlobal {
-			targets[i].Kind = SymbolFunction
+		if fn, ok := value.(*syntax.FunctionExpr); ok && i < len(targets) && targets[i] != nil {
+			target := targets[i]
+			if target.Kind == SymbolGlobal || target.Kind == SymbolLocal || target.Kind == SymbolField {
+				target.Kind = SymbolFunction
+			}
 			b.bindFunction(fn, scope, false, nil, source.Span{})
 			continue
 		}
@@ -449,9 +452,19 @@ func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 		return
 	}
 	if len(st.Names) == 1 {
-		sym := b.declareGlobal(st.Names[0], scope)
-		sym.Kind = SymbolFunction
-		b.bindFunction(st.Func, scope, st.Method, nil, st.Names[0].Span())
+		name := st.Names[0]
+		if sym := scope.Lookup(CanonicalName(name.Text)); sym != nil {
+			// function f() is sugar for f = function(). It updates a visible
+			// local rather than creating a global.
+			if sym.Kind == SymbolLocal {
+				sym.Kind = SymbolFunction
+			}
+			b.addUse(name, sym, scope, true)
+		} else {
+			sym := b.declareGlobal(name, scope)
+			sym.Kind = SymbolFunction
+		}
+		b.bindFunction(st.Func, scope, st.Method, nil, name.Span())
 		return
 	}
 
@@ -598,7 +611,11 @@ func (b *binder) bindTarget(target syntax.Expr, scope *Scope) *Symbol {
 			return nil
 		}
 		if existing := fieldOf(receiver, t.Name); existing != nil {
-			b.addUse(t.Name, existing, scope, true)
+			if len(existing.Decls) == 0 {
+				b.addDecl(t.Name, existing, scope)
+			} else {
+				b.addUse(t.Name, existing, scope, true)
+			}
 			return existing
 		}
 		return b.declareField(receiver, t.Name, scope, SymbolField)
@@ -632,14 +649,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		return b.resolveName(e, scope)
 	case *syntax.FieldExpr:
 		receiver := b.valueSymbol(b.bindExpr(e.Base, scope))
-		if receiver == nil || e.Name == nil {
-			return nil
-		}
-		field := fieldOf(receiver, e.Name)
-		if field != nil {
-			b.addUse(e.Name, field, scope, false)
-		}
-		return field
+		return b.fieldUse(receiver, e.Name, scope)
 	case *syntax.IndexExpr:
 		receiver := b.valueSymbol(b.bindExpr(e.Base, scope))
 		if _, ok := e.Index.(*syntax.StringExpr); ok {
@@ -661,11 +671,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		return nil
 	case *syntax.MethodCallExpr:
 		receiver := b.valueSymbol(b.bindExpr(e.Receiver, scope))
-		if receiver != nil && e.Method != nil {
-			if field := fieldOf(receiver, e.Method); field != nil {
-				b.addUse(e.Method, field, scope, false)
-			}
-		}
+		b.fieldUse(receiver, e.Method, scope)
 		for _, arg := range e.Args {
 			b.bindExpr(arg, scope)
 		}
@@ -781,7 +787,7 @@ func (b *binder) declareFieldAt(receiver *Symbol, name string, span source.Span,
 		b.addDeclAt(name, span, sym, scope)
 		return sym
 	}
-	if kind == SymbolMethod {
+	if kind != SymbolField {
 		sym.Kind = kind
 	}
 	b.addDeclAt(name, span, sym, scope)
@@ -793,6 +799,28 @@ func fieldOf(receiver *Symbol, name *syntax.NameExpr) *Symbol {
 		return nil
 	}
 	return receiver.Fields[CanonicalName(name.Text)]
+}
+
+// fieldUse resolves a dot/method access. If the field has not been declared
+// yet, it creates a provisional field symbol so a later declaration can merge
+// with uses that appeared earlier in the cart. Provisional fields have no
+// declarations and therefore cannot be renamed on their own.
+func (b *binder) fieldUse(receiver *Symbol, name *syntax.NameExpr, scope *Scope) *Symbol {
+	if receiver == nil || name == nil || receiver.Builtin {
+		return nil
+	}
+	if receiver.Fields == nil {
+		receiver.Fields = make(map[string]*Symbol)
+	}
+	canonical := CanonicalName(name.Text)
+	field := receiver.Fields[canonical]
+	if field == nil {
+		field = b.table.NewSymbol(SymbolField, name.Text, name.Span(), scope)
+		field.Owner = receiver
+		receiver.Fields[canonical] = field
+	}
+	b.addUse(name, field, scope, false)
+	return field
 }
 
 func (b *binder) addDecl(name *syntax.NameExpr, sym *Symbol, scope *Scope) {

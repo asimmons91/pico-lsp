@@ -27,24 +27,35 @@ func IsKeyword(text string) bool {
 	return ok
 }
 
-// IsIdentifier reports whether text is a valid PICO-8 identifier. PICO-8
-// identifiers use ASCII letters, digits, underscores, and the two control
-// glyphs the lexer accepts; they cannot start with a digit or be keywords.
+// IsIdentifier reports whether text is a valid PICO-8 identifier. This mirrors
+// the lexer: ASCII letters, digits, underscores, and control glyphs, plus valid
+// non-ASCII runes such as PICO-8 button glyphs. It cannot start with a digit or
+// be a keyword.
 func IsIdentifier(text string) bool {
 	if text == "" || IsKeyword(text) {
 		return false
 	}
-	for i := 0; i < len(text); i++ {
+	first := true
+	for i := 0; i < len(text); {
 		c := text[i]
-		if i == 0 {
-			if !isIdentStart(c) {
+		if c < utf8.RuneSelf {
+			if first {
+				if !isIdentStart(c) {
+					return false
+				}
+			} else if !isIdentContinue(c) {
 				return false
 			}
+			i++
+			first = false
 			continue
 		}
-		if !isIdentContinue(c) {
+		r, size := utf8.DecodeRuneInString(text[i:])
+		if r == utf8.RuneError && size == 1 {
 			return false
 		}
+		i += size
+		first = false
 	}
 	return true
 }

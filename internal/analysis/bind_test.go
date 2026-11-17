@@ -285,6 +285,50 @@ func TestStringKeyedFieldIsNotAStringOccurrence(t *testing.T) {
 	}
 }
 
+func TestFieldForwardReferencesMergeWithDeclarations(t *testing.T) {
+	text := "t = {}\nt:update()\nprint(t.value)\nfunction t:update() end\nt.value = 1\n"
+	result, _ := analyzeText(t, text)
+	tSym := result.Table.Globals["t"]
+	if tSym == nil {
+		t.Fatal("missing t")
+	}
+	update := tSym.Fields["update"]
+	if update == nil || update.Kind != SymbolMethod {
+		t.Fatalf("update field = %+v, want method", update)
+	}
+	if len(update.Uses) != 1 || len(update.Decls) != 1 {
+		t.Fatalf("update field = %+v, want one use before one declaration", update)
+	}
+	declStart := strings.Index(text, "function t:update") + len("function t:")
+	if update.DeclSpan.Start != declStart {
+		t.Fatalf("update DeclSpan = %+v, want declaration at %d", update.DeclSpan, declStart)
+	}
+	value := tSym.Fields["value"]
+	if value == nil || len(value.Uses) != 1 || len(value.Decls) != 1 {
+		t.Fatalf("value field = %+v, want one read before one write", value)
+	}
+}
+
+func TestFunctionDeclarationUpdatesVisibleLocal(t *testing.T) {
+	text := "local f\nfunction f() return f() end\nprint(f)\n"
+	result, _ := analyzeText(t, text)
+	if len(result.Table.Globals) != 0 {
+		t.Fatalf("globals = %+v, want none", result.Table.Globals)
+	}
+	if len(diagnosticsWithCode(result, CodeUndefinedGlobal)) != 0 {
+		t.Fatalf("diagnostics = %+v, want none", result.Diagnostics)
+	}
+	localSym := result.OccurrenceAt(0, strings.Index(text, "local f")+len("local ")).Symbol
+	fnSym := result.OccurrenceAt(0, strings.Index(text, "function f")+len("function ")).Symbol
+	recursive := result.OccurrenceAt(0, strings.LastIndex(text, "f()")).Symbol
+	if localSym == nil || fnSym != localSym || recursive != localSym {
+		t.Fatalf("symbols local=%+v function=%+v recursive=%+v, want one local", localSym, fnSym, recursive)
+	}
+	if localSym.Kind != SymbolFunction || len(localSym.Uses) != 3 {
+		t.Fatalf("local f = %+v, want function with three uses", localSym)
+	}
+}
+
 func TestFieldOnUnknownReceiverIsNotInvented(t *testing.T) {
 	text := "foo.x = 1\n"
 	result, _ := analyzeText(t, text)

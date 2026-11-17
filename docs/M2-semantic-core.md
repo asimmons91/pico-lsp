@@ -109,7 +109,7 @@ The cart is analyzed as the flattened program from M1. Top-level locals can ther
 ### Globals and forward references
 
 - Any assignment without `local` creates or updates a global symbol.
-- Function declarations at any scope without `local` create a global unless the name is a field path.
+- Function declarations at any scope without `local` are sugar for `f = function()`. They update a visible local if one exists; otherwise they create a global. Field-path declarations resolve the receiver and add a field instead.
 - Build a cart-wide global pre-pass before resolving uses, so a function can be called before its definition.
 - Multiple assignments to the same global merge into one symbol with multiple declarations.
 - If a global is read but never declared and is not a built-in, report `undefined-global` (warning by default, configurable to hint/off/error).
@@ -227,7 +227,6 @@ Rename rules:
 | Code | Default | Behavior |
 |---|---|---|
 | `undefined-global` | Warning | A read of a name that is neither local, global, field, nor built-in. Configurable to `off`, `hint`, `warning`, `error`. |
-| `duplicate-local` | Hint/off | A local redeclared in the same scope. Keep off by default to avoid noise. |
 | `unknown-label` | Warning | `goto` target not found in the function. |
 | `duplicate-label` | Warning | Two labels with the same name in one function. |
 
@@ -335,6 +334,10 @@ Resolved during implementation:
 - Workspace symbols scan the client's workspace folders lazily. When no folders
   are configured, they fall back to the carts behind open documents. The scan is
   capped at 500 results, 2000 files, and a 5 second budget.
+- A dot or method access that appears before its declaration creates a
+  provisional field symbol. A later declaration merges with the earlier use, so
+  rename does not miss forward references. Provisional fields have no
+  declarations and cannot be renamed on their own.
 - A field accessed through a string literal (`t["x"]`) is treated as a dynamic
   access: the cursor on the string does not navigate, and the receiver is marked
   unsafe for field rename because editing inside a string literal is out of

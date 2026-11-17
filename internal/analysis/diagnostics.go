@@ -16,7 +16,6 @@ const (
 // Diagnostic codes owned by the analysis layer.
 const (
 	CodeUndefinedGlobal = "undefined-global"
-	CodeDuplicateLocal  = "duplicate-local"
 	CodeUnknownLabel    = "unknown-label"
 	CodeDuplicateLabel  = "duplicate-label"
 )

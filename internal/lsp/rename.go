@@ -26,7 +26,7 @@ func (s *Server) PrepareRename(ctx context.Context, params *protocol.PrepareRena
 	}
 	return &protocol.PrepareRenamePlaceholder{
 		Range:       nav.file.Index.Range(occ.Span.Start, occ.Span.End),
-		Placeholder: sym.Name,
+		Placeholder: occ.Text,
 	}, nil
 }
 

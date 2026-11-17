@@ -142,6 +142,21 @@ func TestEndToEndDefinitionReferencesAndHighlights(t *testing.T) {
 		t.Fatalf("references without decl = %+v, want 2", withoutDecl)
 	}
 
+	// References from an include-declared symbol reach the root cart.
+	includeRefs, err := h.server.References(ctx, &protocol.ReferenceParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: include},
+			Position:     positionAt(t, includeText, "make_player", 0),
+		},
+		Context: protocol.ReferenceContext{IncludeDeclaration: true},
+	})
+	if err != nil {
+		t.Fatalf("include references: %v", err)
+	}
+	if len(includeRefs) != 2 {
+		t.Fatalf("include references = %+v, want declaration and root call", includeRefs)
+	}
+
 	// Document highlights stay within the requested document (both tabs).
 	highlights, err := h.server.DocumentHighlight(ctx, &protocol.DocumentHighlightParams{
 		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
@@ -443,6 +458,93 @@ func TestEndToEndTopLevelLocalAcrossInclude(t *testing.T) {
 	h.exit(t, true)
 }
 
+func TestEndToEndPrepareRenameUsesCursorSpelling(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nPlayer = 1\nprint(player)\n"
+	root := writeTemp(t, dir, "case.p8", text)
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	prepare, err := h.server.PrepareRename(ctx, &protocol.PrepareRenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     positionAt(t, text, "print(player)", len("print(")),
+		},
+	})
+	if err != nil {
+		t.Fatalf("prepareRename: %v", err)
+	}
+	placeholder, ok := prepare.(*protocol.PrepareRenamePlaceholder)
+	if !ok || placeholder.Placeholder != "player" {
+		t.Fatalf("prepareRename = %T %+v, want placeholder player", prepare, prepare)
+	}
+
+	h.exit(t, true)
+}
+
+func TestEndToEndGlyphRename(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n⬅ = 1\nprint(⬅)\n"
+	root := writeTemp(t, dir, "glyph.p8", text)
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	rename, err := h.server.Rename(ctx, &protocol.RenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     positionAt(t, text, "⬅ = 1", 0),
+		},
+		NewName: "⬆",
+	})
+	if err != nil {
+		t.Fatalf("glyph rename: %v", err)
+	}
+	edits := rename.Changes[root]
+	if len(edits) != 2 {
+		t.Fatalf("glyph rename edits = %+v, want declaration and use", edits)
+	}
+	for _, edit := range edits {
+		if edit.NewText != "⬆" {
+			t.Fatalf("glyph rename edit = %+v, want ⬆", edit)
+		}
+	}
+
+	h.exit(t, true)
+}
+
+func TestEndToEndWorkspaceFoldersChange(t *testing.T) {
+	first := uri.File(t.TempDir())
+	second := uri.File(t.TempDir())
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{
+		WorkspaceFoldersInitializeParams: protocol.WorkspaceFoldersInitializeParams{
+			WorkspaceFolders: protocol.NewNullable([]protocol.WorkspaceFolder{{URI: first, Name: "first"}}),
+		},
+	})
+	if err := h.srv.DidChangeWorkspaceFolders(context.Background(), &protocol.DidChangeWorkspaceFoldersParams{
+		Event: protocol.WorkspaceFoldersChangeEvent{
+			Removed: []protocol.WorkspaceFolder{{URI: first, Name: "first"}},
+			Added:   []protocol.WorkspaceFolder{{URI: second, Name: "second"}},
+		},
+	}); err != nil {
+		t.Fatalf("didChangeWorkspaceFolders: %v", err)
+	}
+	folders := h.srv.WorkspaceFolders()
+	if len(folders) != 1 || folders[0] != second {
+		t.Fatalf("workspace folders = %+v, want %s", folders, second)
+	}
+
+	h.exit(t, true)
+}
+
 func TestEndToEndMissingIncludeDefinitionIsEmpty(t *testing.T) {
 	dir := t.TempDir()
 	rootText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"missing.lua\"\n"
@@ -502,13 +604,9 @@ func TestEndToEndWorkspaceSymbols(t *testing.T) {
 
 	cancelled, cancelRequest := context.WithCancel(context.Background())
 	cancelRequest()
-	result, err = h.srv.Symbols(cancelled, &protocol.WorkspaceSymbolParams{Query: ""})
-	if err != nil {
-		t.Fatalf("cancelled workspace symbols: %v", err)
-	}
-	symbols, ok = result.(protocol.SymbolInformationSlice)
-	if !ok || len(symbols) != 0 {
-		t.Fatalf("cancelled workspace symbols = %+v, want empty", result)
+	_, err = h.srv.Symbols(cancelled, &protocol.WorkspaceSymbolParams{Query: ""})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancelled workspace symbols error = %v, want context.Canceled", err)
 	}
 
 	h.exit(t, true)

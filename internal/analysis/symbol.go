@@ -227,8 +227,9 @@ func (r *Result) addOccurrence(occ Occurrence) {
 	}
 	if occ.Symbol != nil && !occ.Symbol.Builtin {
 		if occ.Decl {
+			first := len(occ.Symbol.Decls) == 0
 			occ.Symbol.Decls = appendUniqueSpan(occ.Symbol.Decls, occ.Span)
-			if occ.Symbol.DeclSpan.IsEmpty() {
+			if first {
 				occ.Symbol.DeclSpan = occ.Span
 				occ.Symbol.SelectionSpan = occ.Span
 			}

@@ -28,19 +28,25 @@ func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolPa
 	if params == nil {
 		return protocol.SymbolInformationSlice{}, nil
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	query := analysis.CanonicalName(params.Query)
 	deadline := time.Now().Add(workspaceSymbolTimeout)
 
-	roots := s.workspaceSymbolRoots(ctx, deadline)
+	roots, scanLimited := s.workspaceSymbolRoots(ctx, deadline)
 	results := make([]protocol.SymbolInformation, 0)
 	seen := make(map[string]struct{})
-	truncated := false
+	truncated := scanLimited
 	for _, root := range roots {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if len(results) >= maxWorkspaceSymbolResults {
 			truncated = true
 			break
 		}
-		if ctx.Err() != nil || time.Now().After(deadline) {
+		if time.Now().After(deadline) {
 			truncated = true
 			break
 		}
@@ -85,11 +91,16 @@ func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolPa
 			}
 		}
 	}
-	if truncated && ctx.Err() == nil {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if truncated {
 		s.log.Warn("workspace symbol results truncated",
 			"count", len(results),
 			"limit", maxWorkspaceSymbolResults,
+			"files", maxWorkspaceSymbolFiles,
 			"timeout", workspaceSymbolTimeout,
+			"scanLimited", scanLimited,
 		)
 	}
 	sort.SliceStable(results, func(i, j int) bool {
@@ -116,14 +127,15 @@ func workspaceSymbolKind(kind analysis.SymbolKind) bool {
 	}
 }
 
-func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) []uri.URI {
+func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) ([]uri.URI, bool) {
 	folders := s.WorkspaceFolders()
 	if len(folders) == 0 {
-		return s.openDocumentRoots(ctx)
+		return s.openDocumentRoots(ctx), false
 	}
 
 	resolver := s.carts.Resolver()
 	seen := make(map[uri.URI]struct{})
+	limited := false
 	add := func(root uri.URI) {
 		if root != "" {
 			seen[root] = struct{}{}
@@ -134,6 +146,7 @@ func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) [
 	files := 0
 	for _, folder := range folders {
 		if ctx.Err() != nil || time.Now().After(deadline) {
+			limited = true
 			break
 		}
 		root := folder.FsPath()
@@ -142,6 +155,7 @@ func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) [
 				return nil
 			}
 			if ctx.Err() != nil || time.Now().After(deadline) {
+				limited = true
 				return fs.SkipAll
 			}
 			if entry.IsDir() {
@@ -153,6 +167,7 @@ func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) [
 			}
 			files++
 			if files > maxWorkspaceSymbolFiles {
+				limited = true
 				return fs.SkipAll
 			}
 			switch strings.ToLower(filepath.Ext(path)) {
@@ -172,6 +187,7 @@ func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) [
 	}
 	for _, path := range luas {
 		if ctx.Err() != nil || time.Now().After(deadline) {
+			limited = true
 			break
 		}
 		add(resolver.Resolve(uri.File(path)))
@@ -182,7 +198,7 @@ func (s *Server) workspaceSymbolRoots(ctx context.Context, deadline time.Time) [
 		out = append(out, root)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].String() < out[j].String() })
-	return out
+	return out, limited
 }
 
 func (s *Server) openDocumentRoots(ctx context.Context) []uri.URI {
