@@ -260,6 +260,12 @@ func (c *Cart) Span(start, end int) source.Span {
 	}
 	fileStart := seg.FileOffset + (start - seg.FlatStart)
 	fileEnd := fileStart + (end - start)
+	if fileStart < 0 {
+		fileStart = 0
+	}
+	if fileEnd < fileStart {
+		fileEnd = fileStart
+	}
 	if file := c.File(seg.FileID); file != nil {
 		if fileStart > len(file.Text) {
 			fileStart = len(file.Text)
