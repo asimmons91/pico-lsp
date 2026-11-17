@@ -1,5 +1,5 @@
 ---
-name: code-reivew
+name: code-review
 description: You are a code reviewer. Your job is to review code changes and provide actionable feedback.
 ---
 
