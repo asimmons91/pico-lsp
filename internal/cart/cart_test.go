@@ -130,6 +130,9 @@ func TestLoadIncludesAndSourceMap(t *testing.T) {
 	if len(cart.Diagnostics) != 0 {
 		t.Fatalf("diagnostics = %+v", cart.Diagnostics)
 	}
+	if cart.Tokens != 12 || cart.Chars != 36 {
+		t.Fatalf("counts = %d/%d, want 12/36", cart.Tokens, cart.Chars)
+	}
 
 	flat := string(cart.Flat)
 	if !strings.Contains(flat, "before=1\nlocal a=1\nprint(a)\nafter=2\n") {
@@ -316,6 +319,28 @@ func TestRootReadError(t *testing.T) {
 	_, err := NewLoader(p, "", nil).Load(uri.File("/tmp/p8/missing.p8"))
 	if !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("error = %v, want not-exist", err)
+	}
+}
+
+func TestSourceMapExactOffsets(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	inc := uri.File("/tmp/p8/a.lua")
+	p := newMapProvider()
+	p.files[inc] = "inside=1\n"
+	rootText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nbefore=1\n#include \"a.lua\"\nafter=2\n"
+	snap := loadText(t, p, root, rootText)
+
+	want := map[string]source.Span{
+		"before": {FileID: 0, Start: strings.Index(rootText, "before"), End: strings.Index(rootText, "before") + 6},
+		"inside": {FileID: 1, Start: 0, End: 6},
+		"after":  {FileID: 0, Start: strings.Index(rootText, "after"), End: strings.Index(rootText, "after") + 5},
+	}
+	for _, tok := range snap.Tokens {
+		if span, ok := want[tok.Text]; ok {
+			if tok.Span != span {
+				t.Errorf("token %q span = %+v, want %+v", tok.Text, tok.Span, span)
+			}
+		}
 	}
 }
 
