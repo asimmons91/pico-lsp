@@ -365,8 +365,7 @@ func attachSymbolTypes(result *Result, resolver TypeResolver, mode TypeCheckingM
 				doc.ParsedGenerics = append(doc.ParsedGenerics, param)
 			}
 			outer := symResolver
-			var scoped TypeResolver
-			scoped = func(name string) (types.Type, bool) {
+			scoped := func(name string) (types.Type, bool) {
 				if param := genericByName[CanonicalName(name)]; param != nil {
 					return param, true
 				}

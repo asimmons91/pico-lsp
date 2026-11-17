@@ -816,7 +816,7 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 	var previous types.Type
 	if fieldSym != nil {
 		previous = fieldSym.Type
-		if fieldSym.TypeExplicit && fieldSym.Type != nil && !(fieldSym.FromClass && ok) {
+		if fieldSym.TypeExplicit && fieldSym.Type != nil && (!fieldSym.FromClass || !ok) {
 			fieldType = fieldSym.Type
 			ok = true
 			optional = fieldSym.Doc != nil && fieldSym.Doc.Optional
