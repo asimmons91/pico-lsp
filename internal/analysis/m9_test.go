@@ -9,6 +9,7 @@ import (
 
 	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/cart"
+	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
 func TestM9InheritanceLookupAndCompatibility(t *testing.T) {
@@ -581,5 +582,23 @@ local v = c.value
 	}
 	if got := types.Display(symbolByName(result, "v").Type); got != "integer" {
 		t.Fatalf("overridden field type = %q, want integer", got)
+	}
+}
+
+func TestM9AnnotationNamesHandleExactAndParents(t *testing.T) {
+	comments := []syntax.Comment{
+		{Kind: syntax.CommentDoc, Text: "---@class (exact) Point", Line: 0},
+		{Kind: syntax.CommentDoc, Text: "---@class Enemy: Entity", Line: 1},
+		{Kind: syntax.CommentDoc, Text: "---@alias Mode string", Line: 2},
+	}
+	names := AnnotationNames(comments)
+	want := []string{"Point", "Enemy", "Mode"}
+	if len(names) != len(want) {
+		t.Fatalf("annotation names = %v, want %v", names, want)
+	}
+	for i := range want {
+		if names[i] != want[i] {
+			t.Fatalf("annotation names = %v, want %v", names, want)
+		}
 	}
 }

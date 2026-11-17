@@ -577,7 +577,10 @@ func AnnotationNames(comments []syntax.Comment) []string {
 			continue
 		}
 		switch fields[0] {
-		case "@class", "@alias":
+		case "@class":
+			name, _, _, _ := parseClassHeader(text[len("@class"):])
+			add(name)
+		case "@alias":
 			add(strings.TrimSuffix(fields[1], ":"))
 		}
 	}
