@@ -131,10 +131,17 @@ type Provider interface {
 	List(uri.URI) ([]uri.URI, error)
 }
 
+// SizeProvider optionally reports a file's size before it is read, so callers
+// can reject oversized input without allocating it.
+type SizeProvider interface {
+	Size(uri.URI) (int64, error)
+}
+
 // ProviderFuncs adapts functions into a Provider.
 type ProviderFuncs struct {
 	ReadFunc func(uri.URI) ([]byte, error)
 	ListFunc func(uri.URI) ([]uri.URI, error)
+	SizeFunc func(uri.URI) (int64, error)
 }
 
 func (p ProviderFuncs) Read(u uri.URI) ([]byte, error) {
@@ -151,6 +158,13 @@ func (p ProviderFuncs) List(u uri.URI) ([]uri.URI, error) {
 	return p.ListFunc(u)
 }
 
+func (p ProviderFuncs) Size(u uri.URI) (int64, error) {
+	if p.SizeFunc == nil {
+		return 0, fmt.Errorf("cart: no size provider")
+	}
+	return p.SizeFunc(u)
+}
+
 // DiskProvider reads files and directories from the local filesystem.
 type DiskProvider struct{}
 
@@ -163,6 +177,17 @@ func (DiskProvider) Read(u uri.URI) ([]byte, error) {
 		return nil, fmt.Errorf("not a regular file")
 	}
 	return os.ReadFile(u.FsPath())
+}
+
+func (DiskProvider) Size(u uri.URI) (int64, error) {
+	info, err := os.Stat(u.FsPath())
+	if err != nil {
+		return 0, err
+	}
+	if !info.Mode().IsRegular() {
+		return 0, fmt.Errorf("not a regular file")
+	}
+	return info.Size(), nil
 }
 
 func (DiskProvider) List(u uri.URI) ([]uri.URI, error) {
@@ -233,6 +258,19 @@ func (c *Cart) FileID(u uri.URI) source.FileID {
 
 // Span maps a flattened byte range to an original file. Ranges that cross a
 // segment boundary are clamped to the segment containing the start.
+// sizeOf returns a known file size when the provider supports it.
+func (l *Loader) sizeOf(u uri.URI) (int64, bool) {
+	sp, ok := l.Provider.(SizeProvider)
+	if !ok {
+		return 0, false
+	}
+	size, err := sp.Size(u)
+	if err != nil {
+		return 0, false
+	}
+	return size, true
+}
+
 func (c *Cart) Span(start, end int) source.Span {
 	if c == nil || len(c.Segments) == 0 {
 		return source.Span{Start: start, End: end}

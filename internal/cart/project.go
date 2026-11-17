@@ -86,6 +86,9 @@ func (r *Resolver) findOwner(target uri.URI) uri.URI {
 }
 
 func (r *Resolver) cartIncludes(cartURI, target uri.URI) bool {
+	if size, ok := r.loader.sizeOf(cartURI); ok && size > int64(r.loader.maxSize()) {
+		return false
+	}
 	data, err := r.loader.Provider.Read(cartURI)
 	if err != nil {
 		return false

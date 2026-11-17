@@ -367,6 +367,18 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 		return false
 	}
 
+	max := f.loader.maxSize()
+	if size, ok := f.loader.sizeOf(resolved); ok && size > int64(max) {
+		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, DirectiveSpan: span, Unreadable: true})
+		f.diags = append(f.diags, Diagnostic{
+			Code:     CodeIncludeUnreadable,
+			Message:  fmt.Sprintf("included file is too large: %s (%d bytes)", path, size),
+			Span:     span,
+			Severity: SeverityError,
+		})
+		return false
+	}
+
 	data, readErr := f.loader.Provider.Read(resolved)
 	if readErr != nil {
 		record := Include{Path: path, ResolvedURI: resolved, DirectiveSpan: span}
@@ -391,7 +403,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 		return false
 	}
 
-	if max := f.loader.maxSize(); len(data) > max {
+	if len(data) > max {
 		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, DirectiveSpan: span, Unreadable: true})
 		f.diags = append(f.diags, Diagnostic{
 			Code:     CodeIncludeUnreadable,

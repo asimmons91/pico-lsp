@@ -28,6 +28,14 @@ func (p *mapProvider) Read(u uri.URI) ([]byte, error) {
 	return []byte(text), nil
 }
 
+func (p *mapProvider) Size(u uri.URI) (int64, error) {
+	text, ok := p.files[u]
+	if !ok {
+		return 0, fs.ErrNotExist
+	}
+	return int64(len(text)), nil
+}
+
 func (p *mapProvider) List(u uri.URI) ([]uri.URI, error) {
 	dir := filepath.Clean(u.FsPath())
 	var out []uri.URI
@@ -688,5 +696,86 @@ func TestP8BOMBeforeLuaHeader(t *testing.T) {
 	}
 	if len(snap.Cart.Sections) != 1 || snap.Cart.Sections[0].HeaderSpan.Start != len("\ufeff") {
 		t.Fatalf("sections = %+v", snap.Cart.Sections)
+	}
+}
+
+type sizeOnlyProvider struct {
+	size int64
+}
+
+func (p sizeOnlyProvider) Read(uri.URI) ([]byte, error) {
+	panic("oversized file should not be read")
+}
+
+func (p sizeOnlyProvider) List(uri.URI) ([]uri.URI, error) { return nil, nil }
+
+func (p sizeOnlyProvider) Size(uri.URI) (int64, error) { return p.size, nil }
+
+func TestLoadRejectsOversizedRootBeforeReading(t *testing.T) {
+	loader := NewLoader(sizeOnlyProvider{size: 100}, "", nil)
+	loader.MaxFileSize = 10
+	snap, err := loader.Load(uri.File("/tmp/p8/huge.p8"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.Cart.Flat) != 0 {
+		t.Fatalf("flat = %q, want empty", snap.Cart.Flat)
+	}
+	found := false
+	for _, diag := range snap.Cart.Diagnostics {
+		if strings.Contains(diag.Message, "larger than the supported size") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("diagnostics = %+v", snap.Cart.Diagnostics)
+	}
+}
+
+type sizeOverrideProvider struct {
+	*mapProvider
+	sizes     map[uri.URI]int64
+	panicRead uri.URI
+}
+
+func (p sizeOverrideProvider) Size(u uri.URI) (int64, error) {
+	if size, ok := p.sizes[u]; ok {
+		return size, nil
+	}
+	return p.mapProvider.Size(u)
+}
+
+func (p sizeOverrideProvider) Read(u uri.URI) ([]byte, error) {
+	if u == p.panicRead {
+		panic("oversized include should not be read")
+	}
+	return p.mapProvider.Read(u)
+}
+
+func TestIncludeOversizedIsRejectedBeforeReading(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	inc := uri.File("/tmp/p8/huge.lua")
+	p := newMapProvider()
+	p.files[root] = "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"huge.lua\"\n"
+	p.files[inc] = ""
+	provider := sizeOverrideProvider{
+		mapProvider: p,
+		sizes:       map[uri.URI]int64{inc: 2000},
+		panicRead:   inc,
+	}
+	loader := NewLoader(provider, "", nil)
+	loader.MaxFileSize = 1000
+	snap, err := loader.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, diag := range snap.Cart.Diagnostics {
+		if strings.Contains(diag.Message, "too large") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("diagnostics = %+v", snap.Cart.Diagnostics)
 	}
 }

@@ -19,6 +19,10 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 		return l.emptySnapshot(rootURI, "", "PICO-8 PNG carts are not supported yet; save as .p8."), nil
 	}
 
+	if size, ok := l.sizeOf(rootURI); ok && size > int64(l.maxSize()) {
+		return l.emptySnapshot(rootURI, "", fmt.Sprintf("cart is larger than the supported size (%d bytes)", l.maxSize())), nil
+	}
+
 	data, err := l.Provider.Read(rootURI)
 	if err != nil {
 		return nil, fmt.Errorf("cart: read %s: %w", rootURI.String(), err)
