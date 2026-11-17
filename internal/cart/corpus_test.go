@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"go.lsp.dev/uri"
+
+	"github.com/asimmons91/pico-lsp/internal/source"
 )
 
 type tokenFixture struct {
@@ -158,6 +160,35 @@ func BenchmarkFlattenTenIncludes(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		if _, err := loader.Load(root); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+func TestCorpusTokenSpansAreWithinFiles(t *testing.T) {
+	loader := NewLoader(DiskProvider{}, "", nil)
+	for _, path := range corpusFiles(t) {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			t.Fatalf("abs: %v", err)
+		}
+		snap, err := loader.Load(uri.File(abs))
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		check := func(kind, text string, span source.Span) {
+			file := snap.Cart.File(span.FileID)
+			if file == nil {
+				t.Fatalf("%s: %s %q has no file: %+v", path, kind, text, span)
+			}
+			if span.Start < 0 || span.End < span.Start || span.End > len(file.Text) {
+				t.Fatalf("%s: %s %q span out of bounds: %+v (len %d)", path, kind, text, span, len(file.Text))
+			}
+		}
+		for _, tok := range snap.Tokens {
+			check("token", tok.Text, tok.Span)
+		}
+		for _, comment := range snap.Comments {
+			check("comment", comment.Text, comment.Span)
 		}
 	}
 }
