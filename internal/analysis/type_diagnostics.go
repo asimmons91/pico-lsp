@@ -18,8 +18,27 @@ func isTypeDiagnosticCode(code string) bool {
 	}
 }
 
-func applyTypeDiagnosticSuppressions(result *Result, mode TypeCheckingMode) {
-	if result == nil || mode == TypeCheckingOff || len(result.DiagnosticDirectives) == 0 {
+// IsSuppressibleDiagnosticCode reports whether ---@diagnostic can suppress code.
+func IsSuppressibleDiagnosticCode(code string) bool {
+	return isSuppressibleDiagnosticCode(code)
+}
+
+func isSuppressibleDiagnosticCode(code string) bool {
+	if isTypeDiagnosticCode(code) {
+		return true
+	}
+	switch code {
+	case CodeCallbackPrecedence, CodeCallbackParams, CodeNoStdlib,
+		CodeDuplicateTableField, CodeUnreachableCode, CodeUnusedLocal,
+		CodeShadowedLocal, CodeEmptyBlock, CodeGlobalInFunction:
+		return true
+	default:
+		return false
+	}
+}
+
+func applyDiagnosticSuppressions(result *Result) {
+	if result == nil || len(result.DiagnosticDirectives) == 0 {
 		return
 	}
 	directives := append([]DiagnosticDirective(nil), result.DiagnosticDirectives...)
@@ -35,7 +54,7 @@ func applyTypeDiagnosticSuppressions(result *Result, mode TypeCheckingMode) {
 
 	out := result.Diagnostics[:0]
 	for _, diag := range result.Diagnostics {
-		if isTypeDiagnosticCode(diag.Code) && suppressedByDirectives(result, directives, diag) {
+		if isSuppressibleDiagnosticCode(diag.Code) && suppressedByDirectives(result, directives, diag) {
 			continue
 		}
 		out = append(out, diag)

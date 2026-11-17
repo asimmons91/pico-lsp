@@ -31,10 +31,11 @@ var errUnhandledMethod = errors.New("unhandled LSP method")
 // error instead of MethodNotFound. Later milestones add pico8/... methods here
 // when they implement custom requests.
 var protocolMethods = func() map[string]struct{} {
-	methods := make(map[string]struct{}, len(protocol.Methods))
+	methods := make(map[string]struct{}, len(protocol.Methods)+1)
 	for _, info := range protocol.Methods {
 		methods[info.Method] = struct{}{}
 	}
+	methods[RequestCartInfo] = struct{}{}
 	return methods
 }()
 
@@ -100,6 +101,8 @@ type Server struct {
 	workspaceMu      sync.Mutex
 	workspaceFolders []uri.URI
 
+	watchedFilesDynamic bool
+
 	cancelMu sync.Mutex
 	cancels  map[jsonrpc2.ID]context.CancelFunc
 
@@ -145,7 +148,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		builtins = analysis.BuildBuiltins(api)
 	}
 
-	s.carts = NewCartManager(s.docs, s.diags, func() config.Settings { return s.cfg.Settings() }, builtins, log)
+	s.carts = NewCartManager(s.docs, s.diags, func() config.Settings { return s.cfg.Settings() }, s.WorkspaceFolders, builtins, log)
 	return s
 }
 
@@ -450,6 +453,10 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	s.mu.Unlock()
 
 	s.setWorkspaceFolders(initializeFolders(params))
+	if params.Capabilities.Workspace != nil && params.Capabilities.Workspace.DidChangeWatchedFiles != nil {
+		capability := params.Capabilities.Workspace.DidChangeWatchedFiles
+		s.watchedFilesDynamic = capability.DynamicRegistration != nil && *capability.DynamicRegistration
+	}
 
 	clientName := params.ClientInfo.Name
 	clientVersion, _ := params.ClientInfo.Version.Get()
@@ -477,6 +484,9 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 			},
 			HoverProvider:             protocol.Boolean(true),
 			SignatureHelpProvider:     &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
+			CodeActionProvider:        protocol.Boolean(true),
+			CodeLensProvider:          &protocol.CodeLensOptions{},
+			ExecuteCommandProvider:    protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo}},
 			DefinitionProvider:        protocol.Boolean(true),
 			ReferencesProvider:        protocol.Boolean(true),
 			DocumentHighlightProvider: protocol.Boolean(true),
@@ -506,6 +516,7 @@ func (s *Server) Initialized(ctx context.Context, params *protocol.InitializedPa
 	s.diags.Enable()
 	s.log.Debug("client initialized notification received")
 	s.carts.AnalyzeOpen(ctx)
+	s.registerFileWatchers(ctx)
 	s.pullConfiguration(ctx)
 	return nil
 }
@@ -578,7 +589,16 @@ func (s *Server) DidChangeConfiguration(ctx context.Context, params *protocol.Di
 // Request handles non-standard methods. $/cancelRequest is handled by dispatch
 // before this method is reached.
 func (s *Server) Request(ctx context.Context, method string, params any) (any, error) {
-	return nil, errUnhandledMethod
+	switch method {
+	case RequestCartInfo:
+		raw, ok := params.(protocol.LSPAny)
+		if !ok {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
+		}
+		return s.cartInfoRequest(ctx, raw)
+	default:
+		return nil, errUnhandledMethod
+	}
 }
 
 func (s *Server) pullConfiguration(ctx context.Context) {

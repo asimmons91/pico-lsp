@@ -63,7 +63,6 @@ func inferTypes(snap *cart.Snapshot, result *Result, opts Options) {
 	inf.inferBlock(snap.Chunk.Block, make(map[*Symbol]types.Type))
 	inf.applyCallSites()
 	inf.emitDeprecated()
-	applyTypeDiagnosticSuppressions(result, mode)
 }
 
 func (inf *inferer) beginPass() {

@@ -11,6 +11,17 @@ func analysisOptions(settings config.Settings) analysis.Options {
 	return analysis.Options{
 		UndefinedGlobal: configuredSeverity(settings.Diagnostics.UndefinedGlobal),
 		TypeChecking:    configuredTypeChecking(settings.TypeChecking),
+		Lint: analysis.LintOptions{
+			CallbackPrecedence:  configuredSeverity(settings.Diagnostics.CallbackPrecedence),
+			CallbackParams:      configuredSeverity(settings.Diagnostics.CallbackParams),
+			NoStdlib:            configuredSeverity(settings.Diagnostics.NoStdlib),
+			DuplicateTableField: configuredSeverity(settings.Diagnostics.DuplicateTableField),
+			UnreachableCode:     configuredSeverity(settings.Diagnostics.UnreachableCode),
+			UnusedLocal:         configuredSeverity(settings.Diagnostics.UnusedLocal),
+			ShadowedLocal:       configuredSeverity(settings.Diagnostics.ShadowedLocal),
+			EmptyBlock:          configuredSeverity(settings.Diagnostics.EmptyBlock),
+			GlobalInFunction:    configuredSeverity(settings.Diagnostics.GlobalInFunction),
+		},
 	}
 }
 

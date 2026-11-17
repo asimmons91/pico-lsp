@@ -111,6 +111,8 @@ type Cart struct {
 	Flat        []byte
 	Tokens      int
 	Chars       int
+	FileTokens  map[source.FileID]int
+	FileChars   map[source.FileID]int
 	Version     int
 	Diagnostics []Diagnostic
 }

@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -376,6 +377,20 @@ func includeMarkdown(nav *navContext, include *cart.Include) string {
 		b.WriteString("\n\nResolved path: `")
 		b.WriteString(resolved)
 		b.WriteString("`")
+		if nav != nil && nav.snap != nil && nav.snap.Cart != nil {
+			if id := nav.snap.Cart.FileID(include.ResolvedURI); id >= 0 {
+				if file := nav.snap.Cart.File(id); file != nil {
+					b.WriteString("\n\nFile size: ")
+					b.WriteString(strconv.Itoa(len(file.Text)))
+					b.WriteString(" bytes · ")
+					b.WriteString(strconv.Itoa(nav.snap.Cart.FileTokens[id]))
+					b.WriteString(" tokens")
+				}
+			}
+		}
+	}
+	if include.Nested {
+		b.WriteString("\n\nNested include: this directive is pasted literally and is not expanded.")
 	}
 	b.WriteString("\n\nIncludes are flattened into the cart and are non-recursive.")
 	return truncateMarkdown(b.String())

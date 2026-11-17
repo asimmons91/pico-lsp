@@ -38,6 +38,19 @@ const (
 	CodeTypeUnknown        = "type-unknown"
 )
 
+// PICO-8 lint diagnostic codes.
+const (
+	CodeCallbackPrecedence  = "pico8-callback-precedence"
+	CodeCallbackParams      = "pico8-callback-params"
+	CodeNoStdlib            = "pico8-no-stdlib"
+	CodeDuplicateTableField = "duplicate-table-field"
+	CodeUnreachableCode     = "unreachable-code"
+	CodeUnusedLocal         = "unused-local"
+	CodeShadowedLocal       = "shadowed-local"
+	CodeEmptyBlock          = "empty-block"
+	CodeGlobalInFunction    = "global-in-function"
+)
+
 // Diagnostic is one analysis diagnostic before LSP conversion.
 type Diagnostic struct {
 	Code     string

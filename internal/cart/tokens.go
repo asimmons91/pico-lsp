@@ -3,6 +3,7 @@ package cart
 import (
 	"unicode/utf8"
 
+	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
@@ -13,34 +14,51 @@ import (
 // phrasing in some community references; the golden fixtures use shrinko8.
 func CountTokens(tokens []syntax.Token) int {
 	count := 0
-	for i, tok := range tokens {
-		switch tok.Kind {
-		case syntax.TokenEOF, syntax.TokenComment, syntax.TokenInvalid:
-			continue
+	for i := range tokens {
+		if countsToken(tokens, i) {
+			count++
 		}
-
-		if tok.Kind == syntax.TokenPunct || tok.Kind == syntax.TokenKeyword {
-			switch tok.Text {
-			case ",", ".", ":", ";", "::", ")", "]", "}":
-				continue
-			}
-			if tok.Kind == syntax.TokenKeyword {
-				switch tok.Value {
-				case "local", "end":
-					continue
-				}
-			}
-		}
-
-		if (tok.Text == "-" || tok.Text == "~") && i+1 < len(tokens) && tokens[i+1].Kind == syntax.TokenNumber {
-			if i == 0 || isUnaryFoldedContext(tokens[i-1]) {
-				continue
-			}
-		}
-
-		count++
 	}
 	return count
+}
+
+// CountTokensByFile attributes counted tokens to their original source file.
+func CountTokensByFile(tokens []syntax.Token) map[source.FileID]int {
+	out := make(map[source.FileID]int)
+	for i := range tokens {
+		if countsToken(tokens, i) {
+			out[tokens[i].Span.FileID]++
+		}
+	}
+	return out
+}
+
+func countsToken(tokens []syntax.Token, i int) bool {
+	tok := tokens[i]
+	switch tok.Kind {
+	case syntax.TokenEOF, syntax.TokenComment, syntax.TokenInvalid:
+		return false
+	}
+
+	if tok.Kind == syntax.TokenPunct || tok.Kind == syntax.TokenKeyword {
+		switch tok.Text {
+		case ",", ".", ":", ";", "::", ")", "]", "}":
+			return false
+		}
+		if tok.Kind == syntax.TokenKeyword {
+			switch tok.Value {
+			case "local", "end":
+				return false
+			}
+		}
+	}
+
+	if (tok.Text == "-" || tok.Text == "~") && i+1 < len(tokens) && tokens[i+1].Kind == syntax.TokenNumber {
+		if i == 0 || isUnaryFoldedContext(tokens[i-1]) {
+			return false
+		}
+	}
+	return true
 }
 
 func isUnaryFoldedContext(prev syntax.Token) bool {
@@ -56,6 +74,37 @@ func isUnaryFoldedContext(prev syntax.Token) bool {
 		return false
 	}
 	return true
+}
+
+// CountCharsBySegment attributes flattened character contributions to the
+// original file that supplied each segment. Duplicate includes are counted
+// once per occurrence.
+func CountCharsBySegment(segments []Segment, flat []byte) map[source.FileID]int {
+	out := make(map[source.FileID]int)
+	previousEnd := 0
+	for _, segment := range segments {
+		start, end := segment.FlatStart, segment.FlatEnd
+		if start < 0 {
+			start = 0
+		}
+		if end > len(flat) {
+			end = len(flat)
+		}
+		if start > previousEnd {
+			// Separators inserted by the flattener are part of the root cart's
+			// assembled source.
+			out[0] += CountChars(flat[previousEnd:start])
+		}
+		if end <= start {
+			continue
+		}
+		out[segment.FileID] += CountChars(flat[start:end])
+		previousEnd = end
+	}
+	if previousEnd < len(flat) {
+		out[0] += CountChars(flat[previousEnd:])
+	}
+	return out
 }
 
 // CountChars returns the number of PICO-8/P8SCII characters in assembled

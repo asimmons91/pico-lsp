@@ -352,3 +352,46 @@ func TestApplyDidChange(t *testing.T) {
 		t.Fatalf("typeChecking = %q, want default", got.TypeChecking)
 	}
 }
+
+func TestM5Settings(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{
+		"pico8": {
+			"limits": {"codeLens": false, "diagnostics": false},
+			"lint": {"apiRanges": true},
+			"diagnostics": {
+				"unreachableCode": "warning",
+				"duplicateTableField": "off",
+				"callbackPrecedence": "warning",
+				"callbackParams": "hint",
+				"noStdlib": "warning",
+				"shadowedLocal": "hint",
+				"emptyBlock": "hint",
+				"globalInFunction": "hint",
+				"includeOutsideWorkspace": "off",
+				"includeUnusualType": "warning",
+				"includeDuplicate": "hint"
+			}
+		}
+	}`))
+	got := m.Settings()
+	if got.Limits.CodeLens || got.Limits.Diagnostics {
+		t.Fatalf("limits = %+v", got.Limits)
+	}
+	if !got.Lint.APIRanges {
+		t.Fatal("apiRanges = false")
+	}
+	if got.Diagnostics.UnreachableCode != "warning" ||
+		got.Diagnostics.DuplicateTableField != "off" ||
+		got.Diagnostics.CallbackPrecedence != "warning" ||
+		got.Diagnostics.CallbackParams != "hint" ||
+		got.Diagnostics.NoStdlib != "warning" ||
+		got.Diagnostics.ShadowedLocal != "hint" ||
+		got.Diagnostics.EmptyBlock != "hint" ||
+		got.Diagnostics.GlobalInFunction != "hint" ||
+		got.Diagnostics.IncludeOutsideWorkspace != "off" ||
+		got.Diagnostics.IncludeUnusualType != "warning" ||
+		got.Diagnostics.IncludeDuplicate != "hint" {
+		t.Fatalf("diagnostics = %+v", got.Diagnostics)
+	}
+}

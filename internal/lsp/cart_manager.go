@@ -23,10 +23,11 @@ import (
 // CartManager loads and caches the cart that owns each open document, binds
 // its symbols, and publishes diagnostics.
 type CartManager struct {
-	docs     *DocumentStore
-	diags    *Diagnostics
-	log      *slog.Logger
-	settings func() config.Settings
+	docs             *DocumentStore
+	diags            *Diagnostics
+	log              *slog.Logger
+	settings         func() config.Settings
+	workspaceFolders func() []uri.URI
 
 	mu        sync.Mutex
 	analyzeMu sync.Mutex
@@ -43,21 +44,25 @@ type cartEntry struct {
 	files     map[uri.URI]struct{}
 }
 
-func NewCartManager(docs *DocumentStore, diags *Diagnostics, settings func() config.Settings, builtins map[string]*analysis.Symbol, log *slog.Logger) *CartManager {
+func NewCartManager(docs *DocumentStore, diags *Diagnostics, settings func() config.Settings, workspaceFolders func() []uri.URI, builtins map[string]*analysis.Symbol, log *slog.Logger) *CartManager {
 	if log == nil {
 		log = slog.Default()
 	}
 	if settings == nil {
 		settings = func() config.Settings { return config.Default() }
 	}
+	if workspaceFolders == nil {
+		workspaceFolders = func() []uri.URI { return nil }
+	}
 	m := &CartManager{
-		docs:     docs,
-		diags:    diags,
-		settings: settings,
-		builtins: builtins,
-		log:      log,
-		byRoot:   make(map[uri.URI]*cartEntry),
-		byFile:   make(map[uri.URI]uri.URI),
+		docs:             docs,
+		diags:            diags,
+		settings:         settings,
+		workspaceFolders: workspaceFolders,
+		builtins:         builtins,
+		log:              log,
+		byRoot:           make(map[uri.URI]*cartEntry),
+		byFile:           make(map[uri.URI]uri.URI),
 	}
 	m.loader = cart.NewLoader(m.provider(), protocol.PositionEncodingKindUTF16, log)
 	m.resolver = cart.NewResolver(m.loader)
@@ -159,6 +164,19 @@ func (m *CartManager) AnalyzeChange(ctx context.Context, u uri.URI) {
 	invalidate := isCartURI(u)
 	root := m.analyzeLocked(ctx, u, invalidate)
 	m.refreshAfterLocked(ctx, u, invalidate, root)
+}
+
+// WatchedChange handles a filesystem create/change/delete event. Ownership may
+// have changed, so the resolver is always invalidated.
+func (m *CartManager) WatchedChange(ctx context.Context, u uri.URI) {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+	m.mu.Lock()
+	resolver := m.resolver
+	m.mu.Unlock()
+	resolver.Invalidate()
+	root := m.analyzeLocked(ctx, u, false)
+	m.refreshAfterLocked(ctx, u, isCartURI(u), root)
 }
 
 func isCartURI(u uri.URI) bool {
@@ -361,6 +379,17 @@ func (m *CartManager) documentVersion(u uri.URI) *int32 {
 
 func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantics *analysis.Result, previous *cartEntry) {
 	items := make(map[uri.URI][]protocol.Diagnostic)
+	settings := m.settings()
+	if snap != nil && snap.Cart != nil {
+		items[snap.Cart.RootURI] = append(items[snap.Cart.RootURI], cartLimitDiagnostics(snap, settings)...)
+		for _, diag := range m.includeDiagnostics(snap, settings) {
+			file := snap.Cart.File(diag.span.FileID)
+			if file == nil {
+				continue
+			}
+			items[file.URI] = append(items[file.URI], newDiagnostic(file.Index, diag.span.Start, diag.span.End, diag.severity, diag.code, diag.message))
+		}
+	}
 	add := func(span source.Span, severity protocol.DiagnosticSeverity, code, message string) {
 		file := snap.Cart.File(span.FileID)
 		if file == nil {
@@ -374,7 +403,7 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantic
 		if diag.Severity == cart.SeverityWarning {
 			severity = protocol.DiagnosticSeverityWarning
 		}
-		add(diag.Span, severity, diag.Code, diag.Message)
+		add(narrowIncludeDiagnosticSpan(snap, diag.Span), severity, diag.Code, diag.Message)
 	}
 	for _, parseErr := range snap.Errors {
 		add(parseErr.Span, protocol.DiagnosticSeverityError, syntax.DiagnosticCode, parseErr.Message)
