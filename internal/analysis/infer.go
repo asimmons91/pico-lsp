@@ -685,7 +685,9 @@ func (inf *inferer) inferExpr(expr syntax.Expr, env map[*Symbol]types.Type) type
 	typ = inf.applyAs(expr, typ)
 	if inf.final {
 		if name, ok := expr.(*syntax.NameExpr); ok {
-			inf.result.recordFlow(name.Span(), typ)
+			if sym := inf.symbolAt(name); sym == nil || !types.Identical(typ, sym.Type) {
+				inf.result.recordFlow(name.Span(), typ)
+			}
 		}
 	}
 	return typ
@@ -806,17 +808,11 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 				inf.report(CodeUndefinedField, fmt.Sprintf("field %q does not exist on %s", e.Name.Text, types.Display(base)), e.Name.Span())
 			}
 		}
-		if inf.final {
-			inf.result.recordFlow(e.Name.Span(), types.AnyType)
-		}
 		return types.AnyType
 	}
 	resultType := fieldType
 	if optional {
 		resultType = types.Optional(fieldType)
-	}
-	if inf.final {
-		inf.result.recordFlow(e.Name.Span(), resultType)
 	}
 	return resultType
 }
@@ -993,9 +989,6 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 			inf.checkCall(method, explicit, argTypes, e.Args)
 			resultType = callReturnType(fn)
 		}
-	}
-	if inf.final && e.Method != nil && method != nil && method.Type != nil {
-		inf.result.recordFlow(e.Method.Span(), method.Type)
 	}
 	return resultType
 }

@@ -641,3 +641,36 @@ func IsUnion(t Type) bool {
 	union, ok := Resolve(t).(Union)
 	return ok && len(union.Members) > 1
 }
+
+// Identical reports whether a and b are the same type node or an equal
+// primitive/literal. It is a conservative fast path for deciding whether a
+// flow-narrowed type needs to be stored separately; false does not imply the
+// types differ structurally.
+func Identical(a, b Type) bool {
+	a = Resolve(a)
+	b = Resolve(b)
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	switch av := a.(type) {
+	case Primitive:
+		bv, ok := b.(Primitive)
+		return ok && av == bv
+	case Literal:
+		bv, ok := b.(Literal)
+		return ok && literalEqual(av.Value, bv.Value)
+	case *Record:
+		bv, ok := b.(*Record)
+		return ok && av == bv
+	case *Function:
+		bv, ok := b.(*Function)
+		return ok && av == bv
+	case *Alias:
+		bv, ok := b.(*Alias)
+		return ok && av == bv
+	case *TypeVar:
+		bv, ok := b.(*TypeVar)
+		return ok && av == bv
+	}
+	return false
+}
