@@ -739,8 +739,10 @@ func (inf *inferer) inferBinary(e *syntax.BinaryExpr, env map[*Symbol]types.Type
 		return types.UnionOf(truthy, right)
 	}
 	right := firstType(inf.inferExpr(e.Right, env))
-	if typ, ok := inf.operatorResult(e.Op.Text, left, right, e.Left.Span(), e.Right.Span()); ok {
-		return typ
+	if operatorReceiver(left) || operatorReceiver(right) {
+		if typ, ok := inf.operatorResult(e.Op.Text, left, right, e.Left.Span(), e.Right.Span()); ok {
+			return typ
+		}
 	}
 	if inf.final && inf.mode == TypeCheckingStrict && requiresNonNil(e.Op.Text) {
 		if types.ContainsNil(left) && !types.IsAny(left) {
