@@ -416,17 +416,20 @@ func dedupeGenericDecls(decls []GenericDecl) []GenericDecl {
 	if len(decls) < 2 {
 		return decls
 	}
-	seen := make(map[string]struct{}, len(decls))
+	seen := make(map[string]int, len(decls))
 	out := decls[:0]
 	for _, decl := range decls {
 		key := CanonicalName(decl.Name)
 		if key == "" {
 			continue
 		}
-		if _, ok := seen[key]; ok {
+		if index, ok := seen[key]; ok {
+			if out[index].Default == "" && decl.Default != "" {
+				out[index].Default = decl.Default
+			}
 			continue
 		}
-		seen[key] = struct{}{}
+		seen[key] = len(out)
 		out = append(out, decl)
 	}
 	return out
