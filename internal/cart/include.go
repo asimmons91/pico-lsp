@@ -431,12 +431,10 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 			})
 			return false
 		}
+		record.FileSpan = source.Span{FileID: fileID}
 		if len(selected) > 0 {
-			record.FileSpan = source.Span{
-				FileID: fileID,
-				Start:  selected[0].start,
-				End:    selected[len(selected)-1].end,
-			}
+			record.FileSpan.Start = selected[0].start
+			record.FileSpan.End = selected[len(selected)-1].end
 		}
 		f.includes = append(f.includes, record)
 		f.appendIncluded(text, selected, fileID, filepath.Dir(resolved.FsPath()), trimFinal)

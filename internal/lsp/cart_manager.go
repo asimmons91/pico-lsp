@@ -127,7 +127,10 @@ func (m *CartManager) AnalyzeChange(ctx context.Context, u uri.URI) {
 func (m *CartManager) analyze(ctx context.Context, u uri.URI, invalidate bool) {
 	m.analyzeMu.Lock()
 	defer m.analyzeMu.Unlock()
+	m.analyzeLocked(ctx, u, invalidate)
+}
 
+func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate bool) {
 	m.mu.Lock()
 	resolver := m.resolver
 	m.mu.Unlock()
@@ -181,6 +184,9 @@ func (m *CartManager) AnalyzeOpen(ctx context.Context) {
 // owning cart, its diagnostics and cache entry are removed instead of being
 // kept as a stale snapshot.
 func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+
 	m.mu.Lock()
 	resolver := m.resolver
 	m.mu.Unlock()
@@ -209,7 +215,7 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 					continue
 				}
 				if _, open := m.docs.Get(file); open {
-					m.analyze(ctx, file, false)
+					m.analyzeLocked(ctx, file, false)
 				} else {
 					m.diags.Clear(ctx, file)
 				}
@@ -218,7 +224,7 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 			return
 		}
 	}
-	m.Analyze(ctx, u)
+	m.analyzeLocked(ctx, u, false)
 }
 
 func (m *CartManager) handleLoadError(ctx context.Context, u, root uri.URI, previous *cartEntry, err error) {
