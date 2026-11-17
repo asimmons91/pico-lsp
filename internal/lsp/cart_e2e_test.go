@@ -499,3 +499,33 @@ __sfx__
 	}
 	h.exit(t, true)
 }
+
+func TestEndToEndDidOpenBeforeInitialized(t *testing.T) {
+	dir := t.TempDir()
+	text := "x = 1 +\n"
+	u := writeTemp(t, dir, "early.lua", text)
+
+	h := newHarness(t, newTestClient())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := h.server.Initialize(ctx, &protocol.InitializeParams{}); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	openDoc(t, h, ctx, u, text)
+	select {
+	case params := <-h.client.diagnostics:
+		t.Fatalf("diagnostics published before initialized: %+v", params)
+	case <-time.After(20 * time.Millisecond):
+	}
+
+	if err := h.server.Initialized(ctx, &protocol.InitializedParams{}); err != nil {
+		t.Fatalf("initialized: %v", err)
+	}
+	params := waitDiagnostic(t, h.client, u)
+	if len(params.Diagnostics) == 0 {
+		t.Fatal("diagnostics were not published after initialized")
+	}
+
+	h.exit(t, true)
+}

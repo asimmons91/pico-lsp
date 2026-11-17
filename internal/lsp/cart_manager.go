@@ -141,6 +141,15 @@ func (m *CartManager) Analyze(ctx context.Context, u uri.URI) {
 	m.publish(ctx, snap, previous)
 }
 
+// AnalyzeOpen re-analyzes every open document. It is used after the
+// initialized notification, because clients may send didOpen before that point
+// and diagnostics are intentionally gated until initialization completes.
+func (m *CartManager) AnalyzeOpen(ctx context.Context) {
+	for _, u := range m.docs.List() {
+		m.Analyze(ctx, u)
+	}
+}
+
 // Closed handles didClose. If a standalone document was never saved and has no
 // owning cart, its diagnostics and cache entry are removed instead of being
 // kept as a stale snapshot.

@@ -395,6 +395,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 func (s *Server) Initialized(ctx context.Context, params *protocol.InitializedParams) error {
 	s.diags.Enable()
 	s.log.Debug("client initialized notification received")
+	s.carts.AnalyzeOpen(ctx)
 	s.pullConfiguration(ctx)
 	return nil
 }
