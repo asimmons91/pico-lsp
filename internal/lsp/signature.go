@@ -36,10 +36,14 @@ func (s *Server) SignatureHelp(ctx context.Context, params *protocol.SignatureHe
 	if call == nil || call.callee == nil {
 		return nil, nil
 	}
-	if _, typed := types.AsFunction(call.callee.Type); !typed && call.callee.Signature == "" {
+	if len(call.callee.FunctionCandidates()) == 0 && call.callee.Signature == "" {
 		return nil, nil
 	}
-	return buildSignatureHelp(nav, call, offset), nil
+	active := -1
+	if params.Context.IsRetrigger && params.Context.ActiveSignatureHelp.ActiveSignature != nil {
+		active = int(*params.Context.ActiveSignatureHelp.ActiveSignature)
+	}
+	return buildSignatureHelp(nav, call, offset, active), nil
 }
 
 func (n *navContext) innermostCall(offset int) *callSite {
@@ -98,35 +102,22 @@ func (n *navContext) symbolAtSpan(span source.Span) *analysis.Symbol {
 	return occ.Symbol
 }
 
-func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.SignatureHelp {
+func buildSignatureHelp(nav *navContext, call *callSite, offset, activeOverride int) *protocol.SignatureHelp {
 	sym := call.callee
 	if sym == nil {
 		return nil
 	}
-	label := sym.Signature
-	var params []protocol.ParameterInformation
-	if fn, ok := types.AsFunction(sym.Type); ok {
-		label = typedFunctionSignature(sym, fn)
-		params = make([]protocol.ParameterInformation, 0, len(fn.Params)+1)
-		for _, param := range fn.Params {
-			label := param.Name
-			if label == "" {
-				label = "arg"
-			}
-			info := protocol.ParameterInformation{Label: protocol.String(label)}
-			if doc := typedParamDocumentation(param); doc != "" {
-				info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
-			}
-			params = append(params, info)
-		}
-		if fn.Vararg != nil {
-			info := protocol.ParameterInformation{Label: protocol.String("...")}
-			doc := "`" + types.Display(fn.Vararg) + "`"
-			info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
-			params = append(params, info)
+	candidates := sym.FunctionCandidates()
+	activeParameter := activeParameterIndex(nav, call, offset)
+	provided := len(call.args)
+	callArgs := nav.semantics.CallArguments(call.open)
+	signatures := make([]protocol.SignatureInformation, 0, max(1, len(candidates)))
+	if len(candidates) > 0 {
+		for _, fn := range candidates {
+			signatures = append(signatures, signatureInformation(sym, fn, activeParameter))
 		}
 	} else {
-		params = make([]protocol.ParameterInformation, 0, len(sym.Params))
+		params := make([]protocol.ParameterInformation, 0, len(sym.Params))
 		for _, name := range sym.Params {
 			param := protocol.ParameterInformation{Label: protocol.String(name)}
 			if doc := paramDocumentation(sym, name); doc != "" {
@@ -134,31 +125,138 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 			}
 			params = append(params, param)
 		}
+		info := protocol.SignatureInformation{Label: sym.Signature, Parameters: params}
+		if summary := docSummary(sym); summary != "" {
+			info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: summary}
+		}
+		signatures = append(signatures, info)
 	}
+	activeSignature := chooseActiveSignature(candidates, callArgs, provided, activeParameter, activeOverride)
+	help := &protocol.SignatureHelp{
+		Signatures:      signatures,
+		ActiveSignature: &activeSignature,
+	}
+	if int(activeSignature) < len(signatures) {
+		params := signatures[activeSignature].Parameters
+		if len(params) > 0 {
+			active := activeParameter
+			if active >= len(params) {
+				active = len(params) - 1
+			}
+			help.ActiveParameter = protocol.NewNullable(uint32(active))
+		}
+	}
+	return help
+}
 
-	active := activeParameterIndex(nav, call, offset)
-	if len(params) > 0 && active >= len(params) {
-		active = len(params) - 1
+func signatureInformation(sym *analysis.Symbol, fn *types.Function, active int) protocol.SignatureInformation {
+	params := make([]protocol.ParameterInformation, 0, len(fn.Params)+1)
+	for _, param := range fn.Params {
+		label := param.Name
+		if label == "" {
+			label = "arg"
+		}
+		info := protocol.ParameterInformation{Label: protocol.String(label)}
+		if doc := typedParamDocumentation(param); doc != "" {
+			info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: doc}
+		}
+		params = append(params, info)
+	}
+	if fn.Vararg != nil {
+		info := protocol.ParameterInformation{Label: protocol.String("...")}
+		info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: "`" + types.Display(fn.Vararg) + "`"}
+		params = append(params, info)
 	}
 	info := protocol.SignatureInformation{
-		Label:      label,
+		Label:      typedFunctionSignature(sym, fn),
 		Parameters: params,
 	}
 	if summary := docSummary(sym); summary != "" {
 		info.Documentation = &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: summary}
 	}
 	if len(params) > 0 {
+		active = clamp(active, 0, len(params)-1)
 		info.ActiveParameter = protocol.NewNullable(uint32(active))
 	}
-	activeSignature := uint32(0)
-	help := &protocol.SignatureHelp{
-		Signatures:      []protocol.SignatureInformation{info},
-		ActiveSignature: &activeSignature,
+	return info
+}
+
+func chooseActiveSignature(candidates []*types.Function, args []types.Type, provided, activeParameter, override int) uint32 {
+	if len(candidates) == 0 {
+		return 0
 	}
-	if len(params) > 0 {
-		help.ActiveParameter = protocol.NewNullable(uint32(active))
+	if override >= 0 && override < len(candidates) {
+		return uint32(override)
 	}
-	return help
+	best := 0
+	bestScore := int(^uint(0) >> 1)
+	for i, fn := range candidates {
+		score := signatureScore(fn, args, provided, activeParameter)
+		if score < bestScore {
+			best = i
+			bestScore = score
+		}
+	}
+	return uint32(best)
+}
+
+func signatureScore(fn *types.Function, args []types.Type, provided, activeParameter int) int {
+	if fn == nil {
+		return 10000
+	}
+	fn = types.BindFunction(fn, args)
+	score := 0
+	for i, arg := range args {
+		if i >= len(fn.Params) {
+			continue
+		}
+		target := fn.Params[i].Type
+		if fn.Params[i].Optional {
+			target = types.Optional(target)
+		}
+		if types.IsAny(target) || types.IsAny(arg) {
+			score += 4
+			continue
+		}
+		if !types.Assignable(arg, target, false) {
+			score += 100
+		}
+	}
+	if activeParameter >= len(fn.Params) {
+		if fn.Vararg != nil {
+			score += 2
+		} else {
+			score += 100
+		}
+	}
+	required := 0
+	for _, param := range fn.Params {
+		if !param.Optional {
+			required++
+		}
+	}
+	if provided < required {
+		score += (required - provided) * 8
+	}
+	extras := provided - len(fn.Params)
+	if extras > 0 {
+		if fn.Vararg == nil {
+			score += extras * 8
+		} else {
+			score += extras * 2
+		}
+	}
+	return score
+}
+
+func clamp(value, low, high int) int {
+	if value < low {
+		return low
+	}
+	if value > high {
+		return high
+	}
+	return value
 }
 
 func typedParamDocumentation(param types.Param) string {

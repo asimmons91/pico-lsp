@@ -58,10 +58,10 @@ For installation and editor setup, see [install.md](install.md),
 | `lint.apiRanges` | boolean | `false` | Optional literal API range checks. |
 
 `basic` checks explicit annotations, class inheritance, inherited members,
-`(exact)` class literals, metatable factories, and flow narrowing. `strict`
-adds `need-check-nil` and missing-field checks for open records. `off` keeps
-explicit annotation types for hover and completion but publishes no type
-diagnostics.
+`(exact)` class literals, metatable factories, generics, overloads, operator
+annotations, tagged unions, and flow narrowing. `strict` adds `need-check-nil`
+and missing-field checks for open records. `off` keeps explicit annotation
+types for hover and completion but publishes no type diagnostics.
 
 Diagnostic severity values are `off`, `hint`, `info`, `warning`, and `error`.
 Set a rule to `off` to disable it. Syntax errors and missing includes remain

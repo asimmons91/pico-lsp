@@ -180,20 +180,58 @@ func (p *typeParser) parsePrimary() (types.Type, error) {
 		return types.Literal{Value: false}, nil
 	}
 
-	// Named class, alias, or enum. Generic arguments are parsed and ignored in
-	// M4; generic classes are explicitly out of scope.
+	// Named class, alias, or enum.
+	var genericArgs []types.Type
 	p.skipSpace()
 	if p.consume("<") {
-		if err := p.skipGenericArguments(); err != nil {
+		args, err := p.parseGenericArguments()
+		if err != nil {
 			return nil, err
 		}
+		genericArgs = args
 	}
 	if p.resolve != nil {
 		if typ, ok := p.resolve(name); ok && typ != nil {
+			if len(genericArgs) > 0 {
+				if types.IsAny(typ) {
+					return typ, nil
+				}
+				applied, err := types.Apply(typ, genericArgs)
+				if err != nil {
+					return nil, err
+				}
+				return applied, nil
+			}
 			return typ, nil
 		}
 	}
 	return nil, &unknownTypeError{Name: name}
+}
+
+func (p *typeParser) parseGenericArguments() ([]types.Type, error) {
+	var args []types.Type
+	for {
+		p.skipSpace()
+		if p.consume(">") {
+			if len(args) == 0 {
+				return nil, fmt.Errorf("expected a type argument")
+			}
+			return args, nil
+		}
+		arg, err := p.parseUnion()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, arg)
+		p.skipSpace()
+		if p.consume(",") {
+			continue
+		}
+		if p.consume(">") {
+			return args, nil
+		}
+		return nil, fmt.Errorf("expected ',' or '>' in type arguments")
+	}
 }
 
 func (p *typeParser) parseRecord() (types.Type, error) {
@@ -335,30 +373,6 @@ func (p *typeParser) parseTypeList() (types.Tuple, error) {
 			return types.TupleOf(elems...), nil
 		}
 	}
-}
-
-func (p *typeParser) skipGenericArguments() error {
-	depth := 1
-	for p.pos < len(p.input) && depth > 0 {
-		switch p.input[p.pos] {
-		case '<':
-			depth++
-			p.pos++
-		case '>':
-			depth--
-			p.pos++
-		case '"', '\'':
-			if _, err := p.parseStringLiteral(); err != nil {
-				return err
-			}
-		default:
-			p.pos++
-		}
-	}
-	if depth != 0 {
-		return fmt.Errorf("unterminated generic arguments")
-	}
-	return nil
 }
 
 func (p *typeParser) parseName() string {

@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -148,7 +149,15 @@ func typedFunctionSignature(sym *analysis.Symbol, fn *types.Function) string {
 	if fn.Vararg != nil {
 		params = append(params, "...: "+types.Display(fn.Vararg))
 	}
-	signature := "function " + name + "(" + strings.Join(params, ", ") + ")"
+	signature := "function " + name
+	if len(fn.Generics) > 0 {
+		names := make([]string, 0, len(fn.Generics))
+		for _, param := range fn.Generics {
+			names = append(names, types.Display(param))
+		}
+		signature += "<" + strings.Join(names, ", ") + ">"
+	}
+	signature += "(" + strings.Join(params, ", ") + ")"
 	if len(fn.Returns.Elems) == 1 && fn.Returns.Vararg == nil {
 		signature += ": " + types.Display(fn.Returns.Elems[0])
 	} else if len(fn.Returns.Elems) > 1 {
@@ -205,6 +214,14 @@ func symbolMarkdownWithType(nav *navContext, sym *analysis.Symbol, override type
 		b.WriteString(owner.Name)
 		b.WriteString("`")
 	}
+	if len(sym.Overloads) > 0 {
+		b.WriteString("\n\n**Overloads**")
+		for _, fn := range sym.Overloads {
+			b.WriteString("\n- `")
+			b.WriteString(types.Display(fn))
+			b.WriteString("`")
+		}
+	}
 	if record := namedRecord(effectiveSymbolType(sym)); record != nil {
 		fields := types.Fields(record)
 		if len(fields) > 0 {
@@ -223,6 +240,19 @@ func symbolMarkdownWithType(nav *navContext, sym *analysis.Symbol, override type
 				if field.Optional {
 					b.WriteString(" optional")
 				}
+			}
+		}
+		if len(record.Operators) > 0 {
+			names := make([]string, 0, len(record.Operators))
+			for name := range record.Operators {
+				names = append(names, name)
+			}
+			sort.Strings(names)
+			b.WriteString("\n\n**Operators:**")
+			for _, name := range names {
+				b.WriteString("\n- `")
+				b.WriteString(operatorDisplay(record.Operators[name]))
+				b.WriteString("`")
 			}
 		}
 	}
@@ -270,6 +300,26 @@ func declarationSource(nav *navContext, sym *analysis.Symbol) string {
 		return ""
 	}
 	return workspaceContainer(nav.snap, nav.snap.Cart.RootURI, sym.DeclSpan)
+}
+
+func operatorDisplay(op *types.Operator) string {
+	if op == nil {
+		return ""
+	}
+	if op.Call != nil {
+		return "call" + strings.TrimPrefix(types.Display(op.Call), "fun")
+	}
+	var b strings.Builder
+	b.WriteString(op.Name)
+	b.WriteString("(")
+	if op.Operand != nil {
+		b.WriteString(types.Display(op.Operand))
+	}
+	b.WriteString("): ")
+	if op.Result != nil {
+		b.WriteString(types.Display(op.Result))
+	}
+	return b.String()
 }
 
 func symbolDocumentation(sym *analysis.Symbol) string {

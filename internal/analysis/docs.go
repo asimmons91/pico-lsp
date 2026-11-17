@@ -3,6 +3,7 @@ package analysis
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"go.lsp.dev/protocol"
 
@@ -24,17 +25,21 @@ type ParamDoc struct {
 // DocComment is the subset of LuaCATS docs used by M3 hover and completion.
 // Type semantics are intentionally shallow here; M4 owns type checking.
 type DocComment struct {
-	Span          source.Span
-	Summary       string
-	Type          string
-	Class         string
-	Enum          string
-	Params        []ParamDoc
-	Returns       []string
-	ParsedType    types.Type
-	ParsedReturns []types.Type
-	Deprecated    bool
-	Optional      bool
+	Span            source.Span
+	Summary         string
+	Type            string
+	Class           string
+	Enum            string
+	Params          []ParamDoc
+	Returns         []string
+	ParsedType      types.Type
+	ParsedReturns   []types.Type
+	Generics        []GenericDecl
+	Overloads       []string
+	ParsedGenerics  []*types.GenericParam
+	ParsedOverloads []*types.Function
+	Deprecated      bool
+	Optional        bool
 }
 
 // ClassField is one shallow `---@field` declaration.
@@ -49,12 +54,28 @@ type ClassField struct {
 
 // Class is the class metadata used for member completion and type checking.
 type Class struct {
-	Name     string
-	Fields   []ClassField
-	Record   *types.Record
-	Exact    bool
-	Parents  []string
-	DeclSpan source.Span
+	Name         string
+	Fields       []ClassField
+	Record       *types.Record
+	Exact        bool
+	Parents      []string
+	GenericDecls []GenericDecl
+	Operators    []ClassOperator
+	DeclSpan     source.Span
+}
+
+// GenericDecl is one parsed generic parameter declaration.
+type GenericDecl struct {
+	Name    string
+	Default string
+}
+
+// ClassOperator is one parsed operator annotation before type resolution.
+type ClassOperator struct {
+	Name    string
+	Operand string
+	Result  string
+	Span    source.Span
 }
 
 // ParseDocComments extracts summaries and common LuaCATS tags from contiguous
@@ -118,8 +139,15 @@ func parseDocTag(doc *DocComment, text string) {
 			typeText, _ := splitTrailingType(rest)
 			doc.Type = typeText
 		}
+	case "@generic":
+		doc.Generics = append(doc.Generics, parseGenericDeclList(text[len("@generic"):])...)
+	case "@overload":
+		rest := strings.TrimSpace(text[len("@overload"):])
+		if rest != "" {
+			doc.Overloads = append(doc.Overloads, rest)
+		}
 	case "@class":
-		name, _, _, _ := parseClassHeader(text[len("@class"):])
+		name, _, _, _, _ := parseClassHeader(text[len("@class"):])
 		if name != "" {
 			doc.Class = name
 		}
@@ -214,7 +242,7 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 				current = nil
 				continue
 			}
-			name, exact, parents, _ := parseClassHeader(text[len("@class"):])
+			name, exact, parents, generics, _ := parseClassHeader(text[len("@class"):])
 			if name == "" {
 				current = nil
 				continue
@@ -228,6 +256,9 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 			current.Exact = current.Exact || exact
 			if len(parents) > 0 {
 				current.Parents = parents
+			}
+			if len(generics) > 0 {
+				current.GenericDecls = generics
 			}
 			if current.DeclSpan.IsEmpty() {
 				current.DeclSpan = comment.Span
@@ -243,6 +274,21 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 				continue
 			}
 			current.Fields = append(current.Fields, field)
+		case "@operator":
+			if current == nil {
+				continue
+			}
+			op, ok := parseOperatorAnnotation(text[len("@operator"):], comment.Span)
+			if !ok {
+				current = nil
+				continue
+			}
+			current.Operators = append(current.Operators, op)
+		case "@generic":
+			if current == nil {
+				continue
+			}
+			current.GenericDecls = append(current.GenericDecls, parseGenericDeclList(text[len("@generic"):])...)
 		default:
 			if strings.HasPrefix(text, "@") {
 				current = nil
@@ -252,12 +298,12 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 	return classes
 }
 
-func parseClassHeader(rest string) (name string, exact bool, parents []string, exactValid bool) {
+func parseClassHeader(rest string) (name string, exact bool, parents []string, generics []GenericDecl, exactValid bool) {
 	rest = strings.TrimSpace(rest)
 	exactValid = true
 	namePart := rest
 	parentPart := ""
-	if idx := strings.Index(rest, ":"); idx >= 0 {
+	if idx := splitTopLevelColon(rest); idx >= 0 {
 		namePart = rest[:idx]
 		parentPart = rest[idx+1:]
 	}
@@ -275,36 +321,167 @@ func parseClassHeader(rest string) (name string, exact bool, parents []string, e
 		parentPart = strings.ReplaceAll(parentPart, "(exact)", " ")
 	}
 	if parentPart != "" {
-		parents = splitTypeNames(parentPart)
+		parents = splitTypeExpressions(parentPart)
 	}
-	fields := strings.Fields(namePart)
-	if len(fields) == 0 {
-		return "", false, parents, exactValid
+	namePart = strings.TrimSpace(namePart)
+	if namePart == "" {
+		return "", false, parents, nil, exactValid
 	}
-	return strings.TrimSuffix(fields[0], ":"), exact, parents, exactValid
-}
-
-func splitTypeNames(text string) []string {
-	text = strings.ReplaceAll(text, "(", " ")
-	text = strings.ReplaceAll(text, ")", " ")
-	parts := strings.Split(text, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		name := strings.Fields(strings.TrimSpace(part))
-		if len(name) == 0 {
+	end := 0
+	for end < len(namePart) {
+		r, size := utf8.DecodeRuneInString(namePart[end:])
+		if r == '_' || r == '.' || unicode.IsLetter(r) || unicode.IsDigit(r) {
+			end += size
 			continue
 		}
-		// Generic arguments are parsed and ignored in M9.
-		candidate := name[0]
-		if idx := strings.Index(candidate, "<"); idx >= 0 {
-			candidate = candidate[:idx]
+		break
+	}
+	name = namePart[:end]
+	remaining := strings.TrimSpace(namePart[end:])
+	if strings.HasPrefix(remaining, "<") {
+		generics = parseGenericDecls(remaining)
+	}
+	return name, exact, parents, generics, exactValid
+}
+
+func splitTopLevelColon(text string) int {
+	depth := 0
+	for i, r := range text {
+		switch r {
+		case '<', '{', '[', '(':
+			depth++
+		case '>', '}', ']', ')':
+			if depth > 0 {
+				depth--
+			}
+		case ':':
+			if depth == 0 {
+				return i
+			}
 		}
-		candidate = strings.TrimSpace(candidate)
-		if candidate != "" {
-			out = append(out, candidate)
+	}
+	return -1
+}
+
+func parseGenericDecls(text string) []GenericDecl {
+	text = strings.TrimSpace(text)
+	if !strings.HasPrefix(text, "<") {
+		return nil
+	}
+	close := strings.LastIndex(text, ">")
+	if close < 0 {
+		return nil
+	}
+	inner := text[1:close]
+	parts := splitTypeExpressions(inner)
+	out := make([]GenericDecl, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		decl := GenericDecl{}
+		if idx := strings.Index(part, "="); idx >= 0 {
+			decl.Default = strings.TrimSpace(part[idx+1:])
+			part = strings.TrimSpace(part[:idx])
+		}
+		if idx := strings.Index(part, ":"); idx >= 0 {
+			part = strings.TrimSpace(part[:idx])
+		}
+		fields := strings.Fields(part)
+		if len(fields) == 0 {
+			continue
+		}
+		decl.Name = fields[0]
+		if decl.Name != "" {
+			out = append(out, decl)
 		}
 	}
 	return out
+}
+
+func parseGenericDeclList(text string) []GenericDecl {
+	parts := splitTypeExpressions(text)
+	out := make([]GenericDecl, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		decl := GenericDecl{}
+		if idx := strings.Index(part, "="); idx >= 0 {
+			decl.Default = strings.TrimSpace(part[idx+1:])
+			part = strings.TrimSpace(part[:idx])
+		}
+		if idx := strings.Index(part, ":"); idx >= 0 {
+			part = strings.TrimSpace(part[:idx])
+		}
+		fields := strings.Fields(part)
+		if len(fields) == 0 {
+			continue
+		}
+		decl.Name = fields[0]
+		if decl.Name != "" {
+			out = append(out, decl)
+		}
+	}
+	return out
+}
+
+func splitTypeExpressions(text string) []string {
+	var out []string
+	depth := 0
+	start := 0
+	for i, r := range text {
+		switch r {
+		case '<', '{', '[', '(':
+			depth++
+		case '>', '}', ']', ')':
+			if depth > 0 {
+				depth--
+			}
+		case ',':
+			if depth == 0 {
+				if part := strings.TrimSpace(text[start:i]); part != "" {
+					out = append(out, part)
+				}
+				start = i + 1
+			}
+		}
+	}
+	if part := strings.TrimSpace(text[start:]); part != "" {
+		out = append(out, part)
+	}
+	return out
+}
+
+func parseOperatorAnnotation(rest string, span source.Span) (ClassOperator, bool) {
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return ClassOperator{}, false
+	}
+	end := strings.IndexAny(rest, "( \t:")
+	if end < 0 {
+		end = len(rest)
+	}
+	name := strings.TrimSpace(rest[:end])
+	if name == "" {
+		return ClassOperator{}, false
+	}
+	op := ClassOperator{Name: strings.ToLower(name), Span: span}
+	rest = strings.TrimSpace(rest[end:])
+	if strings.HasPrefix(rest, "(") {
+		close := strings.Index(rest, ")")
+		if close < 0 {
+			return op, true
+		}
+		op.Operand = strings.TrimSpace(rest[1:close])
+		rest = strings.TrimSpace(rest[close+1:])
+	}
+	if idx := strings.Index(rest, ":"); idx >= 0 {
+		op.Result = strings.TrimSpace(rest[idx+1:])
+	}
+	return op, true
 }
 
 func parseFieldAnnotation(rest string, span source.Span) (ClassField, bool) {
@@ -474,9 +651,15 @@ func attachParamDocs(result *Result) {
 
 func classTypeName(value string) string {
 	value = strings.TrimSpace(value)
+	if strings.ContainsAny(value, "|{}[]()") {
+		return ""
+	}
 	for i, r := range value {
 		if r == '_' || r == '.' || unicode.IsLetter(r) || unicode.IsDigit(r) {
 			continue
+		}
+		if r == '<' {
+			return ""
 		}
 		return value[:i]
 	}
@@ -578,7 +761,7 @@ func AnnotationNames(comments []syntax.Comment) []string {
 		}
 		switch fields[0] {
 		case "@class":
-			name, _, _, _ := parseClassHeader(text[len("@class"):])
+			name, _, _, _, _ := parseClassHeader(text[len("@class"):])
 			add(name)
 		case "@alias":
 			add(strings.TrimSuffix(fields[1], ":"))

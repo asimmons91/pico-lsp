@@ -12,7 +12,13 @@ import (
 
 var annotationKeywords = []string{
 	"param", "return", "class", "field", "type", "alias", "enum", "meta",
-	"deprecated", "cast", "diagnostic",
+	"deprecated", "cast", "diagnostic", "generic", "overload", "operator",
+}
+
+var luaOperatorCompletionNames = []string{
+	"add", "band", "bnot", "bor", "bxor", "call", "concat", "div", "eq",
+	"idiv", "le", "len", "lt", "mod", "mul", "pow", "rotl", "rotr", "shl",
+	"shr", "sub", "unm",
 }
 
 var annotationTypes = []string{
@@ -55,6 +61,15 @@ func annotationCompletions(nav *navContext, offset int, linePrefix string) []pro
 		if len(fields) >= 2 {
 			return annotationNameItems(nav, start, offset, partial, annotationTypeNames(nav))
 		}
+	case "operator":
+		if strings.Contains(rest, "(") {
+			return annotationNameItems(nav, start, offset, partial, annotationTypeNames(nav))
+		}
+		return annotationNameItems(nav, start, offset, partial, luaOperatorCompletionNames)
+	case "generic":
+		return annotationNameItems(nav, start, offset, partial, []string{"T", "K", "V"})
+	case "overload":
+		return annotationOverloadItems(nav, start, offset, partial)
 	}
 	return []protocol.CompletionItem{}
 }
@@ -138,6 +153,21 @@ func annotationNameItems(nav *navContext, start, offset int, partial string, nam
 	return items
 }
 
+func annotationOverloadItems(nav *navContext, start, offset int, partial string) []protocol.CompletionItem {
+	if strings.TrimSpace(partial) != "" {
+		return nil
+	}
+	item := protocol.CompletionItem{
+		Label:            "fun(...)",
+		Kind:             protocol.CompletionItemKindSnippet,
+		Detail:           protocol.NewOptional("overload signature"),
+		FilterText:       protocol.NewOptional("fun"),
+		TextEdit:         &protocol.TextEdit{Range: nav.file.Index.Range(start, offset), NewText: "fun(${1:args}): ${2:returns}"},
+		InsertTextFormat: protocol.InsertTextFormatSnippet,
+	}
+	return []protocol.CompletionItem{item}
+}
+
 func annotationClassNames(nav *navContext) []string {
 	seen := make(map[string]struct{})
 	var out []string
@@ -155,6 +185,10 @@ func annotationClassNames(nav *navContext) []string {
 	}
 	if nav != nil && nav.semantics != nil {
 		for _, typ := range nav.semantics.TypeNames() {
+			if record, ok := types.Resolve(typ).(*types.Record); ok && record != nil && record.Name != "" {
+				add(record.Name)
+				continue
+			}
 			add(types.Display(typ))
 		}
 	}

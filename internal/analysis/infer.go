@@ -332,6 +332,7 @@ func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env m
 		env[sym] = valueType
 	case *syntax.FieldExpr:
 		baseType := inf.inferExpr(t.Base, env)
+		inf.invalidateFieldBase(t.Base, env)
 		fieldSym := inf.fieldSymbol(t)
 		fieldType := valueType
 		if fieldSym != nil && fieldSym.TypeExplicit && fieldSym.Type != nil {
@@ -346,6 +347,7 @@ func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env m
 	case *syntax.IndexExpr:
 		inf.inferExpr(t.Index, env)
 		baseType := inf.inferExpr(t.Base, env)
+		inf.invalidateFieldBase(t.Base, env)
 		switch collection := types.Resolve(baseType).(type) {
 		case types.Array:
 			inf.checkAssignmentValue(collection.Elem, valueType, valueSpan)
@@ -657,8 +659,10 @@ func (inf *inferer) inferExpr(expr syntax.Expr, env map[*Symbol]types.Type) type
 			typ = types.AnyType
 		}
 	case *syntax.UnaryExpr:
-		inf.inferExpr(e.X, env)
-		if e.Op.Text == "not" {
+		operand := firstType(inf.inferExpr(e.X, env))
+		if result, ok := inf.unaryOperatorResult(e.Op.Text, operand, e.Span()); ok {
+			typ = result
+		} else if e.Op.Text == "not" {
 			typ = types.BooleanType
 		} else {
 			typ = types.NumberType
@@ -718,6 +722,9 @@ func (inf *inferer) inferBinary(e *syntax.BinaryExpr, env map[*Symbol]types.Type
 		return types.UnionOf(truthy, right)
 	}
 	right := firstType(inf.inferExpr(e.Right, env))
+	if typ, ok := inf.operatorResult(e.Op.Text, left, right, e.Left.Span(), e.Right.Span()); ok {
+		return typ
+	}
 	if inf.final && inf.mode == TypeCheckingStrict && requiresNonNil(e.Op.Text) {
 		if types.ContainsNil(left) && !types.IsAny(left) {
 			inf.report(CodeNeedCheckNil, fmt.Sprintf("%s may be nil", types.Display(left)), e.Left.Span())
@@ -788,17 +795,24 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 		inf.report(CodeNeedCheckNil, fmt.Sprintf("%s may be nil", types.Display(base)), e.Base.Span())
 	}
 	fieldType, ok, optional := types.LookupField(base, e.Name.Text)
-	if sym := inf.fieldSymbol(e); sym != nil {
-		if sym.Type != nil {
-			fieldType = sym.Type
+	fieldSym := inf.fieldSymbol(e)
+	var previous types.Type
+	if fieldSym != nil {
+		previous = fieldSym.Type
+		if fieldSym.TypeExplicit && fieldSym.Type != nil {
+			fieldType = fieldSym.Type
 			ok = true
-			optional = sym.Doc != nil && sym.Doc.Optional
+			optional = fieldSym.Doc != nil && fieldSym.Doc.Optional
 		} else if ok {
 			if optional {
-				sym.Type = types.Optional(fieldType)
+				fieldSym.Type = types.Optional(fieldType)
 			} else {
-				sym.Type = fieldType
+				fieldSym.Type = fieldType
 			}
+		} else if fieldSym.Type != nil && !types.IsUnion(base) {
+			fieldType = fieldSym.Type
+			ok = true
+			optional = fieldSym.Doc != nil && fieldSym.Doc.Optional
 		}
 	}
 	if !ok {
@@ -813,6 +827,9 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 	resultType := fieldType
 	if optional {
 		resultType = types.Optional(fieldType)
+	}
+	if inf.final && fieldSym != nil && !types.Identical(previous, resultType) {
+		inf.result.recordFlow(e.Name.Span(), resultType)
 	}
 	return resultType
 }
@@ -857,6 +874,9 @@ func (inf *inferer) inferCall(e *syntax.CallExpr, env map[*Symbol]types.Type) ty
 	for i, arg := range e.Args {
 		argTypes[i] = inf.inferExpr(arg, env)
 	}
+	if inf.final {
+		inf.result.recordCallArguments(e.Open, argTypes)
+	}
 	name := callName(e.Func)
 	if callee != nil {
 		inf.recordCall(callee, argTypes)
@@ -871,19 +891,47 @@ func (inf *inferer) inferCall(e *syntax.CallExpr, env map[*Symbol]types.Type) ty
 	}
 	if callee != nil {
 		var origin *Symbol
-		if callee.Type == nil || types.IsAny(callee.Type) || !callee.TypeExplicit {
+		if callee.Type == nil || types.IsAny(callee.Type) || !callee.TypeExplicit || len(callee.Overloads) > 0 {
 			origin = inf.attachFieldCalleeType(e.Func, callee, env)
 		}
 		if origin != nil && origin != callee {
 			inf.recordCall(origin, argTypes)
 		}
-		explicit := callee.TypeExplicit || (origin != nil && origin.TypeExplicit)
-		inf.checkCall(callee, explicit, argTypes, e.Args)
-		if fn, ok := types.AsFunction(callee.Type); ok {
-			return callReturnType(fn)
+		explicit := callee.TypeExplicit || (origin != nil && origin.TypeExplicit) || len(callee.Overloads) > 0
+		if typ, ok := inf.callFunctionType(callee, explicit, argTypes, e.Args); ok {
+			return typ
+		}
+		if callee.Type != nil {
+			if op, ok := types.LookupOperator(callee.Type, "call"); ok && op.Call != nil {
+				fn := types.BindFunction(op.Call, argTypes)
+				inf.checkCallFunction(callee, fn, true, argTypes, e.Args)
+				return callReturnType(fn)
+			}
 		}
 	}
 	return types.AnyType
+}
+
+func (inf *inferer) callFunctionType(callee *Symbol, explicit bool, args []types.Type, argExprs []syntax.Expr) (types.Type, bool) {
+	candidates := candidateFunctions(callee)
+	if len(candidates) == 0 {
+		return nil, false
+	}
+	if len(callee.Overloads) > 0 {
+		if selected := selectFunctionCandidate(candidates, args); selected != nil {
+			inf.checkCallFunction(callee, selected, true, args, argExprs)
+			return callReturnType(selected), true
+		}
+		if candidate := soleArityCandidate(candidates, args); candidate != nil {
+			specialized := types.BindFunction(candidate, args)
+			inf.checkCallFunction(callee, specialized, true, args, argExprs)
+			return callReturnType(specialized), true
+		}
+		return types.AnyType, true
+	}
+	specialized := types.BindFunction(candidates[0], args)
+	inf.checkCallFunction(callee, specialized, explicit, args, argExprs)
+	return callReturnType(specialized), true
 }
 
 // attachFieldCalleeType resolves a field call such as obj.method(...) through
@@ -935,6 +983,9 @@ func (inf *inferer) adoptInheritedMember(member, origin *Symbol) {
 	if member.Signature == "" {
 		member.Signature = origin.Signature
 	}
+	if len(member.Overloads) == 0 {
+		member.Overloads = origin.Overloads
+	}
 }
 
 func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]types.Type) types.Type {
@@ -950,32 +1001,30 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 	for i, arg := range e.Args {
 		argTypes[i] = inf.inferExpr(arg, env)
 	}
+	if inf.final {
+		inf.result.recordCallArguments(e.Open, argTypes)
+	}
 	var resultType types.Type = types.AnyType
 	if method != nil {
 		declaredHere := len(method.Decls) > 0
-		var fn *types.Function
 		var origin *Symbol
-		if existing, ok := types.AsFunction(method.Type); ok {
-			fn = existing
-			if !declaredHere {
-				origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
-				if origin != nil {
+		if !declaredHere || len(method.Overloads) > 0 {
+			origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
+			if origin != nil {
+				if method.Type == nil || types.IsAny(method.Type) {
 					if originFn, ok := types.AsFunction(origin.Type); ok {
-						fn = originFn
+						method.Type = originFn
 					}
 				}
+				if len(method.Overloads) == 0 {
+					method.Overloads = origin.Overloads
+				}
 			}
-		} else if !declaredHere {
+		}
+		if !declaredHere && (method.Type == nil || types.IsAny(method.Type)) {
 			if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
 				if resolved, ok := types.AsFunction(fieldType); ok {
-					fn = resolved
-					origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
-					if origin != nil {
-						if originFn, ok := types.AsFunction(origin.Type); ok {
-							fn = originFn
-						}
-					}
-					method.Type = fn
+					method.Type = resolved
 				}
 			}
 		}
@@ -984,10 +1033,9 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 			inf.recordCall(origin, argTypes)
 		}
 		inf.recordCall(method, argTypes)
-		if fn != nil {
-			explicit := method.TypeExplicit || (origin != nil && origin.TypeExplicit)
-			inf.checkCall(method, explicit, argTypes, e.Args)
-			resultType = callReturnType(fn)
+		explicit := method.TypeExplicit || (origin != nil && origin.TypeExplicit) || len(method.Overloads) > 0
+		if typ, ok := inf.callFunctionType(method, explicit, argTypes, e.Args); ok {
+			resultType = typ
 		}
 	}
 	return resultType
@@ -1017,12 +1065,8 @@ func (inf *inferer) recordCall(callee *Symbol, args []types.Type) {
 	}
 }
 
-func (inf *inferer) checkCall(callee *Symbol, explicit bool, args []types.Type, argExprs []syntax.Expr) {
-	if !inf.final || callee == nil || callee.Builtin || !explicit {
-		return
-	}
-	fn, ok := types.AsFunction(callee.Type)
-	if !ok {
+func (inf *inferer) checkCallFunction(callee *Symbol, fn *types.Function, explicit bool, args []types.Type, argExprs []syntax.Expr) {
+	if !inf.final || callee == nil || callee.Builtin || !explicit || fn == nil {
 		return
 	}
 	for i, argType := range args {
@@ -1429,6 +1473,18 @@ func (inf *inferer) applyNarrowBinary(env map[*Symbol]types.Type, e *syntax.Bina
 			inf.applyNarrow(env, e.Right, false)
 		}
 	case "==", "~=", "!=":
+		if field, value, ok := tagFieldComparison(e.Left, e.Right); ok {
+			if name, ok := field.Base.(*syntax.NameExpr); ok {
+				if sym := inf.symbolAt(name); sym != nil {
+					base := inf.symbolType(sym, name.Span(), env)
+					positive := (e.Op.Text == "==") == truthy
+					if narrowed := types.NarrowByTag(base, field.Name.Text, value, positive); narrowed != nil {
+						env[sym] = narrowed
+						return
+					}
+				}
+			}
+		}
 		if name, nilSide := nilComparison(e.Left, e.Right); name != nil {
 			if sym := inf.symbolAt(name); sym != nil {
 				base := inf.symbolType(sym, name.Span(), env)

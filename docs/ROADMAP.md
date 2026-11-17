@@ -67,11 +67,10 @@ These decisions were made before milestone specs were written. Changing one requ
 | M7 | AST-Aware Formatter | Shorthand-safe formatting with comments and annotations preserved | M6 | Done |
 | M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Done |
 | M9 | Type System I | Inheritance, exact classes, metatable inference, stronger narrowing | M8 | Done |
-| M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Planned |
+| M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Done |
 
-M7–M10 are scheduled to ship together as **v1.1.0**, in that order. M7, M8,
-and M9 are implemented; M10 remains planned. Each milestone is independently
-mergeable, but the release is cut only after all four meet their exit criteria.
+M7–M10 ship together as **v1.1.0**, in that order. M7, M8, M9, and M10 are
+implemented; the release is cut after all four milestone exit criteria pass.
 
 Each milestone has a detailed spec:
 
@@ -120,9 +119,9 @@ The v1 release is complete when a user can:
 - VS Code, Zed, or other editor-specific clients.
 - A full Lua standard library or `require` implementation.
 - Luau-style inline type syntax.
-- Advanced type features in v1: generic classes, overload resolution, operator
-  metatypes, metatable-aware inference, exact class checking by default. These
-  are delivered by the post-v1 M9/M10 milestones.
+- Advanced type features in v1.0: generic classes, overload resolution,
+  operator metatypes, metatable-aware inference, exact class checking by
+  default. These were delivered by the post-v1 M9/M10 milestones.
 - Incremental parsing or a Salsa-style query system.
 - Telemetry, cloud features, or network services.
 - Cart execution, emulation, sprite/map previews, or audio tooling.
@@ -154,6 +153,7 @@ All diagnostics use `source: "pico-lsp"` and a stable `code`.
 | `undefined-field` | Warning (exact classes only) | M4/M9 |
 | `need-check-nil` | Off in `basic`; warning in `strict` | M4 |
 | `missing-fields` | Warning for explicit `(exact)` classes in `basic`; otherwise off in `basic`, warning in `strict` | M4/M9 |
+| `operator-type-mismatch` | Hint | M10 |
 | `deprecated` | Hint | M4 |
 | `duplicate-table-field` | Hint | M5 |
 | `unreachable-code` | Hint | M5 |

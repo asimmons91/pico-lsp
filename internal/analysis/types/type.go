@@ -89,6 +89,15 @@ type Record struct {
 	Exact   bool
 	Enum    bool
 	Parents []*Record
+
+	// TypeParams are the class generic parameters, in declaration order.
+	// TypeArgs holds the instantiation arguments for a specialized copy. A
+	// template record has TypeParams set and no TypeArgs.
+	TypeParams []*GenericParam
+	TypeArgs   []Type
+	Template   *Record
+	// Operators holds explicit LuaCATS operator annotations.
+	Operators map[string]*Operator
 }
 
 func (Record) typeNode() {}
@@ -110,9 +119,10 @@ type Field struct {
 
 // Function is a callable type.
 type Function struct {
-	Params  []Param
-	Returns Tuple
-	Vararg  Type
+	Params   []Param
+	Returns  Tuple
+	Vararg   Type
+	Generics []*GenericParam
 }
 
 func (Function) typeNode() {}
@@ -553,7 +563,7 @@ func displayType(t Type, state *displayState) string {
 			return "table"
 		}
 		if v.Name != "" {
-			return v.Name
+			return displayRecordName(v, state)
 		}
 		if state.seen[v] {
 			return "{...}"
@@ -585,6 +595,11 @@ func displayType(t Type, state *displayState) string {
 			return v.Name
 		}
 		return displayType(v.Underlying, state)
+	case *GenericParam:
+		if v == nil || v.Name == "" {
+			return "any"
+		}
+		return v.Name
 	case *TypeVar:
 		if v == nil || v.Bound == nil {
 			return "any"
@@ -619,6 +634,30 @@ func displayUnion(members []Type, state *displayState) string {
 		parts = append(parts[:8], "...")
 	}
 	return strings.Join(parts, " | ")
+}
+
+func displayRecordName(record *Record, state *displayState) string {
+	if record == nil {
+		return "table"
+	}
+	var args []Type
+	switch {
+	case len(record.TypeArgs) > 0:
+		args = record.TypeArgs
+	case len(record.TypeParams) > 0:
+		parts := make([]string, 0, len(record.TypeParams))
+		for _, param := range record.TypeParams {
+			parts = append(parts, displayType(param, state))
+		}
+		return record.Name + "<" + strings.Join(parts, ", ") + ">"
+	default:
+		return record.Name
+	}
+	parts := make([]string, 0, len(args))
+	for _, arg := range args {
+		parts = append(parts, displayType(arg, state))
+	}
+	return record.Name + "<" + strings.Join(parts, ", ") + ">"
 }
 
 func displayRecord(record *Record, state *displayState) string {
@@ -664,6 +703,13 @@ func displayFunction(fn *Function, state *displayState) string {
 		parts = append(parts, "...: "+displayType(fn.Vararg, state))
 	}
 	out := "fun(" + strings.Join(parts, ", ") + ")"
+	if len(fn.Generics) > 0 {
+		names := make([]string, 0, len(fn.Generics))
+		for _, param := range fn.Generics {
+			names = append(names, displayType(param, state))
+		}
+		out = "fun<" + strings.Join(names, ", ") + ">(" + strings.Join(parts, ", ") + ")"
+	}
 	if len(fn.Returns.Elems) == 1 && fn.Returns.Vararg == nil {
 		out += ": " + displayType(fn.Returns.Elems[0], state)
 	} else if len(fn.Returns.Elems) > 1 {

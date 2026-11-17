@@ -47,6 +47,7 @@ disabled there. If diagnostics are missing or land in the wrong place, see
 | `undefined-field` | Warning | Field is missing on an exact class and its parents (or any record in `strict`). |
 | `need-check-nil` | Off in `basic` | Optional value is used where non-nil is required. |
 | `missing-fields` | Warning for `(exact)` | Table literal is missing required fields of an explicit `(exact)` class; in `strict`, applies to any annotated record. |
+| `operator-type-mismatch` | Hint | Explicit `---@operator` operand does not match the value used with the operator. |
 | `deprecated` | Hint | Deprecated symbol is used. |
 | `type-unknown` | Reserved | Type could not be inferred; unused in v1. |
 

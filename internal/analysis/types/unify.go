@@ -46,6 +46,12 @@ func assignable(src, dst Type, strict bool, depth int) bool {
 	if IsAny(src) || IsAny(dst) || src == nil || dst == nil {
 		return true
 	}
+	if _, ok := src.(*GenericParam); ok {
+		return true
+	}
+	if _, ok := dst.(*GenericParam); ok {
+		return true
+	}
 	if srcUnion, ok := src.(Union); ok {
 		if len(srcUnion.Members) == 0 {
 			return true
@@ -394,6 +400,20 @@ func recordFields(record *Record) []FieldInfo {
 		}
 	}
 	add(record, 0)
+	if record.Template != nil {
+		binding := recordBinding(record)
+		for _, field := range recordFields(record.Template) {
+			key := CanonicalName(field.Name)
+			if _, ok := seen[key]; ok {
+				continue
+			}
+			if field.Owner == record.Template {
+				field.Owner = record
+			}
+			field.Type = Substitute(field.Type, binding)
+			seen[key] = field
+		}
+	}
 	out := make([]FieldInfo, 0, len(seen))
 	for _, field := range seen {
 		out = append(out, field)
@@ -553,6 +573,11 @@ func field(t Type, canonical string, depth int) (Type, bool, bool) {
 		if field := recordField(v, canonical); field != nil {
 			return field.Type, true, field.Optional
 		}
+		if v.Template != nil {
+			if field := recordField(v.Template, canonical); field != nil {
+				return Substitute(field.Type, recordBinding(v)), true, field.Optional
+			}
+		}
 	case Record:
 		if field := recordField(&v, canonical); field != nil {
 			return field.Type, true, field.Optional
@@ -670,6 +695,9 @@ func Identical(a, b Type) bool {
 		return ok && av == bv
 	case *TypeVar:
 		bv, ok := b.(*TypeVar)
+		return ok && av == bv
+	case *GenericParam:
+		bv, ok := b.(*GenericParam)
 		return ok && av == bv
 	}
 	return false

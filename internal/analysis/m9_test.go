@@ -549,14 +549,15 @@ func TestM9ParseClassHeader(t *testing.T) {
 		{input: " Point (exact)", name: "Point", exact: true, valid: true},
 		{input: " Child: Parent", name: "Child", parent: []string{"Parent"}, valid: true},
 		{input: " Child: Parent, Other", name: "Child", parent: []string{"Parent", "Other"}, valid: true},
-		{input: " Child: Parent<T>", name: "Child", parent: []string{"Parent"}, valid: true},
+		{input: " Child: Parent<T>", name: "Child", parent: []string{"Parent<T>"}, valid: true},
+		{input: " Box<T = {a: number}>: Base", name: "Box", parent: []string{"Base"}, valid: true},
 		{input: " (exact) Child: Parent", name: "Child", exact: true, parent: []string{"Parent"}, valid: true},
 		{input: " Child: Parent (exact)", name: "Child", parent: []string{"Parent"}, valid: false},
 		{input: " (exact)", name: "", valid: true},
 		{input: " (exact) (exact) Point", name: "Point", exact: true, valid: false},
 	}
 	for _, tc := range cases {
-		name, exact, parents, valid := parseClassHeader(tc.input)
+		name, exact, parents, _, valid := parseClassHeader(tc.input)
 		if name != tc.name || exact != tc.exact || valid != tc.valid {
 			t.Errorf("parseClassHeader(%q) = %q, %v, %v, %v", tc.input, name, exact, parents, valid)
 			continue

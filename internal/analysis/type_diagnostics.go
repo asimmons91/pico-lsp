@@ -10,7 +10,7 @@ func isTypeDiagnosticCode(code string) bool {
 	case CodeAnnotationInvalid, CodeAnnotationUnknownType, CodeAnnotationDuplicate,
 		CodeAnnotationUnknownParam, CodeAnnotationMissingName,
 		CodeAssignTypeMismatch, CodeParamTypeMismatch, CodeReturnTypeMismatch,
-		CodeUndefinedField, CodeNeedCheckNil, CodeMissingFields, CodeDeprecated,
+		CodeUndefinedField, CodeNeedCheckNil, CodeMissingFields, CodeOperatorMismatch, CodeDeprecated,
 		CodeTypeUnknown:
 		return true
 	default:
