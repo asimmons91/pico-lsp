@@ -1,6 +1,6 @@
 # M6 — Packaging, Editor Integration & v1 Release
 
-**Status:** Done — v1 GitHub release prepared; Homebrew and Mason deferred to post-v1.  
+**Status:** In progress — implementation complete; v1 GitHub release pending.  
 **Depends on:** M5  
 **Blocks:** M7  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -379,7 +379,7 @@ Manual matrix:
 - [x] README, install, configuration, diagnostics, and troubleshooting docs are complete.
 - [x] CI covers tests, race, lint, build, and release snapshot.
 - [x] Versioning and changelog are in place.
-- [x] Release checklist is complete.
+- [ ] Release checklist is complete.
 - [x] v1 known limitations are documented.
 - [ ] Homebrew and Mason installs — deferred to post-v1.
 - [ ] `v1.0.0` is tagged and published.
