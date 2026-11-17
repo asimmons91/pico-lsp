@@ -127,6 +127,7 @@ local sx = sum.x
 local shape = {}
 if shape.kind == "circle" then
   local radius = shape.radius
+  local tag = shape.kind
 end
 `
 	dir := t.TempDir()
@@ -152,6 +153,10 @@ end
 	kindHover := hoverMarkup(t, h, ctx, root, positionAt(t, text, "local radius = shape.radius", len("local radius = ")+1))
 	if !strings.Contains(kindHover, "Circle") {
 		t.Fatalf("tagged-union hover:\n%s", kindHover)
+	}
+	tagHover := hoverMarkup(t, h, ctx, root, positionAt(t, text, "local tag = shape.kind", len("local tag = shape.")+1))
+	if !strings.Contains(tagHover, `"circle"`) {
+		t.Fatalf("tag literal hover:\n%s", tagHover)
 	}
 }
 

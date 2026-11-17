@@ -582,6 +582,9 @@ func (inf *inferer) inferFunction(fn *syntax.FunctionExpr, env map[*Symbol]types
 				fnEnv[paramSym] = paramSym.Type
 			}
 		}
+		if self := inf.selfSymbol(functionSym); self != nil && self.Type != nil {
+			fnEnv[self] = self.Type
+		}
 	}
 	inf.inferBlock(fn.Body, fnEnv)
 	inf.funcs = inf.funcs[:len(inf.funcs)-1]
