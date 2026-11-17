@@ -40,3 +40,6 @@ jobs:
 
       - name: Fuzz include flattening
         run: go test -fuzz=FuzzIncludeFlatten -fuzztime=60s ./internal/cart
+
+      - name: Fuzz analysis
+        run: go test -fuzz=FuzzAnalyze -fuzztime=60s ./internal/analysis

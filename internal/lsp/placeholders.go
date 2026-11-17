@@ -10,16 +10,6 @@ import (
 // now so features can replace them individually, but their capabilities are not
 // advertised until they return real results.
 
-// Definition is implemented in M2.
-func (s *Server) Definition(ctx context.Context, params *protocol.DefinitionParams) (protocol.DefinitionResult, error) {
-	return nil, nil
-}
-
-// References is implemented in M2.
-func (s *Server) References(ctx context.Context, params *protocol.ReferenceParams) ([]protocol.Location, error) {
-	return []protocol.Location{}, nil
-}
-
 // Hover is implemented in M3.
 func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
 	return nil, nil
@@ -48,11 +38,6 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 // CodeLens is implemented in M5.
 func (s *Server) CodeLens(ctx context.Context, params *protocol.CodeLensParams) ([]protocol.CodeLens, error) {
 	return []protocol.CodeLens{}, nil
-}
-
-// Symbols handles workspace/symbol. It is implemented in M2.
-func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolParams) (protocol.WorkspaceSymbolResult, error) {
-	return nil, nil
 }
 
 // ExecuteCommand handles workspace/executeCommand. It is implemented in M5.

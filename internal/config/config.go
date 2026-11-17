@@ -296,6 +296,9 @@ func isJSONNull(raw []byte) bool {
 	return len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null"))
 }
 
+// warnedAPIVersions makes unsupported apiVersion warnings one-time per value.
+var warnedAPIVersions sync.Map
+
 // normalize validates enum-like fields. Invalid values fall back to defaults
 // and produce a warning; unknown JSON keys were already ignored by the decoder.
 func normalize(s Settings, log *slog.Logger) Settings {
@@ -305,7 +308,9 @@ func normalize(s Settings, log *slog.Logger) Settings {
 		s.APIVersion = d.APIVersion
 	}
 	if s.APIVersion != d.APIVersion {
-		log.Warn("unsupported pico8.apiVersion", "value", s.APIVersion, "default", d.APIVersion)
+		if _, seen := warnedAPIVersions.LoadOrStore(s.APIVersion, struct{}{}); !seen {
+			log.Warn("unsupported pico8.apiVersion", "value", s.APIVersion, "default", d.APIVersion)
+		}
 		s.APIVersion = d.APIVersion
 	}
 

@@ -1,6 +1,6 @@
 # M2 — Semantic Core & Navigation
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** M1  
 **Blocks:** M3  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -325,16 +325,37 @@ definition / references / rename / highlights / workspace symbols
 - Run the binder over the M1 corpus.
 - No panics; undefined-global diagnostics should be low. Investigate systematic false positives (dynamic globals, generated code) and tune.
 
+## Implementation notes
+
+Resolved during implementation:
+
+- Built-in names and signatures are transcribed from the PICO-8 0.2.7 manual;
+  the one-line descriptions in the stub are original summaries. No text is
+  copied from `pico8-ls`.
+- Workspace symbols scan the client's workspace folders lazily. When no folders
+  are configured, they fall back to the carts behind open documents. The scan is
+  capped at 500 results, 2000 files, and a 5 second budget.
+- A field accessed through a string literal (`t["x"]`) is treated as a dynamic
+  access: the cursor on the string does not navigate, and the receiver is marked
+  unsafe for field rename because editing inside a string literal is out of
+  scope for v1.
+- `self` is bound as an implicit method parameter, but it has no textual
+  declaration occurrence. Go-to-definition and rename refuse it rather than
+  editing a method name that is not a `self` declaration.
+- Unresolved dynamic globals such as `_ENV`-created names and test-harness
+  globals may still produce `undefined-global` warnings in the corpus. They are
+  intentionally not hard-coded as built-ins.
+
 ## Exit criteria
 
-- [ ] Every M1 AST declaration/use is bound to a symbol or intentionally ignored.
-- [ ] Cross-file definitions and references work across tabs and includes.
-- [ ] Rename works for locals/globals/functions/methods/fields and refuses unsafe cases.
-- [ ] Built-in 0.2.7 symbols resolve; no standard Lua library is present.
-- [ ] Undefined-global diagnostics are useful and configurable.
-- [ ] Workspace symbols work without startup scanning.
-- [ ] Case folding matches PICO-8 behavior.
-- [ ] `go test -race ./...` passes.
+- [x] Every M1 AST declaration/use is bound to a symbol or intentionally ignored.
+- [x] Cross-file definitions and references work across tabs and includes.
+- [x] Rename works for locals/globals/functions/methods/fields and refuses unsafe cases.
+- [x] Built-in 0.2.7 symbols resolve; no standard Lua library is present.
+- [x] Undefined-global diagnostics are useful and configurable.
+- [x] Workspace symbols work without startup scanning.
+- [x] Case folding matches PICO-8 behavior.
+- [x] `go test -race ./...` passes.
 
 ## Risks and mitigations
 

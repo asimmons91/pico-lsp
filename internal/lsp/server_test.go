@@ -171,12 +171,29 @@ func TestInitializeCapabilities(t *testing.T) {
 	if _, ok := res.Capabilities.FoldingRangeProvider.(protocol.Boolean); !ok {
 		t.Fatalf("foldingRangeProvider = %T, want Boolean", res.Capabilities.FoldingRangeProvider)
 	}
+	for name, provider := range map[string]any{
+		"definitionProvider":        res.Capabilities.DefinitionProvider,
+		"referencesProvider":        res.Capabilities.ReferencesProvider,
+		"documentHighlightProvider": res.Capabilities.DocumentHighlightProvider,
+		"workspaceSymbolProvider":   res.Capabilities.WorkspaceSymbolProvider,
+	} {
+		if _, ok := provider.(protocol.Boolean); !ok {
+			t.Errorf("%s = %T, want Boolean", name, provider)
+		}
+	}
+	rename, ok := res.Capabilities.RenameProvider.(*protocol.RenameOptions)
+	if !ok || rename.PrepareProvider == nil || !*rename.PrepareProvider {
+		t.Fatalf("renameProvider = %T, want prepare support", res.Capabilities.RenameProvider)
+	}
 
 	if res.Capabilities.Workspace == nil ||
 		res.Capabilities.Workspace.WorkspaceFolders == nil ||
 		res.Capabilities.Workspace.WorkspaceFolders.Supported == nil ||
 		!*res.Capabilities.Workspace.WorkspaceFolders.Supported {
 		t.Fatal("workspace folders are not advertised")
+	}
+	if notifications, ok := res.Capabilities.Workspace.WorkspaceFolders.ChangeNotifications.(protocol.Boolean); !ok || !bool(notifications) {
+		t.Fatalf("workspace folder change notifications = %T, want true", res.Capabilities.Workspace.WorkspaceFolders.ChangeNotifications)
 	}
 
 	if res.ServerInfo.Name != "pico-lsp" {

@@ -14,6 +14,8 @@ import (
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/builtin"
 	"github.com/asimmons91/pico-lsp/internal/config"
 	"github.com/asimmons91/pico-lsp/internal/version"
 )
@@ -94,6 +96,9 @@ type Server struct {
 	encoding protocol.PositionEncodingKind
 	trace    protocol.TraceValue
 
+	workspaceMu      sync.Mutex
+	workspaceFolders []uri.URI
+
 	pullMu sync.Mutex
 
 	exitCode int
@@ -123,7 +128,18 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		func() int { return s.cfg.Settings().MaxProblems },
 		log,
 	)
-	s.carts = NewCartManager(s.docs, s.diags, log)
+
+	var builtins map[string]*analysis.Symbol
+	api, err := builtin.Load()
+	if err != nil {
+		// Keep the server usable without built-ins. Every other feature must
+		// continue to work when the embedded stub is broken.
+		log.Error("failed to load PICO-8 built-in API; built-in symbols are disabled", "error", err)
+	} else {
+		builtins = analysis.BuildBuiltins(api)
+	}
+
+	s.carts = NewCartManager(s.docs, s.diags, func() config.Settings { return s.cfg.Settings() }, builtins, log)
 	return s
 }
 
@@ -355,6 +371,8 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	}
 	s.mu.Unlock()
 
+	s.setWorkspaceFolders(initializeFolders(params))
+
 	clientName := params.ClientInfo.Name
 	clientVersion, _ := params.ClientInfo.Version.Get()
 	s.log.Info("initialized",
@@ -373,13 +391,19 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
-			PositionEncoding:       encoding,
-			TextDocumentSync:       syncOptions,
-			DocumentSymbolProvider: protocol.Boolean(true),
-			FoldingRangeProvider:   protocol.Boolean(true),
+			PositionEncoding:          encoding,
+			TextDocumentSync:          syncOptions,
+			DefinitionProvider:        protocol.Boolean(true),
+			ReferencesProvider:        protocol.Boolean(true),
+			DocumentHighlightProvider: protocol.Boolean(true),
+			DocumentSymbolProvider:    protocol.Boolean(true),
+			FoldingRangeProvider:      protocol.Boolean(true),
+			WorkspaceSymbolProvider:   protocol.Boolean(true),
+			RenameProvider:            &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
 			Workspace: &protocol.WorkspaceOptions{
 				WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
-					Supported: boolPtr(true),
+					Supported:           boolPtr(true),
+					ChangeNotifications: protocol.Boolean(true),
 				},
 			},
 		},
@@ -460,6 +484,7 @@ func (s *Server) DidChangeConfiguration(ctx context.Context, params *protocol.Di
 	}
 	if params != nil {
 		s.cfg.ApplyDidChange(params.Settings)
+		s.carts.AnalyzeOpen(ctx)
 	}
 	return nil
 }
@@ -496,7 +521,10 @@ func (s *Server) pullConfiguration(ctx context.Context) {
 
 	if err := s.cfg.Pull(pullCtx, client); err != nil {
 		s.log.Warn("configuration pull failed", "error", err)
+		return
 	}
+	// Diagnostics and navigation depend on the configured severity.
+	s.carts.AnalyzeOpen(ctx)
 }
 
 func chooseEncoding(params *protocol.InitializeParams) protocol.PositionEncodingKind {
