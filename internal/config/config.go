@@ -23,8 +23,19 @@ const (
 	DefaultTypeChecking = "basic"
 	DefaultMaxProblems  = 100
 
-	DefaultUndefinedGlobal = "warning"
-	DefaultUnusedLocal     = "off"
+	DefaultUndefinedGlobal         = "warning"
+	DefaultUnusedLocal             = "off"
+	DefaultUnreachableCode         = "hint"
+	DefaultDuplicateTableField     = "hint"
+	DefaultCallbackPrecedence      = "hint"
+	DefaultCallbackParams          = "warning"
+	DefaultNoStdlib                = "hint"
+	DefaultShadowedLocal           = "off"
+	DefaultEmptyBlock              = "off"
+	DefaultGlobalInFunction        = "off"
+	DefaultIncludeOutsideWorkspace = "warning"
+	DefaultIncludeUnusualType      = "hint"
+	DefaultIncludeDuplicate        = "off"
 
 	SeverityOff     = "off"
 	SeverityHint    = "hint"
@@ -44,13 +55,37 @@ type Settings struct {
 	InlayHints   bool   `json:"inlayHints"`
 	// MaxProblems is the diagnostic cap. Zero disables truncation.
 	MaxProblems int                `json:"maxProblems"`
+	Limits      LimitsSettings     `json:"limits"`
 	Diagnostics DiagnosticSettings `json:"diagnostics"`
+	Lint        LintSettings       `json:"lint"`
+}
+
+// LimitsSettings controls cart budget UI.
+type LimitsSettings struct {
+	CodeLens    bool `json:"codeLens"`
+	Diagnostics bool `json:"diagnostics"`
+}
+
+// LintSettings controls optional PICO-8 lint checks.
+type LintSettings struct {
+	APIRanges bool `json:"apiRanges"`
 }
 
 // DiagnosticSettings overrides diagnostic severities.
 type DiagnosticSettings struct {
-	UndefinedGlobal string `json:"undefinedGlobal"`
-	UnusedLocal     string `json:"unusedLocal"`
+	UndefinedGlobal         string `json:"undefinedGlobal"`
+	UnusedLocal             string `json:"unusedLocal"`
+	UnreachableCode         string `json:"unreachableCode"`
+	DuplicateTableField     string `json:"duplicateTableField"`
+	CallbackPrecedence      string `json:"callbackPrecedence"`
+	CallbackParams          string `json:"callbackParams"`
+	NoStdlib                string `json:"noStdlib"`
+	ShadowedLocal           string `json:"shadowedLocal"`
+	EmptyBlock              string `json:"emptyBlock"`
+	GlobalInFunction        string `json:"globalInFunction"`
+	IncludeOutsideWorkspace string `json:"includeOutsideWorkspace"`
+	IncludeUnusualType      string `json:"includeUnusualType"`
+	IncludeDuplicate        string `json:"includeDuplicate"`
 }
 
 // Default returns the documented default settings.
@@ -60,10 +95,26 @@ func Default() Settings {
 		TypeChecking: DefaultTypeChecking,
 		InlayHints:   false,
 		MaxProblems:  DefaultMaxProblems,
-		Diagnostics: DiagnosticSettings{
-			UndefinedGlobal: DefaultUndefinedGlobal,
-			UnusedLocal:     DefaultUnusedLocal,
+		Limits: LimitsSettings{
+			CodeLens:    true,
+			Diagnostics: true,
 		},
+		Diagnostics: DiagnosticSettings{
+			UndefinedGlobal:         DefaultUndefinedGlobal,
+			UnusedLocal:             DefaultUnusedLocal,
+			UnreachableCode:         DefaultUnreachableCode,
+			DuplicateTableField:     DefaultDuplicateTableField,
+			CallbackPrecedence:      DefaultCallbackPrecedence,
+			CallbackParams:          DefaultCallbackParams,
+			NoStdlib:                DefaultNoStdlib,
+			ShadowedLocal:           DefaultShadowedLocal,
+			EmptyBlock:              DefaultEmptyBlock,
+			GlobalInFunction:        DefaultGlobalInFunction,
+			IncludeOutsideWorkspace: DefaultIncludeOutsideWorkspace,
+			IncludeUnusualType:      DefaultIncludeUnusualType,
+			IncludeDuplicate:        DefaultIncludeDuplicate,
+		},
+		Lint: LintSettings{APIRanges: false},
 	}
 }
 
@@ -247,12 +298,34 @@ type partialSettings struct {
 	TypeChecking *string                    `json:"typeChecking"`
 	InlayHints   *bool                      `json:"inlayHints"`
 	MaxProblems  *int                       `json:"maxProblems"`
+	Limits       *partialLimitsSettings     `json:"limits"`
 	Diagnostics  *partialDiagnosticSettings `json:"diagnostics"`
+	Lint         *partialLintSettings       `json:"lint"`
+}
+
+type partialLimitsSettings struct {
+	CodeLens    *bool `json:"codeLens"`
+	Diagnostics *bool `json:"diagnostics"`
+}
+
+type partialLintSettings struct {
+	APIRanges *bool `json:"apiRanges"`
 }
 
 type partialDiagnosticSettings struct {
-	UndefinedGlobal *string `json:"undefinedGlobal"`
-	UnusedLocal     *string `json:"unusedLocal"`
+	UndefinedGlobal         *string `json:"undefinedGlobal"`
+	UnusedLocal             *string `json:"unusedLocal"`
+	UnreachableCode         *string `json:"unreachableCode"`
+	DuplicateTableField     *string `json:"duplicateTableField"`
+	CallbackPrecedence      *string `json:"callbackPrecedence"`
+	CallbackParams          *string `json:"callbackParams"`
+	NoStdlib                *string `json:"noStdlib"`
+	ShadowedLocal           *string `json:"shadowedLocal"`
+	EmptyBlock              *string `json:"emptyBlock"`
+	GlobalInFunction        *string `json:"globalInFunction"`
+	IncludeOutsideWorkspace *string `json:"includeOutsideWorkspace"`
+	IncludeUnusualType      *string `json:"includeUnusualType"`
+	IncludeDuplicate        *string `json:"includeDuplicate"`
 }
 
 func (p partialSettings) apply(base Settings) Settings {
@@ -268,12 +341,56 @@ func (p partialSettings) apply(base Settings) Settings {
 	if p.MaxProblems != nil {
 		base.MaxProblems = *p.MaxProblems
 	}
+	if p.Limits != nil {
+		if p.Limits.CodeLens != nil {
+			base.Limits.CodeLens = *p.Limits.CodeLens
+		}
+		if p.Limits.Diagnostics != nil {
+			base.Limits.Diagnostics = *p.Limits.Diagnostics
+		}
+	}
+	if p.Lint != nil && p.Lint.APIRanges != nil {
+		base.Lint.APIRanges = *p.Lint.APIRanges
+	}
 	if p.Diagnostics != nil {
 		if p.Diagnostics.UndefinedGlobal != nil {
 			base.Diagnostics.UndefinedGlobal = *p.Diagnostics.UndefinedGlobal
 		}
 		if p.Diagnostics.UnusedLocal != nil {
 			base.Diagnostics.UnusedLocal = *p.Diagnostics.UnusedLocal
+		}
+		if p.Diagnostics.UnreachableCode != nil {
+			base.Diagnostics.UnreachableCode = *p.Diagnostics.UnreachableCode
+		}
+		if p.Diagnostics.DuplicateTableField != nil {
+			base.Diagnostics.DuplicateTableField = *p.Diagnostics.DuplicateTableField
+		}
+		if p.Diagnostics.CallbackPrecedence != nil {
+			base.Diagnostics.CallbackPrecedence = *p.Diagnostics.CallbackPrecedence
+		}
+		if p.Diagnostics.CallbackParams != nil {
+			base.Diagnostics.CallbackParams = *p.Diagnostics.CallbackParams
+		}
+		if p.Diagnostics.NoStdlib != nil {
+			base.Diagnostics.NoStdlib = *p.Diagnostics.NoStdlib
+		}
+		if p.Diagnostics.ShadowedLocal != nil {
+			base.Diagnostics.ShadowedLocal = *p.Diagnostics.ShadowedLocal
+		}
+		if p.Diagnostics.EmptyBlock != nil {
+			base.Diagnostics.EmptyBlock = *p.Diagnostics.EmptyBlock
+		}
+		if p.Diagnostics.GlobalInFunction != nil {
+			base.Diagnostics.GlobalInFunction = *p.Diagnostics.GlobalInFunction
+		}
+		if p.Diagnostics.IncludeOutsideWorkspace != nil {
+			base.Diagnostics.IncludeOutsideWorkspace = *p.Diagnostics.IncludeOutsideWorkspace
+		}
+		if p.Diagnostics.IncludeUnusualType != nil {
+			base.Diagnostics.IncludeUnusualType = *p.Diagnostics.IncludeUnusualType
+		}
+		if p.Diagnostics.IncludeDuplicate != nil {
+			base.Diagnostics.IncludeDuplicate = *p.Diagnostics.IncludeDuplicate
 		}
 	}
 	return base
@@ -329,6 +446,17 @@ func normalize(s Settings, log *slog.Logger) Settings {
 
 	s.Diagnostics.UndefinedGlobal = normalizeSeverity(s.Diagnostics.UndefinedGlobal, d.Diagnostics.UndefinedGlobal, "undefinedGlobal", log)
 	s.Diagnostics.UnusedLocal = normalizeSeverity(s.Diagnostics.UnusedLocal, d.Diagnostics.UnusedLocal, "unusedLocal", log)
+	s.Diagnostics.UnreachableCode = normalizeSeverity(s.Diagnostics.UnreachableCode, d.Diagnostics.UnreachableCode, "unreachableCode", log)
+	s.Diagnostics.DuplicateTableField = normalizeSeverity(s.Diagnostics.DuplicateTableField, d.Diagnostics.DuplicateTableField, "duplicateTableField", log)
+	s.Diagnostics.CallbackPrecedence = normalizeSeverity(s.Diagnostics.CallbackPrecedence, d.Diagnostics.CallbackPrecedence, "callbackPrecedence", log)
+	s.Diagnostics.CallbackParams = normalizeSeverity(s.Diagnostics.CallbackParams, d.Diagnostics.CallbackParams, "callbackParams", log)
+	s.Diagnostics.NoStdlib = normalizeSeverity(s.Diagnostics.NoStdlib, d.Diagnostics.NoStdlib, "noStdlib", log)
+	s.Diagnostics.ShadowedLocal = normalizeSeverity(s.Diagnostics.ShadowedLocal, d.Diagnostics.ShadowedLocal, "shadowedLocal", log)
+	s.Diagnostics.EmptyBlock = normalizeSeverity(s.Diagnostics.EmptyBlock, d.Diagnostics.EmptyBlock, "emptyBlock", log)
+	s.Diagnostics.GlobalInFunction = normalizeSeverity(s.Diagnostics.GlobalInFunction, d.Diagnostics.GlobalInFunction, "globalInFunction", log)
+	s.Diagnostics.IncludeOutsideWorkspace = normalizeSeverity(s.Diagnostics.IncludeOutsideWorkspace, d.Diagnostics.IncludeOutsideWorkspace, "includeOutsideWorkspace", log)
+	s.Diagnostics.IncludeUnusualType = normalizeSeverity(s.Diagnostics.IncludeUnusualType, d.Diagnostics.IncludeUnusualType, "includeUnusualType", log)
+	s.Diagnostics.IncludeDuplicate = normalizeSeverity(s.Diagnostics.IncludeDuplicate, d.Diagnostics.IncludeDuplicate, "includeDuplicate", log)
 
 	return s
 }

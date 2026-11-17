@@ -2,6 +2,7 @@ package cart
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -793,5 +794,49 @@ func TestDiskProviderReadLimit(t *testing.T) {
 	}
 	if len(data) != 11 {
 		t.Fatalf("read %d bytes, want max+1 = 11", len(data))
+	}
+}
+
+func TestFileContributions(t *testing.T) {
+	root := uri.File("/tmp/contrib/cart.p8")
+	lib := uri.File("/tmp/contrib/lib.lua")
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.lua\"\nx = 1\n"
+	p := newMapProvider()
+	p.files[lib] = "function f() end\n"
+	snap := loadText(t, p, root, text)
+	tokenSum, charSum := 0, 0
+	for _, count := range snap.Cart.FileTokens {
+		tokenSum += count
+	}
+	for _, count := range snap.Cart.FileChars {
+		charSum += count
+	}
+	if tokenSum != snap.Cart.Tokens {
+		t.Fatalf("file tokens sum = %d, total = %d", tokenSum, snap.Cart.Tokens)
+	}
+	if charSum != snap.Cart.Chars {
+		t.Fatalf("file chars sum = %d, total = %d", charSum, snap.Cart.Chars)
+	}
+	if snap.Cart.FileTokens[0] == 0 || snap.Cart.FileTokens[1] == 0 {
+		t.Fatalf("file tokens = %+v", snap.Cart.FileTokens)
+	}
+}
+
+func TestM5StressFiftyIncludes(t *testing.T) {
+	root := uri.File("/tmp/stress/cart.p8")
+	p := newMapProvider()
+	var code strings.Builder
+	code.WriteString("pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n")
+	for i := 0; i < 50; i++ {
+		fmt.Fprintf(&code, "#include \"lib%02d.lua\"\n", i)
+		file := uri.File(fmt.Sprintf("/tmp/stress/lib%02d.lua", i))
+		p.files[file] = fmt.Sprintf("function lib%02d() end\n", i)
+	}
+	snap := loadText(t, p, root, code.String())
+	if len(snap.Cart.Includes) != 50 {
+		t.Fatalf("includes = %d, want 50", len(snap.Cart.Includes))
+	}
+	if snap.Cart.Tokens == 0 {
+		t.Fatal("token count is zero")
 	}
 }

@@ -62,7 +62,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M2 | Semantic Core & Navigation | Scopes, symbols, PICO-8 built-ins, definitions, references, rename | M1 | Done |
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Done |
 | M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Done |
-| M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Planned |
+| M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Done |
 | M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Planned |
 | M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
 
@@ -76,6 +76,12 @@ Each milestone has a detailed spec:
 - [M5 — PICO-8-Specific Polish](M5-pico8-polish.md)
 - [M6 — Packaging, Editor Integration & v1](M6-packaging-and-release.md)
 - [M7 — Post-v1](M7-post-v1.md)
+
+API and configuration references:
+
+- [API](api.md)
+- [Configuration](configuration.md)
+- [Diagnostics](diagnostics.md)
 
 ## v1 definition of done
 
@@ -116,6 +122,9 @@ All diagnostics use `source: "pico-lsp"` and a stable `code`.
 | `include-missing` | Error | M1 |
 | `include-nested` | Warning | M1 |
 | `include-unreadable` | Error | M1/M5 |
+| `include-outside-workspace` | Warning | M5 |
+| `include-unusual-type` | Hint | M5 |
+| `include-duplicate` | Off | M5 |
 | `undefined-global` | Warning | M2 |
 | `annotation-invalid` | Warning | M4 |
 | `annotation-unknown-type` | Warning | M4 |
@@ -129,6 +138,11 @@ All diagnostics use `source: "pico-lsp"` and a stable `code`.
 | `need-check-nil` | Off in `basic`; warning in `strict` | M4 |
 | `missing-fields` | Off in `basic`; warning in `strict` | M4 |
 | `deprecated` | Hint | M4 |
+| `duplicate-table-field` | Hint | M5 |
+| `unreachable-code` | Hint | M5 |
+| `shadowed-local` | Off | M5 |
+| `empty-block` | Off | M5 |
+| `global-in-function` | Off | M5 |
 | `token-limit` | Error when exceeded; warning at 90% | M5 |
 | `char-limit` | Error when exceeded; warning at 90% | M5 |
 | `pico8-callback-precedence` | Hint | M5 |
@@ -151,9 +165,21 @@ The server reads configuration from the `pico8` section via `workspace/configura
     "typeChecking": "basic",
     "inlayHints": false,
     "maxProblems": 100,
+    "limits": {
+      "codeLens": true,
+      "diagnostics": true
+    },
     "diagnostics": {
       "undefinedGlobal": "warning",
-      "unusedLocal": "off"
+      "unusedLocal": "off",
+      "unreachableCode": "hint",
+      "duplicateTableField": "hint",
+      "callbackPrecedence": "hint",
+      "callbackParams": "warning",
+      "noStdlib": "hint"
+    },
+    "lint": {
+      "apiRanges": false
     }
   }
 }

@@ -55,6 +55,17 @@ func TestCorpusAnalyzes(t *testing.T) {
 			continue
 		}
 		result := Analyze(snap, builtins, Options{UndefinedGlobal: SeverityWarning})
+		tokenSum, charSum := 0, 0
+		for _, count := range snap.Cart.FileTokens {
+			tokenSum += count
+		}
+		for _, count := range snap.Cart.FileChars {
+			charSum += count
+		}
+		if tokenSum != snap.Cart.Tokens || charSum != snap.Cart.Chars {
+			t.Errorf("%s: per-file contributions = %d tokens/%d chars, want %d/%d",
+				path, tokenSum, charSum, snap.Cart.Tokens, snap.Cart.Chars)
+		}
 		if elapsed := time.Since(start); elapsed > 2*time.Second {
 			t.Errorf("%s: analyze took %v", path, elapsed)
 		}
@@ -105,5 +116,43 @@ func BenchmarkAnalyzeCorpusCart(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = Analyze(snap, builtins, Options{UndefinedGlobal: SeverityWarning})
+	}
+}
+
+func TestM5CorpusLintDefaults(t *testing.T) {
+	files := corpusCarts(t)
+	loader := cart.NewLoader(nil, "", nil)
+	builtins := testBuiltins(t)
+	lint := LintOptions{
+		CallbackPrecedence:  SeverityHint,
+		CallbackParams:      SeverityWarning,
+		NoStdlib:            SeverityHint,
+		DuplicateTableField: SeverityHint,
+		UnreachableCode:     SeverityHint,
+	}
+	counts := make(map[string]int)
+	for _, path := range files {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			t.Fatalf("abs: %v", err)
+		}
+		snap, err := loader.Load(uri.File(abs))
+		if err != nil {
+			t.Fatalf("%s: load: %v", path, err)
+		}
+		result := Analyze(snap, builtins, Options{Lint: lint})
+		for _, diag := range result.Diagnostics {
+			switch diag.Code {
+			case CodeCallbackPrecedence, CodeCallbackParams, CodeNoStdlib, CodeDuplicateTableField, CodeUnreachableCode:
+				counts[diag.Code]++
+			}
+		}
+	}
+	t.Logf("M5 lint diagnostics across %d corpus carts: %v", len(files), counts)
+	if counts[CodeNoStdlib] > 0 || counts[CodeDuplicateTableField] > 0 || counts[CodeUnreachableCode] > 0 {
+		t.Fatalf("corpus lint noise: %v", counts)
+	}
+	if counts[CodeCallbackParams] > len(files)/10 {
+		t.Fatalf("callback parameter lint fired too often: %v", counts)
 	}
 }

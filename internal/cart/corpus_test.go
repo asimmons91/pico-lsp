@@ -111,6 +111,17 @@ func TestTokenFixtures(t *testing.T) {
 		if snap.Cart.Chars != fixture.Chars {
 			t.Errorf("%s: chars = %d, want %d", fixture.Path, snap.Cart.Chars, fixture.Chars)
 		}
+		tokenSum, charSum := 0, 0
+		for _, count := range snap.Cart.FileTokens {
+			tokenSum += count
+		}
+		for _, count := range snap.Cart.FileChars {
+			charSum += count
+		}
+		if tokenSum != snap.Cart.Tokens || charSum != snap.Cart.Chars {
+			t.Errorf("%s: per-file contributions = %d tokens/%d chars, want %d/%d",
+				fixture.Path, tokenSum, charSum, snap.Cart.Tokens, snap.Cart.Chars)
+		}
 	}
 }
 

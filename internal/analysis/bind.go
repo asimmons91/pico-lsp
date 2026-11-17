@@ -18,10 +18,24 @@ const (
 	TypeCheckingStrict TypeCheckingMode = "strict"
 )
 
+// LintOptions controls PICO-8-specific lint rules. SeverityOff disables a rule.
+type LintOptions struct {
+	CallbackPrecedence  Severity
+	CallbackParams      Severity
+	NoStdlib            Severity
+	DuplicateTableField Severity
+	UnreachableCode     Severity
+	UnusedLocal         Severity
+	ShadowedLocal       Severity
+	EmptyBlock          Severity
+	GlobalInFunction    Severity
+}
+
 // Options controls analysis diagnostics.
 type Options struct {
 	UndefinedGlobal Severity
 	TypeChecking    TypeCheckingMode
+	Lint            LintOptions
 }
 
 // typeCheckingMode returns the effective mode, defaulting to basic.
@@ -38,9 +52,10 @@ func (o Options) typeCheckingMode() TypeCheckingMode {
 // built-in name resolution while keeping every other feature working.
 func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Result {
 	result := &Result{
-		Table:       NewSymbolTable(builtins),
-		meta:        metaFiles(snap),
-		funcSymbols: make(map[*syntax.FunctionExpr]*Symbol),
+		Table:          NewSymbolTable(builtins),
+		meta:           metaFiles(snap),
+		funcSymbols:    make(map[*syntax.FunctionExpr]*Symbol),
+		functionScopes: make(map[*Scope]bool),
 	}
 	if snap == nil || snap.Cart == nil || snap.Chunk == nil {
 		result.finish()
@@ -81,6 +96,8 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	attachTypeAnnotations(snap, result, opts)
 	result.finish()
 	inferTypes(snap, result, opts)
+	runLint(snap, result, opts.Lint)
+	applyDiagnosticSuppressions(result)
 	result.finish()
 	return result
 }
@@ -594,6 +611,7 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 		b.result.funcSymbols[fn] = functionSym
 	}
 	fnScope := NewScope(outer)
+	b.result.functionScopes[fnScope] = true
 	fnScope.Labels = make(map[string]*Symbol)
 	if span := fn.Span(); !span.IsEmpty() {
 		fnScope.Span = span

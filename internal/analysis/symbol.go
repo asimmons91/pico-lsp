@@ -183,12 +183,13 @@ type Result struct {
 	AsCasts              []AsDirective
 	DiagnosticDirectives []DiagnosticDirective
 
-	occs       []Occurrence
-	byFile     map[source.FileID][]Occurrence
-	meta       map[source.FileID]bool
-	scopes     []*Scope
-	chunkScope *Scope
-	cart       *cart.Cart
+	occs           []Occurrence
+	byFile         map[source.FileID][]Occurrence
+	meta           map[source.FileID]bool
+	scopes         []*Scope
+	chunkScope     *Scope
+	functionScopes map[*Scope]bool
+	cart           *cart.Cart
 }
 
 // ScopeAt returns the innermost lexical scope containing offset. It falls back

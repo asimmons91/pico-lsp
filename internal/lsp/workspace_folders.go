@@ -83,5 +83,6 @@ func (s *Server) DidChangeWorkspaceFolders(ctx context.Context, params *protocol
 	}
 	s.setWorkspaceFolders(next)
 	s.log.Debug("workspace folders changed", "count", len(next))
+	s.carts.AnalyzeOpen(ctx)
 	return nil
 }

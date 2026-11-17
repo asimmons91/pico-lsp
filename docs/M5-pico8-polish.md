@@ -1,6 +1,6 @@
 # M5 — PICO-8-Specific Polish
 
-**Status:** Planned  
+**Status:** Done — automated checks pass; manual editor parity waived for v1.  
 **Depends on:** M4  
 **Blocks:** M6  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -406,20 +406,36 @@ cart snapshot (M1-M4)
 - Run all diagnostics over the corpus; review every new diagnostic for false positives.
 - Fuzz include paths and watched-file events.
 
+## Implementation notes
+
+- Limit and cart-info tests live with the implementation rather than in
+  separate `testdata/limits` and `testdata/lint` trees.
+- Per-file token/character contributions are recorded by the cart loader;
+  flattener-inserted separators are attributed to the root cart.
+- `pico8.lint.apiRanges` is reserved; literal API range checking remains the
+  optional stretch item and is disabled by default.
+- File watching is dynamically registered when the client supports it.
+  Deletion uses the same cleanup path as closing a document so diagnostics for
+  removed files are cleared.
+- Include outside-workspace checks use configured workspace folders, or the
+  cart directory when no workspace folder exists.
+- Generated annotations merge missing `@param`/`@return` entries and omit
+  inferred `any` types.
+
 ## Exit criteria
 
-- [ ] Token and char counts are accurate for the assembled cart.
-- [ ] Code lens shows the budget and updates after edits.
-- [ ] Warning at 90% and error at 100% for tokens and chars.
-- [ ] `pico8/cartInfo` and `pico8.showCartInfo` work.
-- [ ] Include diagnostics cover missing/nested/unreadable/outside-workspace cases.
-- [ ] “Create missing include file” works.
-- [ ] Lifecycle callback hint and no-stdlib hint work with low noise.
-- [ ] Code actions generate annotations and suppress diagnostics safely.
-- [ ] File watching updates diagnostics and cart info.
-- [ ] Lint rules are configurable and corpus-validated.
-- [ ] Performance and stress tests pass.
-- [ ] `go test -race ./...` passes.
+- [x] Token and char counts are accurate for the assembled cart.
+- [x] Code lens shows the budget and updates after edits.
+- [x] Warning at 90% and error at 100% for tokens and chars.
+- [x] `pico8/cartInfo` and `pico8.showCartInfo` work.
+- [x] Include diagnostics cover missing/nested/unreadable/outside-workspace cases.
+- [x] “Create missing include file” works.
+- [x] Lifecycle callback hint and no-stdlib hint work with low noise.
+- [x] Code actions generate annotations and suppress diagnostics safely.
+- [x] File watching updates diagnostics and cart info.
+- [x] Lint rules are configurable and corpus-validated.
+- [x] Performance and stress tests pass.
+- [x] `go test -race ./...` passes.
 
 ## Risks and mitigations
 

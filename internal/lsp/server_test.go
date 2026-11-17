@@ -278,6 +278,15 @@ func TestInitializeCapabilities(t *testing.T) {
 			t.Errorf("%s = %T, want Boolean", name, provider)
 		}
 	}
+	if _, ok := res.Capabilities.CodeActionProvider.(protocol.Boolean); !ok {
+		t.Fatalf("codeActionProvider = %T, want Boolean", res.Capabilities.CodeActionProvider)
+	}
+	if res.Capabilities.CodeLensProvider == nil {
+		t.Fatal("codeLensProvider not advertised")
+	}
+	if !containsString(res.Capabilities.ExecuteCommandProvider.Commands, CommandShowCartInfo) {
+		t.Fatalf("executeCommandProvider = %+v", res.Capabilities.ExecuteCommandProvider)
+	}
 	rename, ok := res.Capabilities.RenameProvider.(*protocol.RenameOptions)
 	if !ok || rename.PrepareProvider == nil || !*rename.PrepareProvider {
 		t.Fatalf("renameProvider = %T, want prepare support", res.Capabilities.RenameProvider)

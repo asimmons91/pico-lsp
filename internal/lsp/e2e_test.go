@@ -21,16 +21,20 @@ import (
 type testClient struct {
 	protocol.UnimplementedClient
 
-	configValues []protocol.LSPAny
-	configErr    error
-	configCalls  chan *protocol.ConfigurationParams
-	diagnostics  chan *protocol.PublishDiagnosticsParams
+	configValues  []protocol.LSPAny
+	configErr     error
+	configCalls   chan *protocol.ConfigurationParams
+	diagnostics   chan *protocol.PublishDiagnosticsParams
+	messages      chan *protocol.ShowMessageParams
+	registrations chan *protocol.RegistrationParams
 }
 
 func newTestClient() *testClient {
 	return &testClient{
-		configCalls: make(chan *protocol.ConfigurationParams, 4),
-		diagnostics: make(chan *protocol.PublishDiagnosticsParams, 8),
+		configCalls:   make(chan *protocol.ConfigurationParams, 4),
+		diagnostics:   make(chan *protocol.PublishDiagnosticsParams, 8),
+		messages:      make(chan *protocol.ShowMessageParams, 8),
+		registrations: make(chan *protocol.RegistrationParams, 4),
 	}
 }
 
@@ -41,6 +45,16 @@ func (c *testClient) Configuration(ctx context.Context, params *protocol.Configu
 
 func (c *testClient) PublishDiagnostics(ctx context.Context, params *protocol.PublishDiagnosticsParams) error {
 	c.diagnostics <- params
+	return nil
+}
+
+func (c *testClient) ShowMessage(ctx context.Context, params *protocol.ShowMessageParams) error {
+	c.messages <- params
+	return nil
+}
+
+func (c *testClient) RegisterCapability(ctx context.Context, params *protocol.RegistrationParams) error {
+	c.registrations <- params
 	return nil
 }
 

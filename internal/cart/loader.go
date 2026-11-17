@@ -79,9 +79,11 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 	cart.Includes = f.includes
 	cart.Diagnostics = append(cart.Diagnostics, f.diags...)
 	cart.Chars = CountChars(cart.Flat)
+	cart.FileChars = CountCharsBySegment(cart.Segments, cart.Flat)
 
 	lexed := syntax.Lex(cart.Flat, cart.Span)
 	cart.Tokens = CountTokens(lexed.Tokens)
+	cart.FileTokens = CountTokensByFile(lexed.Tokens)
 	chunk, parseErrors := syntax.Parse(lexed.Tokens)
 
 	errors := make([]syntax.Error, 0, len(lexed.Errors)+len(parseErrors))
