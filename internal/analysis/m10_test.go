@@ -484,3 +484,38 @@ local value = 1
 		t.Fatalf("malformed generic/operator/overload annotations were accepted: %+v", result.Diagnostics)
 	}
 }
+
+func TestM10GenericClassCycle(t *testing.T) {
+	text := `---@class A<T>: B<T>
+---@class B<T>: A<T>
+local a = {}
+local b = {}
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	diag := findDiagnostic(result, CodeAnnotationInvalid)
+	if diag == nil || !strings.Contains(diag.Message, "cycle") {
+		t.Fatalf("generic cycle diagnostics = %+v", result.Diagnostics)
+	}
+}
+
+func TestM10ExactGenericInheritance(t *testing.T) {
+	text := `---@class Pair<K, V>
+---@field key K
+---@field value V
+---@class (exact) NamedPair<V>: Pair<string, V>
+---@field assigned boolean
+
+---@type NamedPair<number>
+local ok = {key = "a", value = 1, assigned = true}
+
+---@type NamedPair<number>
+local bad = {key = "a", assigned = true}
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if hasDiagnosticOnText(result, text, "local ok =") {
+		t.Fatalf("complete exact generic literal produced a diagnostic: %+v", result.Diagnostics)
+	}
+	if !hasDiagnosticOnText(result, text, "local bad =") {
+		t.Fatalf("missing exact generic parent field was accepted: %+v", result.Diagnostics)
+	}
+}

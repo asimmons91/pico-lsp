@@ -88,7 +88,19 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 		alias.Underlying = parsed
 	}
 
-	for _, class := range result.Classes {
+	type classResolution struct {
+		class    *Class
+		record   *types.Record
+		resolver TypeResolver
+	}
+	classNames := make([]string, 0, len(result.Classes))
+	for name := range result.Classes {
+		classNames = append(classNames, name)
+	}
+	sort.Strings(classNames)
+	resolutions := make(map[string]*classResolution, len(classNames))
+	for _, name := range classNames {
+		class := result.Classes[name]
 		if class == nil {
 			continue
 		}
@@ -110,13 +122,27 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 			classParams[canonical] = param
 			record.TypeParams = append(record.TypeParams, param)
 		}
-		classResolver := func(name string) (types.Type, bool) {
-			if param := classParams[CanonicalName(name)]; param != nil {
-				return param, true
-			}
-			return resolver(name)
+		resolutions[name] = &classResolution{
+			class:  class,
+			record: record,
+			resolver: func(name string) (types.Type, bool) {
+				if param := classParams[CanonicalName(name)]; param != nil {
+					return param, true
+				}
+				return resolver(name)
+			},
 		}
-		for _, decl := range class.GenericDecls {
+	}
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		classParams := make(map[string]*types.GenericParam, len(res.record.TypeParams))
+		for _, param := range res.record.TypeParams {
+			classParams[CanonicalName(param.Name)] = param
+		}
+		for _, decl := range res.class.GenericDecls {
 			if strings.TrimSpace(decl.Default) == "" {
 				continue
 			}
@@ -124,13 +150,22 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 			if param == nil {
 				continue
 			}
-			parsed, err := parseType(decl.Default, classResolver)
+			parsed, err := parseType(decl.Default, res.resolver)
 			if err != nil {
-				result.addTypeParseError(mode, err, class.DeclSpan, fmt.Sprintf("generic %q default", decl.Name))
+				result.addTypeParseError(mode, err, res.class.DeclSpan, fmt.Sprintf("generic %q default", decl.Name))
 				continue
 			}
 			param.Default = parsed
 		}
+	}
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		class := res.class
+		record := res.record
+		classResolver := res.resolver
 		for _, parent := range class.Parents {
 			parentType, err := parseType(parent, classResolver)
 			if err != nil {
@@ -147,7 +182,7 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("%q is not a parent class", parent), class.DeclSpan, SeverityWarning)
 				continue
 			}
-			if parentRecord == record {
+			if templateRecord(parentRecord) == record {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("class %q cannot inherit itself", class.Name), class.DeclSpan, SeverityWarning)
 				continue
 			}
@@ -847,6 +882,7 @@ func classCyclePath(start *types.Record) []*types.Record {
 	if start == nil {
 		return nil
 	}
+	start = templateRecord(start)
 	path := make([]*types.Record, 0, 4)
 	visited := map[*types.Record]bool{start: true}
 	var walk func(*types.Record, int) bool
@@ -856,6 +892,7 @@ func classCyclePath(start *types.Record) []*types.Record {
 		}
 		path = append(path, current)
 		for _, parent := range current.Parents {
+			parent = templateRecord(parent)
 			if parent == start {
 				return true
 			}
@@ -874,6 +911,16 @@ func classCyclePath(start *types.Record) []*types.Record {
 		return nil
 	}
 	return path
+}
+
+func templateRecord(record *types.Record) *types.Record {
+	if record == nil {
+		return nil
+	}
+	if record.Template != nil {
+		return record.Template
+	}
+	return record
 }
 
 // cycleOwner reports whether start sorts first in the cycle. Reporting only
@@ -952,8 +999,12 @@ func (r *Result) originFieldSymbol(t types.Type, name string) *Symbol {
 	if !ok || info.Owner == nil {
 		return nil
 	}
+	owner := info.Owner
+	if owner.Template != nil {
+		owner = owner.Template
+	}
 	canonical := CanonicalName(name)
-	for _, field := range info.Owner.Fields {
+	for _, field := range owner.Fields {
 		if field == nil || CanonicalName(field.Name) != canonical {
 			continue
 		}

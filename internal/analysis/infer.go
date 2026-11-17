@@ -958,22 +958,17 @@ func (inf *inferer) attachFieldCalleeType(expr syntax.Expr, callee *Symbol, env 
 		return nil
 	}
 	origin := inf.result.originFieldSymbol(base, fieldExpr.Name.Text)
-	if origin != nil {
-		if originFn, ok := types.AsFunction(origin.Type); ok {
-			fn = originFn
-		}
-	}
 	if callee.Type == nil || types.IsAny(callee.Type) {
 		callee.Type = fn
 	}
-	inf.adoptInheritedMember(callee, origin)
+	inf.adoptInheritedMember(callee, origin, base)
 	return origin
 }
 
 // adoptInheritedMember copies documentation and the display signature from a
 // declaring class-table symbol onto the provisional member used at a call or
 // access site.
-func (inf *inferer) adoptInheritedMember(member, origin *Symbol) {
+func (inf *inferer) adoptInheritedMember(member, origin *Symbol, receiver types.Type) {
 	if member == nil || origin == nil || member == origin {
 		return
 	}
@@ -984,7 +979,12 @@ func (inf *inferer) adoptInheritedMember(member, origin *Symbol) {
 		member.Signature = origin.Signature
 	}
 	if len(member.Overloads) == 0 {
-		member.Overloads = origin.Overloads
+		for _, overload := range origin.Overloads {
+			substituted := types.SubstituteFor(receiver, overload)
+			if fn, ok := types.AsFunction(substituted); ok && fn != nil {
+				member.Overloads = append(member.Overloads, fn)
+			}
+		}
 	}
 }
 
@@ -1010,25 +1010,15 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 		var origin *Symbol
 		if !declaredHere || len(method.Overloads) > 0 {
 			origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
-			if origin != nil {
-				if method.Type == nil || types.IsAny(method.Type) {
-					if originFn, ok := types.AsFunction(origin.Type); ok {
-						method.Type = originFn
-					}
-				}
-				if len(method.Overloads) == 0 {
-					method.Overloads = origin.Overloads
-				}
-			}
 		}
-		if !declaredHere && (method.Type == nil || types.IsAny(method.Type)) {
+		if !declaredHere {
 			if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
 				if resolved, ok := types.AsFunction(fieldType); ok {
 					method.Type = resolved
 				}
 			}
 		}
-		inf.adoptInheritedMember(method, origin)
+		inf.adoptInheritedMember(method, origin, receiver)
 		if origin != nil && origin != method {
 			inf.recordCall(origin, argTypes)
 		}

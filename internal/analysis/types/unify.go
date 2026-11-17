@@ -497,7 +497,11 @@ func fieldExact(t Type, name string, depth int) (Type, bool, bool) {
 	switch v := t.(type) {
 	case *Record:
 		if field := recordFieldExact(v, name, depth); field != nil {
-			return field.Type, true, field.Optional
+			fieldType := field.Type
+			if v.Template != nil {
+				fieldType = Substitute(fieldType, recordBinding(v))
+			}
+			return fieldType, true, field.Optional
 		}
 	case Record:
 		if field := recordFieldExact(&v, name, depth); field != nil {
@@ -548,6 +552,9 @@ func recordFieldExact(record *Record, name string, depth int) *Field {
 			return field
 		}
 	}
+	if record.Template != nil {
+		return recordFieldExact(record.Template, name, depth+1)
+	}
 	return nil
 }
 
@@ -571,12 +578,11 @@ func field(t Type, canonical string, depth int) (Type, bool, bool) {
 	switch v := t.(type) {
 	case *Record:
 		if field := recordField(v, canonical); field != nil {
-			return field.Type, true, field.Optional
-		}
-		if v.Template != nil {
-			if field := recordField(v.Template, canonical); field != nil {
-				return Substitute(field.Type, recordBinding(v)), true, field.Optional
+			fieldType := field.Type
+			if v.Template != nil {
+				fieldType = Substitute(fieldType, recordBinding(v))
 			}
+			return fieldType, true, field.Optional
 		}
 	case Record:
 		if field := recordField(&v, canonical); field != nil {
@@ -619,6 +625,9 @@ func recordFieldDepth(record *Record, canonical string, depth int) *Field {
 		if field := recordFieldDepth(parent, canonical, depth+1); field != nil {
 			return field
 		}
+	}
+	if record.Template != nil {
+		return recordFieldDepth(record.Template, canonical, depth+1)
 	}
 	return nil
 }

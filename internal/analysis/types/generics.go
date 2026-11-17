@@ -166,6 +166,16 @@ func instantiateWithState(record *Record, args []Type, state *substituteState) *
 	return copyRecord
 }
 
+// SubstituteFor applies a receiver's generic arguments to t. It is used when a
+// member comes from a generic class template.
+func SubstituteFor(receiver Type, t Type) Type {
+	record, ok := Resolve(receiver).(*Record)
+	if !ok || record == nil || record.Template == nil {
+		return t
+	}
+	return Substitute(t, recordBinding(record))
+}
+
 // Substitute replaces generic parameters in t using binding. Unbound parameters
 // fall back to their default, then any.
 func Substitute(t Type, binding map[*GenericParam]Type) Type {

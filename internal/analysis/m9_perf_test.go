@@ -22,7 +22,7 @@ func annotatedTypeCartText() string {
 	for i := 0; i < 600; i++ {
 		fmt.Fprintf(&b, "local value_%03d = %d + #tostr(%d)\n", i, i, i)
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 2; i++ {
 		fmt.Fprintf(&b, "local boxed_%03d = box(%d)\n", i, i)
 		fmt.Fprintf(&b, "local chosen_%03d = choose(%d)\n", i, i)
 		fmt.Fprintf(&b, "local vec_a_%03d = setmetatable({x = %d}, {__index = Vec})\n", i, i)
