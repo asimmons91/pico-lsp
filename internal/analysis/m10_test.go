@@ -113,6 +113,10 @@ func TestM10GenericParentInstantiation(t *testing.T) {
 local pair = {key = "a", value = 1, assigned = true}
 local keyType = pair.key
 local valueType = pair.value
+
+---@type NamedPair<number>
+local empty = {}
+local emptyKey = empty.key
 `
 	result := analyzeTextMode(t, text, TypeCheckingBasic)
 	if got := types.Display(symbolByName(result, "keyType").Type); got != "string" {
@@ -120,6 +124,9 @@ local valueType = pair.value
 	}
 	if got := types.Display(symbolByName(result, "valueType").Type); got != "number" {
 		t.Fatalf("value type = %q", got)
+	}
+	if got := types.Display(symbolByName(result, "emptyKey").Type); got != "string" {
+		t.Fatalf("inherited generic parent field = %q", got)
 	}
 }
 

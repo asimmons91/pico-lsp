@@ -214,6 +214,21 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 		attachClassOperators(result, class, classResolver, mode)
 	}
 
+	// Parent applications created before a parent's fields/operators were
+	// attached are refreshed now that the whole hierarchy is resolved.
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		for i, parent := range res.record.Parents {
+			if parent == nil || parent.Template == nil {
+				continue
+			}
+			res.record.Parents[i] = types.Instantiate(parent.Template, parent.TypeArgs)
+		}
+	}
+
 	reportClassCycles(result, mode)
 	if mode == TypeCheckingOff {
 		// Inference normally merges class-table methods and fields. With type
