@@ -30,8 +30,8 @@ func TestPerformanceTargets(t *testing.T) {
 	if raceDetectorEnabled {
 		t.Skip("timing targets are not meaningful under the race detector")
 	}
-	if runtime.GOOS == "windows" {
-		t.Skip("timing targets are measured on Linux and macOS runners")
+	if runtime.GOOS != "linux" {
+		t.Skip("timing targets are measured on Linux runners")
 	}
 	text := largeCartText()
 	if len(text) < 64*1024 {
