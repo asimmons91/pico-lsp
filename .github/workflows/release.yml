@@ -65,3 +65,22 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify released assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          work="$(mktemp -d)"
+          gh release download "$GITHUB_REF_NAME" --dir "$work"
+          (cd "$work" && sha256sum -c checksums.txt)
+          for os in linux darwin windows; do
+            for arch in amd64 arm64; do
+              test -f "$work/pico-lsp_${version}_${os}_${arch}.tar.gz" ||
+                test -f "$work/pico-lsp_${version}_${os}_${arch}.zip"
+            done
+          done
+          tar -xzf "$work/pico-lsp_${version}_linux_amd64.tar.gz" -C "$work"
+          test "$("$work/pico-lsp" --version)" = "$GITHUB_REF_NAME"
