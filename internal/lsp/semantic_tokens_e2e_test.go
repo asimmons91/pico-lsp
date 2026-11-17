@@ -2,6 +2,7 @@ package lsp
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -294,4 +295,17 @@ func TestSemanticTokensUTF16AndUTF8Lengths(t *testing.T) {
 	}
 	run(protocol.PositionEncodingKindUTF16, 5)
 	run(protocol.PositionEncodingKindUTF8, 8)
+}
+
+func TestIncludePathSpanSkipsIndentation(t *testing.T) {
+	text := "  #include \"lib/x.lua\""
+	got, ok := includePathSpan(text, source.Span{FileID: 0, Start: 0, End: len(text)})
+	if !ok {
+		t.Fatal("includePathSpan returned false")
+	}
+	wantStart := strings.Index(text, "lib/x.lua")
+	wantEnd := wantStart + len("lib/x.lua")
+	if got.Start != wantStart || got.End != wantEnd {
+		t.Fatalf("include path span = %+v, want [%d,%d)", got, wantStart, wantEnd)
+	}
 }

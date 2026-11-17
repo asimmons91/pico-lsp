@@ -220,6 +220,9 @@ func includePathSpan(text string, directive source.Span) (source.Span, bool) {
 		return source.Span{}, false
 	}
 	i := directive.Start
+	for i < directive.End && (text[i] == ' ' || text[i] == '\t') {
+		i++
+	}
 	if !strings.HasPrefix(text[i:directive.End], "#include") {
 		return source.Span{}, false
 	}

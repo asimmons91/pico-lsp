@@ -25,6 +25,7 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 		result.finish()
 		return result
 	}
+	result.cart = snap.Cart
 
 	chunkScope := NewScope(nil)
 	chunkScope.Labels = make(map[string]*Symbol)
@@ -55,6 +56,7 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	b.collectLabels(snap.Chunk.Block, chunkScope)
 	b.bindBlock(snap.Chunk.Block, chunkScope)
 	attachDocs(snap, result)
+	attachParamDocs(result)
 	result.finish()
 	return result
 }
@@ -333,7 +335,7 @@ func (b *binder) bindStmt(stmt syntax.Stmt, scope *Scope) {
 		scope.Declare(sym)
 		b.addDecl(st.Name, sym, scope)
 		setFunctionInfo(sym, st.Name.Text, st.Func)
-		b.bindFunction(st.Func, scope, false, nil, source.Span{})
+		b.bindFunction(st.Func, scope, false, nil, source.Span{}, sym)
 	case *syntax.AssignStmt:
 		b.bindAssign(st, scope)
 	case *syntax.CallStmt:
@@ -412,13 +414,19 @@ func (b *binder) bindLocal(st *syntax.LocalStmt, scope *Scope) {
 		if value == nil {
 			continue
 		}
+		var target *Symbol
 		if i < len(symbols) {
-			if fn, ok := value.(*syntax.FunctionExpr); ok {
-				setFunctionInfo(symbols[i], st.Names[i].Text, fn)
-			}
+			target = symbols[i]
 		}
-		if table, ok := value.(*syntax.TableExpr); ok && i < len(symbols) {
-			b.bindTable(table, symbols[i], scope)
+		if fn, ok := value.(*syntax.FunctionExpr); ok {
+			if target != nil {
+				setFunctionInfo(target, st.Names[i].Text, fn)
+			}
+			b.bindFunction(fn, scope, false, nil, source.Span{}, target)
+			continue
+		}
+		if table, ok := value.(*syntax.TableExpr); ok && target != nil {
+			b.bindTable(table, target, scope)
 			continue
 		}
 		b.bindExpr(value, scope)
@@ -449,7 +457,7 @@ func (b *binder) bindAssign(st *syntax.AssignStmt, scope *Scope) {
 				target.Kind = SymbolFunction
 			}
 			setFunctionInfo(target, target.Name, fn)
-			b.bindFunction(fn, scope, false, nil, source.Span{})
+			b.bindFunction(fn, scope, false, nil, source.Span{}, target)
 			continue
 		}
 		b.bindExpr(value, scope)
@@ -498,7 +506,7 @@ func functionDisplayName(names []*syntax.NameExpr, method bool) string {
 
 func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 	if len(st.Names) == 0 {
-		b.bindFunction(st.Func, scope, st.Method, nil, source.Span{})
+		b.bindFunction(st.Func, scope, st.Method, nil, source.Span{}, nil)
 		return
 	}
 	if len(st.Names) == 1 {
@@ -517,7 +525,7 @@ func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 			sym.Kind = SymbolFunction
 		}
 		setFunctionInfo(sym, name.Text, st.Func)
-		b.bindFunction(st.Func, scope, st.Method, nil, name.Span())
+		b.bindFunction(st.Func, scope, st.Method, nil, name.Span(), sym)
 		return
 	}
 
@@ -551,10 +559,10 @@ func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 		setFunctionInfo(receiver, functionDisplayName(st.Names, st.Method), st.Func)
 	}
 	selfSpan := st.Names[len(st.Names)-1].Span()
-	b.bindFunction(st.Func, scope, st.Method, selfReceiver, selfSpan)
+	b.bindFunction(st.Func, scope, st.Method, selfReceiver, selfSpan, receiver)
 }
 
-func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool, receiver *Symbol, selfSpan source.Span) {
+func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool, receiver *Symbol, selfSpan source.Span, functionSym *Symbol) {
 	if fn == nil {
 		return
 	}
@@ -569,6 +577,7 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 		self := b.table.NewSymbol(SymbolParam, "self", selfSpan, fnScope)
 		self.DeclSpan = selfSpan
 		self.SelectionSpan = selfSpan
+		self.Function = functionSym
 		self.Decls = nil // implicit; no occurrence at the method name
 		fnScope.Declare(self)
 		if receiver != nil {
@@ -578,6 +587,7 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 	}
 	for _, param := range fn.Params {
 		sym := b.table.NewSymbol(SymbolParam, param.Text, param.Span(), fnScope)
+		sym.Function = functionSym
 		fnScope.Declare(sym)
 		b.addDecl(param, sym, fnScope)
 	}
@@ -753,7 +763,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		b.bindExpr(e.Right, scope)
 		return nil
 	case *syntax.FunctionExpr:
-		b.bindFunction(e, scope, false, nil, source.Span{})
+		b.bindFunction(e, scope, false, nil, source.Span{}, nil)
 		return nil
 	case *syntax.TableExpr:
 		b.bindTable(e, nil, scope)
@@ -793,6 +803,8 @@ func (b *binder) bindTable(table *syntax.TableExpr, receiver *Symbol, scope *Sco
 		if fieldSym != nil {
 			if fn, ok := field.Value.(*syntax.FunctionExpr); ok {
 				setFunctionInfo(fieldSym, fieldSym.Name, fn)
+				b.bindFunction(fn, scope, false, nil, source.Span{}, fieldSym)
+				continue
 			}
 		}
 		if nested, ok := field.Value.(*syntax.TableExpr); ok && fieldSym != nil {

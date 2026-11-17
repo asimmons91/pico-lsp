@@ -129,3 +129,60 @@ func TestVisibleSymbolsAtRespectsDeclarationOrder(t *testing.T) {
 		t.Fatalf("after declaration resolved to %d, want inner x", inner.DeclSpan.Start)
 	}
 }
+
+func TestDocsDoNotAttachToUndeclaredFieldUses(t *testing.T) {
+	text := "local player = {}\n--- Draw the player.\ncircfill(player.x)\n"
+	result, _ := analyzeText(t, text)
+	offset := strings.Index(text, "player.x") + len("player.")
+	occ := result.OccurrenceAt(0, offset)
+	if occ == nil || occ.Symbol == nil {
+		t.Fatal("missing field occurrence")
+	}
+	if occ.Symbol.Doc != nil {
+		t.Fatalf("field inherited docs from a call site: %+v", occ.Symbol.Doc)
+	}
+}
+
+func TestClassFieldMetadataMergesIntoUsedField(t *testing.T) {
+	text := "---@class Player\n---@field score? number points\nlocal p = {}\np.score = 1\n"
+	result, _ := analyzeText(t, text)
+	offset := strings.Index(text, "p.score") + len("p.")
+	occ := result.OccurrenceAt(0, offset)
+	if occ == nil || occ.Symbol == nil {
+		t.Fatal("missing field occurrence")
+	}
+	doc := occ.Symbol.Doc
+	if doc == nil || doc.Type != "number" || !doc.Optional || doc.Summary != "points" {
+		t.Fatalf("field docs = %+v, want merged class metadata", doc)
+	}
+	if doc.Class != "" {
+		t.Fatalf("field docs inherited the class from the local's block: %+v", doc)
+	}
+}
+
+func TestParamDocsAttachToParameterSymbols(t *testing.T) {
+	text := "--- Move.\n---@param dx? number horizontal\n---@param dy number vertical\nfunction move(dx, dy)\n  print(dx, dy)\nend\n"
+	result, _ := analyzeText(t, text)
+	offset := strings.Index(text, "print(dx") + len("print(")
+	occ := result.OccurrenceAt(0, offset)
+	if occ == nil || occ.Symbol == nil {
+		t.Fatal("missing parameter occurrence")
+	}
+	doc := occ.Symbol.Doc
+	if doc == nil || doc.Type != "number" || !doc.Optional || doc.Summary != "horizontal" {
+		t.Fatalf("parameter docs = %+v, want param annotation", doc)
+	}
+}
+
+func TestDocsAttachToStandaloneTableField(t *testing.T) {
+	text := "local t = {\n  --- The value.\n  x = 1,\n}\n"
+	result, _ := analyzeText(t, text)
+	offset := strings.Index(text, "x = 1") + 1
+	occ := result.OccurrenceAt(0, offset)
+	if occ == nil || occ.Symbol == nil {
+		t.Fatal("missing table field occurrence")
+	}
+	if occ.Symbol.Doc == nil || occ.Symbol.Doc.Summary != "The value." {
+		t.Fatalf("table field docs = %+v", occ.Symbol.Doc)
+	}
+}

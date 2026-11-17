@@ -164,3 +164,22 @@ func TestStubCoversKeyAPISurface(t *testing.T) {
 		}
 	}
 }
+
+func TestStubMetadataIncludesVariadicParameters(t *testing.T) {
+	api, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	for _, name := range []string{"poke", "chr", "coresume"} {
+		entry, ok := api.Lookup(name)
+		if !ok {
+			t.Fatalf("missing %s", name)
+		}
+		if !strings.HasSuffix(entry.Signature, "...)") {
+			t.Fatalf("%s signature = %q, want variadic", name, entry.Signature)
+		}
+		if len(entry.Params) == 0 || entry.Params[len(entry.Params)-1] != "..." {
+			t.Fatalf("%s params = %v, want trailing ...", name, entry.Params)
+		}
+	}
+}

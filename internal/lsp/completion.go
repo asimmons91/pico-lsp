@@ -47,7 +47,11 @@ func (s *Server) Completion(ctx context.Context, params *protocol.CompletionPara
 	if !ok {
 		return &protocol.CompletionList{Items: []protocol.CompletionItem{}}, nil
 	}
-	items, incomplete := s.completions(nav, offset)
+	trigger := ""
+	if params.Context.TriggerKind == protocol.CompletionTriggerKindTriggerCharacter && params.Context.TriggerCharacter != nil {
+		trigger = *params.Context.TriggerCharacter
+	}
+	items, incomplete := s.completions(nav, offset, trigger)
 	return &protocol.CompletionList{IsIncomplete: incomplete, Items: items}, nil
 }
 
@@ -103,7 +107,7 @@ func (s *Server) CompletionResolve(ctx context.Context, item *protocol.Completio
 	return item, nil
 }
 
-func (s *Server) completions(nav *navContext, offset int) ([]protocol.CompletionItem, bool) {
+func (s *Server) completions(nav *navContext, offset int, trigger string) ([]protocol.CompletionItem, bool) {
 	if nav == nil || nav.file == nil {
 		return nil, false
 	}
@@ -133,6 +137,12 @@ func (s *Server) completions(nav *navContext, offset int) ([]protocol.Completion
 
 	prefixStart := identifierPrefixStart(nav.file.Text, offset)
 	prefix := nav.file.Text[prefixStart:offset]
+	if trigger == "@" || trigger == "#" {
+		// Those characters trigger annotation/include completion above. At
+		// every other position they are the peek and length operators, which
+		// are not identifier contexts.
+		return nil, false
+	}
 	if separator, method, ok := precedingMemberSeparator(nav.file.Text, prefixStart); ok {
 		receiver := nav.receiverBefore(separator)
 		return s.memberCompletions(nav, receiver, method, prefixStart, offset, prefix)
@@ -172,7 +182,7 @@ func (s *Server) identifierCompletions(context *completionContext) ([]protocol.C
 	}
 
 	if context.scope != nil {
-		for _, sym := range context.scope.VisibleSymbolsAt(nav.fileID, context.offset) {
+		for _, sym := range nav.semantics.VisibleSymbolsAt(context.scope, nav.fileID, context.offset) {
 			if sym == nil || sym.Owner != nil || sym.Kind == analysis.SymbolLabel {
 				continue
 			}

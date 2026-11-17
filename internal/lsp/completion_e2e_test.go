@@ -620,3 +620,98 @@ func TestIncludeCompletionRespectsFileLimits(t *testing.T) {
 		t.Fatalf("includeFiles(limit=3) = %v, want 3", got)
 	}
 }
+
+func TestCompletionRespectsIncludeOrdering(t *testing.T) {
+	t.Run("locals after the include are hidden", func(t *testing.T) {
+		dir := t.TempDir()
+		cartText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.lua\"\nlocal later = 1\n"
+		libText := "print(\n"
+		root := writeTemp(t, dir, "cart.p8", cartText)
+		lib := writeTemp(t, dir, "lib.lua", libText)
+		h := newHarness(t, newTestClient())
+		h.initialize(t, &protocol.InitializeParams{})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		openDoc(t, h, ctx, root, cartText)
+		openDoc(t, h, ctx, lib, libText)
+
+		pos := positionAt(t, libText, "print(", len("print("))
+		items := completionItems(t, h, ctx, lib, pos)
+		if findCompletion(items, "later") != nil {
+			t.Fatalf("include-file completion offered later local: %v", completionLabels(items))
+		}
+	})
+
+	t.Run("locals before the include are visible", func(t *testing.T) {
+		dir := t.TempDir()
+		cartText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nlocal earlier = 1\n#include \"lib.lua\"\n"
+		libText := "print(\n"
+		root := writeTemp(t, dir, "cart.p8", cartText)
+		lib := writeTemp(t, dir, "lib.lua", libText)
+		h := newHarness(t, newTestClient())
+		h.initialize(t, &protocol.InitializeParams{})
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		openDoc(t, h, ctx, root, cartText)
+		openDoc(t, h, ctx, lib, libText)
+
+		pos := positionAt(t, libText, "print(", len("print("))
+		items := completionItems(t, h, ctx, lib, pos)
+		if findCompletion(items, "earlier") == nil {
+			t.Fatalf("include-file completion missed earlier local: %v", completionLabels(items))
+		}
+	})
+}
+
+func TestCompletionTriggerCharactersDoNotOfferIdentifiersAtOperators(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+local n = #
+x = @
+---@ty
+#inc
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	completeWithTrigger := func(pos protocol.Position, trigger string) []protocol.CompletionItem {
+		t.Helper()
+		result, err := h.server.Completion(ctx, &protocol.CompletionParams{
+			TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+				TextDocument: protocol.TextDocumentIdentifier{URI: root},
+				Position:     pos,
+			},
+			Context: protocol.CompletionContext{
+				TriggerKind:      protocol.CompletionTriggerKindTriggerCharacter,
+				TriggerCharacter: &trigger,
+			},
+		})
+		if err != nil {
+			t.Fatalf("completion: %v", err)
+		}
+		list, ok := result.(*protocol.CompletionList)
+		if !ok {
+			t.Fatalf("completion result type = %T", result)
+		}
+		return list.Items
+	}
+
+	if items := completeWithTrigger(positionAt(t, text, "local n = #", len("local n = #")), "#"); len(items) != 0 {
+		t.Fatalf("completion after # = %v, want empty", completionLabels(items))
+	}
+	if items := completeWithTrigger(positionAt(t, text, "x = @", len("x = @")), "@"); len(items) != 0 {
+		t.Fatalf("completion after @ = %v, want empty", completionLabels(items))
+	}
+	if items := completeWithTrigger(positionAt(t, text, "---@ty", len("---@ty")), "@"); findCompletion(items, "type") == nil {
+		t.Fatalf("annotation completion after @ = %v, missing type", completionLabels(items))
+	}
+	if items := completeWithTrigger(positionAt(t, text, "#inc", len("#inc")), "#"); findCompletion(items, "#include") == nil {
+		t.Fatalf("include completion after # = %v, missing #include", completionLabels(items))
+	}
+}

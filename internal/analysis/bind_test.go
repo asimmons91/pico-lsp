@@ -566,3 +566,17 @@ func TestRenameConflictGlobalAndField(t *testing.T) {
 		t.Fatal("field x -> y should conflict")
 	}
 }
+
+func TestScopeAtDoesNotLeakFinishedFunctionLocals(t *testing.T) {
+	text := "local top = 1\nfunction f(param)\n  local inner = 2\nend\n"
+	result, _ := analyzeText(t, text)
+	scope := result.ScopeAt(0, len(text))
+	if scope != result.chunkScope {
+		t.Fatalf("ScopeAt after function = %p, want chunk scope %p", scope, result.chunkScope)
+	}
+	for _, sym := range result.VisibleSymbolsAt(scope, 0, len(text)) {
+		if sym.Canonical == "param" || sym.Canonical == "inner" {
+			t.Fatalf("top-level completion leaked %q", sym.Canonical)
+		}
+	}
+}

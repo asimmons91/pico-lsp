@@ -57,6 +57,9 @@ func symbolMarkdown(nav *navContext, sym *analysis.Symbol) string {
 		b.WriteString("\n\n**Type:** `")
 		b.WriteString(sym.Doc.Type)
 		b.WriteString("`")
+		if sym.Doc.Optional {
+			b.WriteString(" (optional)")
+		}
 	}
 	if sym.Doc != nil && len(sym.Doc.Params) > 0 {
 		b.WriteString("\n\n**Parameters**")
@@ -119,6 +122,9 @@ func symbolDocumentation(sym *analysis.Symbol) string {
 		b.WriteString("**Type:** `")
 		b.WriteString(sym.Doc.Type)
 		b.WriteString("`")
+		if sym.Doc.Optional {
+			b.WriteString(" (optional)")
+		}
 	}
 	if len(sym.Doc.Params) > 0 {
 		if b.Len() > 0 {

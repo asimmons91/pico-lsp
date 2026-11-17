@@ -449,7 +449,8 @@ function peek(addr, n) end
 ---@param addr number
 ---@param val1 number
 ---@param val2? number
-function poke(addr, val1, val2) end
+---@param ... number
+function poke(addr, val1, val2, ...) end
 
 --- Read a 16-bit value from memory.
 ---@param addr number
@@ -629,7 +630,8 @@ function tonum(val, format_flags) end
 --- Return the string for one or more character codes.
 ---@param val0 number
 ---@param val1? number
-function chr(val0, val1) end
+---@param ... number
+function chr(val0, val1, ...) end
 
 --- Return character codes from a string.
 ---@param str string
@@ -709,7 +711,8 @@ function cocreate(func) end
 ---@param c thread
 ---@param p0? any
 ---@param p1? any
-function coresume(c, p0, p1) end
+---@param ... any
+function coresume(c, p0, p1, ...) end
 
 --- Return a coroutine's status.
 ---@param c thread

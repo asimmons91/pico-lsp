@@ -28,6 +28,7 @@ type DocComment struct {
 	Params     []ParamDoc
 	Returns    []string
 	Deprecated bool
+	Optional   bool
 }
 
 // ClassField is one shallow `---@field` declaration.
@@ -128,6 +129,15 @@ func attachDocs(snap *cart.Snapshot, result *Result) {
 		file := snap.Cart.File(sym.DeclSpan.FileID)
 		if file == nil || file.Index == nil {
 			continue
+		}
+		if sym.Kind == SymbolField {
+			// A field using a doc block above a call line is not a
+			// declaration, and fields embedded in a table/assignment line do
+			// not own a doc block above that line. Only a field that starts its
+			// own line can carry its own docs.
+			if len(sym.Decls) == 0 || !fieldAtLineStart(file, sym.DeclSpan) {
+				continue
+			}
 		}
 		sym.Doc = ParseDocComments(docCommentsFor(file, snap.Comments, sym.DeclSpan.Start))
 	}
@@ -230,15 +240,85 @@ func attachClassFields(result *Result) {
 			if canonical == "" {
 				continue
 			}
-			if _, exists := sym.Fields[canonical]; exists {
+			if existing := sym.Fields[canonical]; existing != nil {
+				applyClassFieldDoc(existing, field)
 				continue
 			}
 			fieldSym := result.Table.NewSymbol(SymbolField, field.Name, field.Span, nil)
 			fieldSym.Owner = sym
-			if field.Type != "" || field.Doc != "" {
-				fieldSym.Doc = &DocComment{Type: field.Type, Summary: field.Doc}
-			}
+			applyClassFieldDoc(fieldSym, field)
 			sym.Fields[canonical] = fieldSym
+		}
+	}
+}
+
+func applyClassFieldDoc(sym *Symbol, field ClassField) {
+	if sym == nil {
+		return
+	}
+	if sym.Doc == nil {
+		if field.Type == "" && field.Doc == "" && !field.Optional {
+			return
+		}
+		sym.Doc = &DocComment{}
+	}
+	if sym.Doc.Type == "" {
+		sym.Doc.Type = field.Type
+	}
+	if sym.Doc.Summary == "" {
+		sym.Doc.Summary = field.Doc
+	}
+	sym.Doc.Optional = sym.Doc.Optional || field.Optional
+}
+
+// fieldAtLineStart reports whether only indentation precedes span on its line.
+// Table fields on their own line can own a doc block; fields embedded in a
+// local declaration, table literal, or assignment line cannot.
+func fieldAtLineStart(file *cart.File, span source.Span) bool {
+	if file == nil || file.Index == nil || span.IsEmpty() {
+		return false
+	}
+	pos, err := file.Index.Position(span.Start)
+	if err != nil {
+		return false
+	}
+	lineStart, err := file.Index.Offset(protocol.Position{Line: pos.Line, Character: 0})
+	if err != nil || lineStart < 0 || lineStart > span.Start {
+		return false
+	}
+	for _, r := range file.Text[lineStart:span.Start] {
+		if r != ' ' && r != '\t' {
+			return false
+		}
+	}
+	return true
+}
+
+// attachParamDocs copies matching `---@param` metadata onto parameter symbols.
+// The function-level doc block is still attached to the function itself.
+func attachParamDocs(result *Result) {
+	if result == nil || result.Table == nil {
+		return
+	}
+	for _, sym := range result.Table.Symbols {
+		if sym == nil || sym.Kind != SymbolParam || sym.Function == nil || sym.Function.Doc == nil {
+			continue
+		}
+		for _, param := range sym.Function.Doc.Params {
+			if !strings.EqualFold(param.Name, sym.Name) {
+				continue
+			}
+			if sym.Doc == nil {
+				sym.Doc = &DocComment{}
+			}
+			if sym.Doc.Type == "" {
+				sym.Doc.Type = param.Type
+			}
+			if sym.Doc.Summary == "" {
+				sym.Doc.Summary = param.Doc
+			}
+			sym.Doc.Optional = sym.Doc.Optional || param.Optional
+			break
 		}
 	}
 }

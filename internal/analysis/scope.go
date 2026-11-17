@@ -55,17 +55,20 @@ func (s *Scope) Lookup(canonical string) *Symbol {
 // newer declarations taking precedence. The result is sorted by canonical name
 // for deterministic completion output.
 func (s *Scope) VisibleSymbols() []*Symbol {
-	return s.visibleSymbols(source.FileID(-1), -1)
+	return s.visibleSymbolsBefore(nil)
 }
 
 // VisibleSymbolsAt returns the declarations visible at offset in fileID. A
 // declaration later in the same file is not visible yet, so an outer
-// declaration with the same name is returned until that point.
+// declaration with the same name is returned until that point. Cross-file
+// ordering needs cart metadata; use Result.VisibleSymbolsAt for that.
 func (s *Scope) VisibleSymbolsAt(fileID source.FileID, offset int) []*Symbol {
-	return s.visibleSymbols(fileID, offset)
+	return s.visibleSymbolsBefore(func(candidate *Symbol) bool {
+		return candidate.DeclSpan.FileID != fileID || candidate.DeclSpan.Start <= offset
+	})
 }
 
-func (s *Scope) visibleSymbols(fileID source.FileID, offset int) []*Symbol {
+func (s *Scope) visibleSymbolsBefore(visible func(*Symbol) bool) []*Symbol {
 	seen := make(map[string]struct{})
 	var out []*Symbol
 	for scope := s; scope != nil; scope = scope.Parent {
@@ -77,11 +80,11 @@ func (s *Scope) visibleSymbols(fileID source.FileID, offset int) []*Symbol {
 				continue
 			}
 			chosen := list[len(list)-1]
-			if offset >= 0 {
+			if visible != nil {
 				chosen = nil
 				for i := len(list) - 1; i >= 0; i-- {
 					candidate := list[i]
-					if candidate.DeclSpan.FileID != fileID || candidate.DeclSpan.Start <= offset {
+					if visible(candidate) {
 						chosen = candidate
 						break
 					}

@@ -234,8 +234,9 @@ func workspaceContainer(snap *cart.Snapshot, root uri.URI, span source.Span) str
 	}
 	if !strings.HasSuffix(strings.ToLower(file.URI.Path()), ".p8") {
 		// Included .lua files are part of the cart; show their path relative
-		// to the cart directory rather than only the cart name.
-		if rel, err := filepath.Rel(filepath.Dir(root.FsPath()), file.URI.FsPath()); err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+		// to the cart directory rather than only the cart name. Parent paths
+		// are valid when an include reaches another workspace directory.
+		if rel, err := filepath.Rel(filepath.Dir(root.FsPath()), file.URI.FsPath()); err == nil && rel != "." {
 			return filepath.ToSlash(rel)
 		}
 		return base

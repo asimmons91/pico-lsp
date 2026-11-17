@@ -227,3 +227,45 @@ func TestTruncateMarkdownIsUTF8Safe(t *testing.T) {
 		}
 	}
 }
+
+func TestHoverShowsParamAndClassFieldAnnotations(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Player
+---@field score? number points
+local p = {}
+p.score = 1
+
+---@param dx? number horizontal
+function move(dx)
+  print(dx)
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	for _, tc := range []struct {
+		name    string
+		needle  string
+		offset  int
+		contain []string
+	}{
+		{name: "class field", needle: "p.score", offset: len("p.") + 1, contain: []string{"field score", "number", "optional", "points"}},
+		{name: "parameter", needle: "print(dx)", offset: len("print(") + 1, contain: []string{"parameter dx", "number", "optional", "horizontal"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			markdown := hoverMarkup(t, h, ctx, root, positionAt(t, text, tc.needle, tc.offset))
+			for _, want := range tc.contain {
+				if !strings.Contains(markdown, want) {
+					t.Fatalf("hover missing %q:\n%s", want, markdown)
+				}
+			}
+		})
+	}
+}

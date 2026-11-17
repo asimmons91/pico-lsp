@@ -252,3 +252,25 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 		t.Fatalf("signature help outside call = %+v", help)
 	}
 }
+
+func TestSignatureHelpKeepsCurrentParameterBeforeComma(t *testing.T) {
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n---@param dx number\n---@param dy number\nfunction move(dx, dy) end\nmove(1 , 2)\n"
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	beforeComma := positionAt(t, text, "move(1 , 2)", len("move(1 "))
+	help := signatureHelp(t, h, ctx, root, beforeComma)
+	if active := activeParameter(t, help); active != 0 {
+		t.Fatalf("active parameter before comma = %d, want 0", active)
+	}
+	afterComma := positionAt(t, text, "move(1 , 2)", len("move(1 ,"))
+	help = signatureHelp(t, h, ctx, root, afterComma)
+	if active := activeParameter(t, help); active != 1 {
+		t.Fatalf("active parameter after comma = %d, want 1", active)
+	}
+}

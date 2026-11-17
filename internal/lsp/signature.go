@@ -108,7 +108,7 @@ func buildSignatureHelp(nav *navContext, call *callSite, offset int) *protocol.S
 		params = append(params, param)
 	}
 
-	active := activeParameterIndex(call.args, offset)
+	active := activeParameterIndex(nav, call, offset)
 	if len(params) > 0 && active >= len(params) {
 		active = len(params) - 1
 	}
@@ -171,20 +171,37 @@ func exprSpans(exprs []syntax.Expr) []source.Span {
 	return spans
 }
 
-// activeParameterIndex derives the active argument from parsed argument spans
-// rather than raw text. A text-only comma scan miscounts commas inside nested
-// function bodies, which are not argument separators of the enclosing call.
-func activeParameterIndex(args []source.Span, offset int) int {
+// activeParameterIndex counts top-level comma tokens before offset. Argument
+// spans exclude commas inside nested calls, tables, function bodies, comments,
+// and strings, while the token scan ensures a comma after trailing whitespace
+// still advances the parameter at the comma itself, not at the whitespace
+// before it.
+func activeParameterIndex(nav *navContext, call *callSite, offset int) int {
+	if nav == nil || nav.snap == nil || call == nil {
+		return 0
+	}
 	active := 0
-	for i, span := range args {
-		if span.IsEmpty() {
+	for i := range nav.snap.Tokens {
+		token := &nav.snap.Tokens[i]
+		if token.Span.FileID != nav.fileID || token.Span.Start < call.open.Start || token.Span.Start >= offset {
 			continue
 		}
-		if offset <= span.End {
-			active = i
-			break
+		if token.Kind != syntax.TokenPunct || token.Text != "," {
+			continue
 		}
-		active = i + 1
+		if spanContains(call.args, token.Span.Start) {
+			continue
+		}
+		active++
 	}
 	return active
+}
+
+func spanContains(spans []source.Span, offset int) bool {
+	for _, span := range spans {
+		if span.Contains(offset) {
+			return true
+		}
+	}
+	return false
 }
