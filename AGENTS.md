@@ -45,6 +45,18 @@
 - There is no Lua standard library. Use only the PICO-8 API.
 - `.p8.png` is unsupported in v1; only text `.p8` and standalone `.lua` files.
 
+## Git workflow
+
+- Before starting any task, create a branch from an up-to-date `main`:
+  `feat/<short-slug>` for features, `fix/<short-slug>` for bug fixes, or
+  `chore/<short-slug>` for docs, tooling, and maintenance.
+- Never work directly on `main`; it is protected and direct pushes are rejected.
+- Use Conventional Commits for every commit: `<type>(<optional scope>): <description>`.
+  Allowed types: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `build`, `ci`, `perf`.
+- Use imperative, lowercase descriptions with no trailing period. Mark breaking changes
+  with `!` and/or a `BREAKING CHANGE:` footer.
+- Push the branch and open a PR; do not bypass the `Protect main` ruleset.
+
 ## Commands
 
 - `mise install` installs the pinned Go toolchain; `go version` should report 1.27.4.
