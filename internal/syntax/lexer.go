@@ -189,8 +189,6 @@ func (l *lexer) addError(start, end int, message string) {
 func (l *lexer) lexIdentifier() {
 	start := l.offset
 	for l.offset < len(l.text) {
-		l.tokenLine = l.line
-		l.tokenLineStart = l.lineStart
 		c := l.text[l.offset]
 		if isIdentContinue(c) {
 			l.offset++
@@ -283,8 +281,6 @@ func (l *lexer) lexShortString() {
 	contentStart := l.offset
 
 	for l.offset < len(l.text) {
-		l.tokenLine = l.line
-		l.tokenLineStart = l.lineStart
 		c := l.text[l.offset]
 		switch {
 		case c == quote:
@@ -387,10 +383,9 @@ func (l *lexer) lexLineComment() {
 }
 
 func (l *lexer) lexLineCommentText(start int, kind CommentKind) {
+	atLineStart := l.lineOnlyWhitespace
 	l.offset += 2
 	for l.offset < len(l.text) {
-		l.tokenLine = l.line
-		l.tokenLineStart = l.lineStart
 		c := l.text[l.offset]
 		if c == '\r' || c == '\n' {
 			break
@@ -398,7 +393,7 @@ func (l *lexer) lexLineCommentText(start int, kind CommentKind) {
 		l.offset++
 	}
 	text := l.text[start:l.offset]
-	if strings.HasPrefix(text, "-->8") {
+	if atLineStart && strings.HasPrefix(text, "-->8") {
 		kind = CommentTab
 	} else if strings.HasPrefix(text, "---") && kind == CommentLine {
 		kind = CommentDoc
@@ -413,16 +408,6 @@ func (l *lexer) addComment(kind CommentKind, start, end int) {
 		Span: l.mapper(start, end),
 		Line: l.tokenLine,
 	})
-	if kind == CommentTab {
-		l.tokens = append(l.tokens, Token{
-			Kind:   TokenTabMarker,
-			Text:   l.text[start:end],
-			Value:  "",
-			Span:   l.mapper(start, end),
-			Line:   l.tokenLine,
-			Column: start - l.tokenLineStart,
-		})
-	}
 }
 
 func (l *lexer) lexIncludeDirective() {

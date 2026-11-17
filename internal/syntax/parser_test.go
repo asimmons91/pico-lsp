@@ -435,3 +435,157 @@ func TestParseChainedComparisonAndBitwise(t *testing.T) {
 		t.Fatalf("expr = %s, want %s", got, want)
 	}
 }
+
+func TestParseDeepNestingIsBounded(t *testing.T) {
+	parens := strings.Repeat("(", 2000) + "1" + strings.Repeat(")", 2000)
+	lexed := Lex([]byte(parens), nil)
+	chunk, errs := Parse(lexed.Tokens)
+	if chunk == nil {
+		t.Fatal("nil chunk")
+	}
+	if len(errs) == 0 {
+		t.Fatal("expected a nesting-limit error")
+	}
+	if len(errs) > maxParseErrors {
+		t.Fatalf("errors = %d, want <= %d", len(errs), maxParseErrors)
+	}
+
+	dos := strings.Repeat("do ", 2000)
+	lexed = Lex([]byte(dos), nil)
+	chunk, errs = Parse(lexed.Tokens)
+	if chunk == nil {
+		t.Fatal("nil chunk")
+	}
+	if len(errs) == 0 {
+		t.Fatal("expected a block nesting-limit error")
+	}
+}
+
+func TestParseSpanPrecision(t *testing.T) {
+	text := "x = a.b[2].c"
+	stmt := oneStmt(t, text)
+	assign := stmt.(*AssignStmt)
+	value := assign.Values[0]
+	if value.Span().Start != strings.Index(text, "a") || value.Span().End != strings.Index(text, "c")+1 {
+		t.Fatalf("indexed field span = %+v, want %d..%d", value.Span(), strings.Index(text, "a"), strings.Index(text, "c")+1)
+	}
+
+	text = "y = f(1)(2)"
+	stmt = oneStmt(t, text)
+	assign = stmt.(*AssignStmt)
+	value = assign.Values[0]
+	if value.Span().Start != strings.Index(text, "f") || value.Span().End != len(text) {
+		t.Fatalf("call span = %+v, want %d..%d", value.Span(), strings.Index(text, "f"), len(text))
+	}
+
+	text = "if (x) y=1"
+	stmt = oneStmt(t, text)
+	if stmt.Span().Start != 0 {
+		t.Fatalf("shorthand if span = %+v, want start 0", stmt.Span())
+	}
+
+	text = "while (x) y=1"
+	stmt = oneStmt(t, text)
+	if stmt.Span().Start != 0 {
+		t.Fatalf("shorthand while span = %+v, want start 0", stmt.Span())
+	}
+
+	text = "t = {[k]=3}"
+	stmt = oneStmt(t, text)
+	assign = stmt.(*AssignStmt)
+	table := assign.Values[0].(*TableExpr)
+	field := table.Fields[0]
+	if field.Span().Start != strings.Index(text, "[") {
+		t.Fatalf("bracket field span = %+v, want start %d", field.Span(), strings.Index(text, "["))
+	}
+}
+
+func TestParseMissingEndBeforeEnclosingTerminators(t *testing.T) {
+	chunk, errs := parseText(t, "if x then\n function f()\nelse\n g()\nend")
+	if len(errs) == 0 {
+		t.Fatal("expected missing-end errors")
+	}
+	outer, ok := chunk.Block.Stmts[0].(*IfStmt)
+	if !ok || outer.Else == nil {
+		t.Fatalf("outer if = %+v, want else branch", chunk.Block.Stmts)
+	}
+	if len(outer.Branches[0].Body.Stmts) == 0 {
+		t.Fatal("then branch lost the function")
+	}
+
+	chunk, errs = parseText(t, "repeat\n function f()\nuntil x")
+	if len(errs) == 0 {
+		t.Fatal("expected missing-end errors")
+	}
+	if _, ok := chunk.Block.Stmts[0].(*RepeatStmt); !ok {
+		t.Fatalf("stmt = %T, want repeat", chunk.Block.Stmts[0])
+	}
+}
+
+func TestParseShorthandBlockBodies(t *testing.T) {
+	tests := []struct {
+		text string
+		want string
+	}{
+		{"if (a) x=1; y=2", "*syntax.IfStmt"},
+		{"if (a) do x=1 end", "*syntax.IfStmt"},
+		{"if (a) for i=1,2 do x=i end", "*syntax.IfStmt"},
+		{"if (a) repeat x=1 until x", "*syntax.IfStmt"},
+		{"if (a) function f() end", "*syntax.IfStmt"},
+		{"while (a) x=1;", "*syntax.WhileStmt"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.text, func(t *testing.T) {
+			chunk, errs := parseText(t, tt.text)
+			if len(errs) != 0 {
+				t.Fatalf("errors = %v", errs)
+			}
+			if got := typeName(chunk.Block.Stmts[0]); got != tt.want {
+				t.Fatalf("kind = %s, want %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseTabMarkerIsTrivia(t *testing.T) {
+	chunk, errs := parseText(t, "function f()\n return\n-->8 tab\nend")
+	if len(errs) != 0 {
+		t.Fatalf("errors = %v", errs)
+	}
+	if _, ok := chunk.Block.Stmts[0].(*FunctionDeclStmt); !ok {
+		t.Fatalf("stmt = %T", chunk.Block.Stmts[0])
+	}
+
+	_, errs = parseText(t, "x=1 -->8 tab")
+	if len(errs) != 0 {
+		t.Fatalf("inline marker errors = %v", errs)
+	}
+}
+
+func TestParseBinaryTildeAndConcatShift(t *testing.T) {
+	stmt := oneStmt(t, "x=a~b")
+	assign := stmt.(*AssignStmt)
+	if got, want := exprText(assign.Values[0]), "(a ~ b)"; got != want {
+		t.Fatalf("expr = %s, want %s", got, want)
+	}
+
+	stmt = oneStmt(t, "x=a..b<<c")
+	assign = stmt.(*AssignStmt)
+	if got, want := exprText(assign.Values[0]), "((a .. b) << c)"; got != want {
+		t.Fatalf("expr = %s, want %s", got, want)
+	}
+}
+
+func TestParseTableRecoveryDoesNotConsumeBlockEnd(t *testing.T) {
+	chunk, errs := parseText(t, "if x then\n t = {1, 2\nend")
+	if len(errs) == 0 {
+		t.Fatal("expected table errors")
+	}
+	outer, ok := chunk.Block.Stmts[0].(*IfStmt)
+	if !ok {
+		t.Fatalf("stmt = %T, want if", chunk.Block.Stmts[0])
+	}
+	if outer.End.IsEmpty() {
+		t.Fatal("outer if lost its end token")
+	}
+}

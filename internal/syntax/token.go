@@ -20,7 +20,6 @@ const (
 	TokenPunct
 	TokenComment
 	TokenInclude
-	TokenTabMarker
 )
 
 // String returns a stable name for diagnostics and tests.
@@ -44,8 +43,6 @@ func (k TokenKind) String() string {
 		return "comment"
 	case TokenInclude:
 		return "include"
-	case TokenTabMarker:
-		return "tab-marker"
 	default:
 		return "unknown"
 	}

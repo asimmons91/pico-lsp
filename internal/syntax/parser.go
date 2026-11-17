@@ -6,7 +6,10 @@ import (
 	"github.com/asimmons91/pico-lsp/internal/source"
 )
 
-const maxParseErrors = 100
+const (
+	maxParseErrors = 100
+	maxParseDepth  = 200
+)
 
 // Parse builds an error-recovering AST from a token stream. The stream must
 // end with a TokenEOF token.
@@ -17,10 +20,12 @@ func Parse(tokens []Token) (*Chunk, []Error) {
 }
 
 type parser struct {
-	tokens  []Token
-	pos     int
-	errors  []Error
-	tooMany bool
+	tokens     []Token
+	pos        int
+	errors     []Error
+	tooMany    bool
+	exprDepth  int
+	blockDepth int
 }
 
 func (p *parser) current() Token {
@@ -103,6 +108,13 @@ func describeToken(tok Token) string {
 }
 
 func (p *parser) parseBlock(stop func(Token) bool) *Block {
+	if p.blockDepth >= maxParseDepth {
+		p.errorAt(p.current(), "block nesting too deep")
+		return &Block{NodeSpan: NodeSpan{p.current().Span}}
+	}
+	p.blockDepth++
+	defer func() { p.blockDepth-- }()
+
 	start := p.current().Span
 	block := &Block{}
 	for !p.eof() && (stop == nil || !stop(p.current())) {
@@ -132,10 +144,6 @@ func (p *parser) parseStatement() Stmt {
 	}
 	if tok.Kind == TokenInvalid {
 		p.errorAt(tok, "invalid token")
-		p.advance()
-		return nil
-	}
-	if tok.Kind == TokenTabMarker {
 		p.advance()
 		return nil
 	}
@@ -401,7 +409,7 @@ func (p *parser) parseFunctionBody(function Token) *FunctionExpr {
 		p.expect(")")
 	}
 
-	body := p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+	body := p.parseBlock(blockBodyStop)
 	end := p.expect("end")
 	return &FunctionExpr{
 		NodeSpan: NodeSpan{spanFrom(function, end.Span)},
@@ -435,7 +443,7 @@ func (p *parser) parseIf(lineBound bool) Stmt {
 		Keyword:  ifTok.Span,
 		Cond:     cond,
 		Then:     thenTok.Span,
-		Body:     p.parseBlock(func(tok Token) bool { return tok.Is("elseif") || tok.Is("else") || tok.Is("end") }),
+		Body:     p.parseBlock(blockBodyStop),
 	}
 	branches := []*IfBranch{branch}
 
@@ -451,7 +459,7 @@ func (p *parser) parseIf(lineBound bool) Stmt {
 			Keyword:  kw.Span,
 			Cond:     cond,
 			Then:     thenTok.Span,
-			Body:     p.parseBlock(func(tok Token) bool { return tok.Is("elseif") || tok.Is("else") || tok.Is("end") }),
+			Body:     p.parseBlock(blockBodyStop),
 			ElseIf:   true,
 		}
 		branches = append(branches, branch)
@@ -462,7 +470,7 @@ func (p *parser) parseIf(lineBound bool) Stmt {
 	if p.check("else") {
 		kw := p.advance()
 		elseSpan = kw.Span
-		elseBlock = p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+		elseBlock = p.parseBlock(blockBodyStop)
 	}
 
 	end := p.expect("end")
@@ -482,13 +490,13 @@ func (p *parser) parseShorthandIf(ifTok Token, cond Expr) Stmt {
 		p.errorAt(p.current(), "expected statement on the same line as shorthand if")
 	}
 	branch := &IfBranch{
-		NodeSpan: NodeSpan{cond.Span()},
+		NodeSpan: NodeSpan{spanFrom(ifTok, cond.Span())},
 		Keyword:  ifTok.Span,
 		Cond:     cond,
 		Body:     body,
 	}
 	stmt := &IfStmt{
-		NodeSpan:   NodeSpan{cond.Span().Merge(body.Span())},
+		NodeSpan:   NodeSpan{spanFrom(ifTok, body.Span())},
 		Branches:   []*IfBranch{branch},
 		SingleLine: true,
 	}
@@ -517,7 +525,7 @@ func (p *parser) parseWhile(lineBound bool) Stmt {
 		}
 	}
 	doTok := p.expect("do")
-	body := p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+	body := p.parseBlock(blockBodyStop)
 	end := p.expect("end")
 	return &WhileStmt{
 		NodeSpan: NodeSpan{spanFrom(whileTok, end.Span)},
@@ -536,7 +544,7 @@ func (p *parser) parseShorthandWhile(whileTok Token, cond Expr) Stmt {
 		p.errorAt(p.current(), "expected statement on the same line as shorthand while")
 	}
 	return &WhileStmt{
-		NodeSpan:   NodeSpan{cond.Span().Merge(body.Span())},
+		NodeSpan:   NodeSpan{spanFrom(whileTok, body.Span())},
 		While:      whileTok.Span,
 		Cond:       cond,
 		Body:       body,
@@ -566,6 +574,10 @@ func (p *parser) parseLineBody(line int) *Block {
 
 func (p *parser) parseLineStatement() Stmt {
 	tok := p.current()
+	if tok.Is(";") {
+		p.advance()
+		return &EmptyStmt{NodeSpan: NodeSpan{tok.Span}, Semicolon: tok.Span}
+	}
 	if tok.Is("?") {
 		return p.parsePrint()
 	}
@@ -584,6 +596,14 @@ func (p *parser) parseLineStatement() Stmt {
 			return p.parseIf(true)
 		case "while":
 			return p.parseWhile(true)
+		case "do":
+			return p.parseDo()
+		case "for":
+			return p.parseFor()
+		case "repeat":
+			return p.parseRepeat()
+		case "function":
+			return p.parseFunctionDecl()
 		}
 	}
 	if tok.Is("::") {
@@ -610,7 +630,7 @@ func lineBodyStop(tok Token) bool {
 
 func (p *parser) parseRepeat() Stmt {
 	repeatTok := p.advance()
-	body := p.parseBlock(func(tok Token) bool { return tok.Is("until") })
+	body := p.parseBlock(blockBodyStop)
 	untilTok := p.expect("until")
 	cond := p.parseExpr(0)
 	end := untilTok.Span
@@ -628,7 +648,7 @@ func (p *parser) parseRepeat() Stmt {
 
 func (p *parser) parseDo() Stmt {
 	doTok := p.advance()
-	body := p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+	body := p.parseBlock(blockBodyStop)
 	end := p.expect("end")
 	return &DoStmt{
 		NodeSpan: NodeSpan{spanFrom(doTok, end.Span)},
@@ -657,7 +677,7 @@ func (p *parser) parseFor() Stmt {
 			step = p.parseExpr(0)
 		}
 		doTok := p.expect("do")
-		body := p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+		body := p.parseBlock(blockBodyStop)
 		end := p.expect("end")
 		return &NumericForStmt{
 			NodeSpan: NodeSpan{spanFrom(forTok, end.Span)},
@@ -684,7 +704,7 @@ func (p *parser) parseFor() Stmt {
 	inTok := p.expect("in")
 	values := p.parseExprList()
 	doTok := p.expect("do")
-	body := p.parseBlock(func(tok Token) bool { return tok.Is("end") })
+	body := p.parseBlock(blockBodyStop)
 	end := p.expect("end")
 	return &GenericForStmt{
 		NodeSpan: NodeSpan{spanFrom(forTok, end.Span)},
@@ -791,6 +811,13 @@ func (p *parser) parseExprList() []Expr {
 }
 
 func (p *parser) parseExpr(minPrec int) Expr {
+	if p.exprDepth >= maxParseDepth {
+		p.errorAt(p.current(), "expression nesting too deep")
+		return nil
+	}
+	p.exprDepth++
+	defer func() { p.exprDepth-- }()
+
 	left := p.parseUnary()
 	if left == nil {
 		return nil
@@ -857,7 +884,7 @@ func (p *parser) parseSuffixed() Expr {
 				Name:     name,
 			}
 		case p.check("["):
-			open := p.advance()
+			p.advance()
 			index := p.parseExpr(0)
 			close := p.expect("]")
 			end := close.Span
@@ -865,7 +892,7 @@ func (p *parser) parseSuffixed() Expr {
 				end = index.Span().Merge(close.Span)
 			}
 			expr = &IndexExpr{
-				NodeSpan: NodeSpan{spanFrom(open, end)},
+				NodeSpan: NodeSpan{expr.Span().Merge(end)},
 				Base:     expr,
 				Index:    index,
 			}
@@ -879,7 +906,8 @@ func (p *parser) parseSuffixed() Expr {
 			end := name.Span()
 			if len(args) > 0 {
 				end = end.Merge(args[len(args)-1].Span())
-			} else if !close.IsEmpty() {
+			}
+			if !close.IsEmpty() {
 				end = end.Merge(close)
 			}
 			expr = &MethodCallExpr{
@@ -894,9 +922,10 @@ func (p *parser) parseSuffixed() Expr {
 			args, open, close := p.parseArgs()
 			end := expr.Span()
 			if len(args) > 0 {
-				end = args[len(args)-1].Span()
-			} else if !close.IsEmpty() {
-				end = close
+				end = end.Merge(args[len(args)-1].Span())
+			}
+			if !close.IsEmpty() {
+				end = end.Merge(close)
 			}
 			expr = &CallExpr{
 				NodeSpan: NodeSpan{expr.Span().Merge(end)},
@@ -1013,14 +1042,14 @@ func (p *parser) parseTable() *TableExpr {
 		var field *TableField
 
 		if p.check("[") {
-			p.advance()
+			openBracket := p.advance()
 			key := p.parseExpr(0)
 			p.expect("]")
 			p.expect("=")
 			value := p.parseExpr(0)
 			if key != nil && value != nil {
 				field = &TableField{
-					NodeSpan:   NodeSpan{key.Span().Merge(value.Span())},
+					NodeSpan:   NodeSpan{spanFrom(openBracket, value.Span())},
 					Key:        key,
 					BracketKey: true,
 					Value:      value,
@@ -1062,6 +1091,9 @@ func (p *parser) parseTable() *TableExpr {
 			}
 		}
 		if p.pos == before {
+			if blockTerminator(p.current()) {
+				break
+			}
 			p.advance()
 		}
 	}
@@ -1095,6 +1127,10 @@ func (p *parser) recoverTo(stops ...string) {
 	}
 }
 
+func blockBodyStop(tok Token) bool {
+	return tok.Is("end") || tok.Is("else") || tok.Is("elseif") || tok.Is("until")
+}
+
 func blockTerminator(tok Token) bool {
 	if tok.Kind != TokenKeyword {
 		return false
@@ -1113,7 +1149,7 @@ func statementStart(tok Token) bool {
 			return true
 		}
 	}
-	if tok.Kind == TokenInclude || tok.Kind == TokenTabMarker {
+	if tok.Kind == TokenInclude {
 		return true
 	}
 	return tok.Is("?") || tok.Is("::") || tok.Is(";")

@@ -147,18 +147,8 @@ func TestLexComments(t *testing.T) {
 			if len(res.Comments) != 1 || res.Comments[0].Kind != tt.kind {
 				t.Fatalf("comments = %+v, want kind %v", res.Comments, tt.kind)
 			}
-			wantTokens := 1
-			if tt.kind == CommentTab {
-				wantTokens = 2
-				if res.Tokens[0].Kind != TokenTabMarker {
-					t.Fatalf("first token = %v, want tab marker", res.Tokens[0].Kind)
-				}
-			}
-			if len(res.Tokens) != wantTokens {
-				t.Fatalf("tokens = %v, want %d", tokenSignature(res.Tokens), wantTokens)
-			}
-			if res.Tokens[len(res.Tokens)-1].Kind != TokenEOF {
-				t.Fatal("token stream does not end with EOF")
+			if len(res.Tokens) != 1 || res.Tokens[0].Kind != TokenEOF {
+				t.Fatalf("tokens = %v, want only EOF", tokenSignature(res.Tokens))
 			}
 		})
 	}
@@ -273,5 +263,37 @@ func TestLexLineNumbersInMultilineTokens(t *testing.T) {
 	}
 	if res.Tokens[1].Line != 2 {
 		t.Fatalf("next token line = %d, want 2", res.Tokens[1].Line)
+	}
+}
+
+func TestLexShortStringLineContinuationPositions(t *testing.T) {
+	text := "x = \"a\\\nb\"\ny=1"
+	res := lex(t, text)
+	if len(res.Errors) != 0 {
+		t.Fatalf("errors = %v", res.Errors)
+	}
+	var str *Token
+	for i := range res.Tokens {
+		if res.Tokens[i].Kind == TokenString {
+			str = &res.Tokens[i]
+		}
+	}
+	if str == nil {
+		t.Fatal("missing string token")
+	}
+	if str.Line != 0 || str.Column != 4 {
+		t.Fatalf("string line/column = %d/%d, want 0/4", str.Line, str.Column)
+	}
+	for _, tok := range res.Tokens {
+		if tok.Text == "y" && tok.Line != 2 {
+			t.Fatalf("y line = %d, want 2", tok.Line)
+		}
+	}
+}
+
+func TestLexInlineTabMarkerIsOrdinaryComment(t *testing.T) {
+	res := lex(t, "x=1 -->8 not a tab marker")
+	if len(res.Comments) != 1 || res.Comments[0].Kind != CommentLine {
+		t.Fatalf("comments = %+v, want ordinary line comment", res.Comments)
 	}
 }
