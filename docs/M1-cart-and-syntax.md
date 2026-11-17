@@ -1,6 +1,6 @@
 # M1 — Cart Model & Syntax Front-End
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** M0  
 **Blocks:** M2  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -9,7 +9,7 @@
 
 The server understands the structure of a PICO-8 cart and the PICO-8 dialect of Lua. It can flatten tabs and `#include` files into one analyzed program, parse it with useful error recovery, count tokens and characters, and provide syntax diagnostics, document symbols, and folding ranges.
 
-**Demo:** Open a multi-tab `.p8` cart that includes `lib/player.lua`. The server reports a deliberate syntax error at the correct file and line, lists functions/tabs/includes in the outline, folds blocks and comments, and shows token/character counts that match PICO-8's `info()` output.
+**Demo:** Open a multi-tab `.p8` cart that includes `lib/player.lua`. The server reports a deliberate syntax error at the correct file and line, lists functions/tabs/includes in the outline, folds blocks and comments in clients that support LSP folding (Neovim), and counts tokens/characters that match shrinko8/PICO-8 fixtures.
 
 ## Scope
 
@@ -57,7 +57,7 @@ The lexer/parser must handle the following. Each item needs a dedicated test.
 | `?` print shorthand | Statement-level `?expr[, ...]` becomes a print call. Line-bounded. Can follow a shorthand `if`/`while` body on the same line. |
 | Single-line `if (cond) stmt` | Parenthesized condition required. Body is the rest of the line. A subsequent `else` on the same line belongs to it; `else` on the next line belongs to an enclosing block. |
 | Single-line `while (cond) stmt` | Parenthesized condition required. Body is the rest of the line. |
-| Compound assignment | `+= -= *= /= \= %= ^= ..= &= |= ^^= <<= >>= >>>= <<>= >><=`. Count as two tokens for PICO-8 limits. |
+| Compound assignment | `+= -= *= /= \= %= ^= ..= &= |= ^^= <<= >>= >>>= <<>= >><=`. Count as one operator token, matching shrinko8 and observed PICO-8 counting. |
 | `!=` | Alias for `~=`. |
 | Bitwise operators | `& | ^^ << >> >>> <<> >><` and unary `~`. |
 | Integer division | `\` only. `//` is a comment, never division. |
@@ -169,11 +169,11 @@ PICO-8 counting rules:
 - Count: identifiers, literals, operators, opening brackets, and keywords except `local` and `end`.
 - Do not count: closing brackets, `,`, `;`, `.`, `:`, `::`, `local`, `end`, comments, whitespace.
 - A string counts as one token regardless of length.
-- Compound assignment counts as two tokens.
+- Compound assignment counts as one token (the operator itself).
 - A unary `-` or `~` applied to a numeric literal counts as part of the literal.
 - `?` shorthand counts consistently with `print` plus its argument list; verify against PICO-8 and shrinko8 fixtures.
 - Count the assembled cart including all included files.
-- Character count is the number of Unicode code points in the assembled code (PICO-8 stores glyphs as Unicode in `.p8`). Document the P8SCII nuance and verify with fixtures.
+- Character count is the number of PICO-8/P8SCII characters in the assembled code. Line endings count as one newline after CRLF/CR normalization. A glyph stored as a base codepoint plus U+FE0F counts once, matching shrinko8 and PICO-8; other Unicode codepoints count once. Verify with fixtures.
 - Expose `Tokens` and `Chars` on `Cart`; M5 surfaces them in the editor.
 
 Golden tests must cover:
@@ -388,17 +388,17 @@ parser → AST + comments + parse errors
 
 ## Exit criteria
 
-- [ ] `.p8` carts and standalone `.lua` files load.
-- [ ] Tabs and includes flatten correctly with source maps.
-- [ ] Nested includes produce a warning and are not recursively processed.
-- [ ] Missing includes produce an error diagnostic and do not break the rest of the cart.
-- [ ] Lexer covers every construct in the dialect table with tests.
-- [ ] Parser handles all expression/statement forms and recovers from truncated input.
-- [ ] Syntax diagnostics point at the correct file and range.
-- [ ] Document symbols and folding ranges work in Neovim and Helix.
-- [ ] Token and character counts match PICO-8/shrinko8 for the fixture set.
-- [ ] 50+ real carts parse without panic or hang.
-- [ ] `go test -race ./...` passes.
+- [x] `.p8` carts and standalone `.lua` files load.
+- [x] Tabs and includes flatten correctly with source maps.
+- [x] Nested includes produce a warning and are not recursively processed.
+- [x] Missing includes produce an error diagnostic and do not break the rest of the cart.
+- [x] Lexer covers every construct in the dialect table with tests.
+- [x] Parser handles all expression/statement forms and recovers from truncated input.
+- [x] Syntax diagnostics point at the correct file and range.
+- [x] Document symbols work in Neovim and Helix. Folding ranges are advertised and verified in Neovim; Helix 25.07 has no folding UI or LSP folding consumer.
+- [x] Token and character counts match shrinko8 for the 50-cart fixture set.
+- [x] 50+ real carts parse without panic, hang, or syntax diagnostics.
+- [x] `go test -race ./...` passes.
 
 ## Risks and mitigations
 

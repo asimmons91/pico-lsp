@@ -2,12 +2,12 @@
 
 ## Current state
 
-- M0 (Foundation & Walking Skeleton) is implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/source`, `internal/config`, and `internal/version`.
-- The server speaks LSP over stdio, syncs documents, maps UTF-8/UTF-16 positions, includes a configuration-driven diagnostics publisher, and passes in-memory protocol tests.
-- M1 and later are not implemented. There is no PICO-8 parsing, syntax diagnostics, navigation, completion, or type checking yet.
+- M0 (Foundation & Walking Skeleton) and M1 (Cart Model & Syntax Front-End) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include diagnostics, and serves document symbols and folding ranges.
+- M2 and later are not implemented. There is no scope/symbol navigation, completion, hover, signature help, type checking, token-budget UI, or formatter yet.
 - CI: `.github/workflows/ci.yml` runs gofmt, vet, unit tests, race tests, and a static build on pull requests. M6 expands this with lint, fuzz, build matrices, and release workflows.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
-- No README, lint config, or release tooling exists yet.
+- No README, lint config, or release tooling exists yet. The 50-cart corpus and token fixtures live under `testdata/`.
 - Do not invent or claim build/test results. Run the commands below and report the actual output.
 
 ## Source of truth
