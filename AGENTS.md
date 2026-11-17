@@ -2,9 +2,13 @@
 
 ## Current state
 
-- This is a docs-only planning repo: no Go source, README, CI, or build/test/lint config exists yet.
+- M0 (Foundation & Walking Skeleton) is implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/source`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, maps UTF-8/UTF-16 positions, includes a configuration-driven diagnostics publisher, and passes in-memory protocol tests.
+- M1 and later are not implemented. There is no PICO-8 parsing, syntax diagnostics, navigation, completion, or type checking yet.
+- CI: `.github/workflows/ci.yml` runs gofmt, vet, unit tests, race tests, and a static build on pull requests. M6 expands this with lint, fuzz, build matrices, and release workflows.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
-- Do not invent or claim build/test results. For docs work, verify links and consistency against `docs/ROADMAP.md`.
+- No README, lint config, or release tooling exists yet.
+- Do not invent or claim build/test results. Run the commands below and report the actual output.
 
 ## Source of truth
 
@@ -73,8 +77,12 @@
 ## Commands
 
 - `mise install` installs the pinned Go toolchain; `go version` should report 1.27.4.
-- No build, test, lint, or formatter commands exist yet. Add and document them when code is introduced.
-- Once packages exist, use `go test ./...` and `go test -race ./...` as specified in the roadmap.
+- `go build ./...` builds the server and library packages.
+- `CGO_ENABLED=0 go build -o pico-lsp ./cmd/pico-lsp` verifies the static release build path.
+- `go test ./...` runs unit and in-memory LSP integration tests.
+- `go test -race ./...` is the required race-free gate.
+- `go vet ./...` and `gofmt -l cmd internal` catch correctness and formatting issues.
+- No lint configuration or release tooling exists yet; add and document them with the milestone that introduces them.
 
 ## Documentation rules
 

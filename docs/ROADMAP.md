@@ -47,7 +47,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Built-in API | PICO-8 0.2.7 only | Reserve `pico8.apiVersion` for future versions. |
 | Install channels | Binaries + Homebrew + Mason | GitHub release archives, Homebrew tap, Mason package. |
 | Distribution | Static Go binary | `go install` is documented for developers; release binaries are the primary user path. |
-| LSP library | `go.lsp.dev/protocol` + `go.lsp.dev/jsonrpc2` | Typed LSP 3.18 types with `UnimplementedServer`. |
+| LSP library | `go.lsp.dev/protocol` + `go.lsp.dev/jsonrpc2` | Typed LSP 3.18 types with `UnimplementedServer`; pinned to v1.0.1. |
 | Position encoding | UTF-16 by default | Negotiate UTF-8 if the client supports it; UTF-16 must be correct first. |
 | Diagnostics | Push-based | Pull diagnostics are post-v1. |
 | Formatter | Post-v1 | PICO-8 shorthand is line-sensitive; this needs a dedicated AST-aware formatter. |
@@ -57,7 +57,7 @@ These decisions were made before milestone specs were written. Changing one requ
 
 | ID | Milestone | Outcome | Depends on | Status |
 |---|---|---|---|---|
-| M0 | Foundation & Walking Skeleton | Server starts, speaks LSP, syncs documents, maps positions correctly | — | Planned |
+| M0 | Foundation & Walking Skeleton | Server starts, speaks LSP, syncs documents, maps positions correctly | — | Done |
 | M1 | Cart Model & Syntax Front-End | Understands `.p8`, includes, tabs, and the PICO-8 grammar; reports syntax errors | M0 | Planned |
 | M2 | Semantic Core & Navigation | Scopes, symbols, PICO-8 built-ins, definitions, references, rename | M1 | Planned |
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Planned |

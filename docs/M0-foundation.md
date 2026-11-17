@@ -1,6 +1,6 @@
 # M0 — Foundation & Walking Skeleton
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** none  
 **Blocks:** M1  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -9,7 +9,7 @@
 
 A real LSP process that starts, speaks the protocol over stdio, tracks open documents, converts positions correctly, logs safely, and survives malformed requests. It does not understand PICO-8 yet; it is the skeleton every later milestone builds on.
 
-**Demo:** Open a `.p8` file in Neovim and Helix. `:LspInfo` / `:lsp-info` shows `pico-lsp` attached with document sync and position encoding. Editing, saving, and closing the file produces no errors and no protocol corruption.
+**Demo:** Open a `.p8` file in Neovim and Helix. `:checkhealth vim.lsp` / `hx --health pico8` shows `pico-lsp` attached with document sync and position encoding. Editing, saving, and closing the file produces no errors and no protocol corruption.
 
 ## Scope
 
@@ -82,13 +82,18 @@ InitializeResult{
 }
 ```
 
+> Implementation note: with `go.lsp.dev/protocol` v1.0.1, fields such as
+> `TextDocumentSync`, `Save`, and `Workspace` are union or optional wrappers and
+> `ServerInfo` is a value type. The concrete construction lives in
+> `internal/lsp/server.go`.
+
 - Advertise only capabilities that are actually implemented. Later milestones add providers.
 - Read `general.positionEncodings` from client capabilities. Prefer `utf-8` if offered, otherwise `utf-16`. The chosen encoding is returned in `positionEncoding` and used for all conversions.
 - `initialized` performs no heavy workspace scan. Background indexing belongs to later milestones.
 - `shutdown` returns success and marks the server as shutting down.
 - `exit` exits with code `0` if shutdown was received, otherwise `1`.
 - Unknown requests return `MethodNotFound`; unknown notifications are ignored.
-- `$/cancelRequest` is handled by the JSON-RPC layer; long operations must observe `ctx.Done()`.
+- `$/cancelRequest` is accepted and ignored in M0. Most handlers are short-lived and run in order, but `initialized` releases the read loop with `jsonrpc2.Async` while pulling configuration, so later notifications can overlap with that pull. Revisit cancellation when long-running or concurrent handlers exist.
 
 ### 3. Document store
 
@@ -100,7 +105,7 @@ InitializeResult{
 - `didSave` is a no-op unless `text` is included; if included, update the overlay.
 - `didClose` removes the open overlay. If the file still exists on disk, later analysis may fall back to disk content; if it does not, mark it missing.
 - Guard all document state with a mutex or a single-writer event loop. Requests must see a consistent snapshot.
-- Maintain a monotonically increasing document version; diagnostics should carry the version when the protocol allows it.
+- Maintain a monotonically increasing document version. Reject `didChange` notifications whose version is not greater than the current version, log a warning, and keep the prior snapshot; diagnostics carry the version when the protocol allows it.
 
 ### 4. Position mapping
 
@@ -159,11 +164,14 @@ Defaults:
 - `undefinedGlobal: "warning"`
 - `unusedLocal: "off"`
 
+`maxProblems: 0` disables truncation; negative values fall back to the default.
+
 Behavior:
 
 - If the client supports `workspace/configuration`, request section `pico8` after `initialized` and on `workspace/didChangeConfiguration`.
 - Otherwise use `initializationOptions.pico8` if present.
 - Otherwise use defaults.
+- Pulled values override initialization options per field. Fields absent or null in a pulled section fall back to initialization options, then defaults. A null or missing section value leaves the initialization-options settings in place.
 - Unknown keys are ignored; invalid enum values fall back to defaults and log a warning.
 - Do not block `initialize` on configuration requests.
 
@@ -189,8 +197,8 @@ type Diagnostics struct {
     Client protocol.Client
 }
 
-func (d *Diagnostics) Publish(ctx context.Context, uri protocol.DocumentURI, version *int32, items []protocol.Diagnostic)
-func (d *Diagnostics) Clear(ctx context.Context, uri protocol.DocumentURI)
+func (d *Diagnostics) Publish(ctx context.Context, uri uri.URI, version *int32, items []protocol.Diagnostic)
+func (d *Diagnostics) Clear(ctx context.Context, uri uri.URI)
 ```
 
 - Publish empty diagnostics to clear a URI.
@@ -225,7 +233,7 @@ Provide:
 - `editors/nvim/README.md` with Neovim 0.11+ config using `vim.lsp.config` and `vim.lsp.enable`.
 - `editors/helix/README.md` with a `languages.toml` snippet.
 - A tiny `testdata/smoke.p8` cart.
-- Instructions to run `pico-lsp` directly and inspect `:LspInfo` / `:lsp-info`.
+- Instructions to run `pico-lsp` directly and inspect `:checkhealth vim.lsp` / `hx --health pico8`.
 
 ## Architecture and files
 
@@ -247,7 +255,7 @@ internal/version/version.go       version injection
 type Server struct {
     protocol.UnimplementedServer
 
-    client protocol.Client
+    client atomic.Value // protocol.Client
     docs   *DocumentStore
     cfg    *config.Manager
     diags  *Diagnostics
@@ -256,7 +264,7 @@ type Server struct {
 }
 
 type Document struct {
-    URI        protocol.DocumentURI
+    URI        uri.URI
     LanguageID string
     Version    int32
     Text       string
@@ -264,11 +272,12 @@ type Document struct {
 }
 ```
 
-Requests take a consistent snapshot from the document store and never mutate it.
+Requests take a consistent snapshot from the document store and never mutate it. The client dispatcher is installed in an `atomic.Value` before the connection starts reading, so handlers never race with connection setup.
 
 ## Error handling
 
 - Invalid params: return `InvalidParams`, log at debug.
+- Notifications never terminate the connection. Errors and invalid lifecycle transitions for notifications are logged and dropped.
 - Unknown document: for notifications, log and ignore; for requests, return an empty/nil result where the protocol allows, otherwise `InvalidParams`.
 - Out-of-range positions: clamp for diagnostics/hover lookups; never panic.
 - I/O errors on stdio: log and exit non-zero.
@@ -304,15 +313,15 @@ Add a test that captures stdout with an `io.Pipe` and asserts every write is a v
 
 ## Exit criteria
 
-- [ ] `pico-lsp` builds with `CGO_ENABLED=0`.
-- [ ] `initialize`/`shutdown`/`exit` comply with the LSP lifecycle.
-- [ ] Incremental document sync is correct for insert/delete/replace.
-- [ ] UTF-16 position conversion passes round-trip tests.
-- [ ] No stdout writes occur outside the JSON-RPC stream.
-- [ ] Panics are recovered and logged; the server stays alive.
-- [ ] Configuration pull and fallback work.
-- [ ] Neovim and Helix attach successfully using the documented configs.
-- [ ] `go test -race ./...` passes.
+- [x] `pico-lsp` builds with `CGO_ENABLED=0`.
+- [x] `initialize`/`shutdown`/`exit` comply with the LSP lifecycle.
+- [x] Incremental document sync is correct for insert/delete/replace.
+- [x] UTF-16 position conversion passes round-trip tests.
+- [x] No stdout writes occur outside the JSON-RPC stream.
+- [x] Panics are recovered and logged; the server stays alive.
+- [x] Configuration pull and fallback work.
+- [x] Neovim and Helix attach successfully using the documented configs.
+- [x] `go test -race ./...` passes.
 
 ## Risks and mitigations
 

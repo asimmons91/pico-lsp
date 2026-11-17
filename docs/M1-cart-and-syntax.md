@@ -127,13 +127,13 @@ type Segment struct {
 }
 
 type File struct {
-    URI  protocol.DocumentURI
+    URI  uri.URI
     Text string
     Index *source.LineIndex
 }
 
 type Cart struct {
-    RootURI   protocol.DocumentURI
+    RootURI   uri.URI
     Files     []*File
     Segments  []Segment
     Includes  []Include

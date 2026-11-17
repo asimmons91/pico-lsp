@@ -43,7 +43,7 @@ Expose:
 
 ```go
 type CartInfo struct {
-    RootURI      protocol.DocumentURI
+    RootURI      uri.URI
     Tokens       int
     TokenLimit   int // 8192
     Chars        int
@@ -54,7 +54,7 @@ type CartInfo struct {
 }
 
 type FileInfo struct {
-    URI    protocol.DocumentURI
+    URI    uri.URI
     Tokens int
     Chars  int
     Bytes  int
