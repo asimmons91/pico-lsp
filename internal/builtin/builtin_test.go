@@ -20,7 +20,7 @@ func TestStubMatchesManifest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open manifest: %v", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var manifest []string
 	scanner := bufio.NewScanner(file)

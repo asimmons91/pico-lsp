@@ -1,0 +1,133 @@
+# Troubleshooting
+
+## The server does not attach
+
+1. Confirm the binary is on `PATH` and is the version you expect:
+
+   ```sh
+   command -v pico-lsp
+   pico-lsp --version
+   ```
+
+2. Confirm the editor recognizes the file type:
+   - Neovim: `:set filetype?` should print `filetype=pico8` for a `.p8` file.
+   - Helix: `hx --health pico8` should list `pico-lsp` without an error.
+
+3. Check the editor's LSP log:
+   - Neovim: `:lua =vim.lsp.log.get_filename()`
+   - Helix: usually `~/.cache/helix/helix.log`, or pass `--log /tmp/helix.log`.
+
+4. Start the server manually with debug logging and a known log path:
+
+   ```sh
+   pico-lsp --log-level debug --log-file /tmp/pico-lsp.log
+   ```
+
+   The server waits for LSP messages on stdin. A normal editor connection should
+   log `pico-lsp started`, followed by `initialized` and document sync events.
+
+## The server starts but no language features appear
+
+- Confirm the editor sent `initialize` and `initialized`. Features are disabled
+  until initialization completes.
+- Confirm the file is a text `.p8` cart or a `.lua` file. `.p8.png` carts are
+  unsupported in v1.
+- If the file is outside the workspace, some include features use the cart
+  directory as the workspace boundary. Open the project root or configure
+  workspace folders.
+- For included `.lua` files, open the owning `.p8` cart or enable the Neovim
+  helper. Helix attaches by file type; it does not ship a cart-ownership helper
+  in v1.
+
+## Included `.lua` files are not attached
+
+The server analyzes includes whenever the owning `.p8` cart is attached, even
+when the included file is closed. Separate editor buffers need their own LSP
+attachment.
+
+- Neovim: use the optional helper in `editors/nvim/lua/pico_lsp/`, or attach
+  manually with `vim.lsp.start` from the cart root.
+- Helix: open the owning cart. Automatic attachment to cart-owned `.lua` buffers
+  is not configured by the v1 Helix snippet.
+- Avoid running `lua_ls` and `pico-lsp` on the same cart-owned `.lua` buffer.
+  Two Lua language servers will publish competing diagnostics.
+
+## Configuration is not applied
+
+The server prefers `workspace/configuration` when the client advertises support,
+then falls back to `initializationOptions`, then
+`workspace/didChangeConfiguration`. Fields returned by a configuration pull
+override initialization values field by field.
+
+- Confirm the section name is `pico8`.
+- Confirm your editor actually implements `workspace/configuration`; otherwise
+  pass the same table as `init_options`/`initializationOptions`.
+- Check the server log after the `initialized` notification for configuration
+  pull failures.
+- Severity values are `off`, `hint`, `info`, `warning`, and `error`. Invalid
+  values fall back to the documented default.
+
+## Unicode, P8SCII, and UTF-16 positions
+
+The server defaults to UTF-16 positions and negotiates UTF-8 when the client
+advertises it. In Neovim, check the attached client's offset encoding:
+
+```vim
+:lua =vim.lsp.get_clients({ bufnr = 0 })[1].offset_encoding
+```
+
+PICO-8 glyphs can use base codepoints plus U+FE0F variation selectors. The
+server's token and character counters follow PICO-8/shrinko8 semantics, not Go
+byte length. If a diagnostic lands on the wrong column, include the server
+version, editor version, offset encoding, and a minimal cart in the bug report.
+
+## Multiple carts and include ownership
+
+A `.lua` file belongs to the nearest ancestor `.p8` cart that includes it. If
+several carts in the same directory include the file, the server chooses
+deterministically and logs the others at debug level. Rename or move carts to
+make ownership unambiguous.
+
+## `.p8.png` carts are unsupported
+
+v1 reads text `.p8` carts and standalone `.lua` files. Export the cart as text
+`.p8` from PICO-8 before opening it. `.p8.png` support is post-v1.
+
+## Formatter and code actions
+
+v1 has no formatter. If another formatter is configured, do not send
+`textDocument/formatting` to `pico-lsp`; it does not advertise formatting
+support.
+
+Code actions cover generated type annotations, diagnostic suppression, and
+creating missing `.lua` includes. A “Create missing include file” action is only
+offered for `.lua` paths inside the workspace boundary.
+
+## Logs and stdout
+
+Routine logs go to stderr or the `--log-file` path. The server never writes to
+stdout except LSP protocol frames. If an editor reports malformed LSP messages,
+check whether another tool is writing to the same stdout stream or wrapping the
+server command.
+
+Logs may contain source excerpts only when trace logging is explicitly enabled.
+Review a log before attaching it to a public issue.
+
+## Release download warnings
+
+Release binaries are unsigned. Verify `checksums.txt` before overriding
+Gatekeeper or SmartScreen warnings. Instructions are in
+[docs/install.md](install.md).
+
+## Reporting a bug
+
+Include:
+
+- `pico-lsp --version`;
+- editor and version;
+- operating system and architecture;
+- a minimal `.p8` cart or `.lua` include that reproduces the problem;
+- the relevant log lines from `--log-file`;
+- whether the issue occurs with the default configuration.
+
+The server has no telemetry and does not collect data automatically.

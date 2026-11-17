@@ -1,29 +1,29 @@
 # Helix setup
 
-This config attaches `pico-lsp` to `.p8` carts. The server syncs documents
-incrementally, reports syntax and include diagnostics, and provides document
-symbols and folding ranges. Syntax highlighting requires a tree-sitter grammar
-and arrives in a later milestone; token-budget UI arrives in M5.
+Helix attaches `pico-lsp` to `.p8` carts through its language-server
+configuration. The server supports the full v1 feature set: diagnostics,
+symbols, completion, hover, signature help, semantic tokens, inlay hints,
+code actions, and the cart budget code lens.
 
-## Prerequisites
+## Install
 
-Build or install `pico-lsp` so it is on `PATH`:
+Install a GitHub release binary with [../../docs/install.md](../../docs/install.md),
+or build from a checkout:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@latest
-# or, from a checkout:
-go build -o ./pico-lsp ./cmd/pico-lsp
+CGO_ENABLED=0 go build -trimpath -o pico-lsp ./cmd/pico-lsp
 ```
+
+Confirm `pico-lsp --version` works in the same environment that launches Helix.
 
 ## languages.toml
 
-Add this to `~/.config/helix/languages.toml` (or a project-local
-`.helix/languages.toml`):
+Copy [languages.toml](languages.toml) into `~/.config/helix/languages.toml`, or
+merge the definitions into an existing file:
 
 ```toml
 [language-server.pico-lsp]
 command = "pico-lsp"
-args = ["--log-level", "debug", "--log-file", "/tmp/pico-lsp.log"]
 
 [[language]]
 name = "pico8"
@@ -33,16 +33,32 @@ comment-token = "--"
 language-servers = ["pico-lsp"]
 ```
 
-`language-servers` must reference the name defined in the
-`[language-server.<name>]` table. Remove the `args` entry if you do not want a
-debug log file.
-
-For a locally built binary, use an absolute path in `command`:
+For a locally built binary, use an absolute path:
 
 ```toml
 [language-server.pico-lsp]
 command = "/absolute/path/to/pico-lsp"
 ```
+
+To collect server logs:
+
+```toml
+[language-server.pico-lsp]
+command = "pico-lsp"
+args = ["--log-level", "debug", "--log-file", "/tmp/pico-lsp.log"]
+```
+
+Avoid pointing `--log-file` at a file inside the workspace if your editor
+watches workspace files; use a temporary directory.
+
+## Configuration
+
+Server settings use the `pico8` section. Helix does not pull
+`workspace/configuration` in every version, so pass settings in the server
+definition or via the language configuration supported by your Helix release.
+The server also accepts initialization options when the client sends them.
+
+See [../../docs/configuration.md](../../docs/configuration.md) for every setting.
 
 ## Smoke test
 
@@ -52,9 +68,8 @@ command = "/absolute/path/to/pico-lsp"
    hx --health pico8
    ```
 
-   The configured language server should be listed without an error. Missing
-   highlight or textobject queries are expected in v1 because no PICO-8
-   tree-sitter grammar is shipped yet; the server still attaches.
+   The configured language server should be listed without an error. A missing
+   tree-sitter grammar is expected in v1; the LSP still attaches.
 
 2. Open the test cart:
 
@@ -62,38 +77,34 @@ command = "/absolute/path/to/pico-lsp"
    hx testdata/smoke.p8
    ```
 
-3. Open the symbol picker with `<space>s` to inspect tabs, functions, and
-   includes. Open a cart with a deliberate syntax error and confirm the
-   diagnostic lands on the right line.
+3. Check diagnostics, completion, hover, signature help, and symbols. Open a
+   cart with a deliberate error and confirm the diagnostic lands on the right
+   line.
 
-   Helix 25.07 has no code-folding feature or LSP folding consumer, so the
-   server's folding ranges are not displayed there. Folding works in Neovim and
-   clients that support `textDocument/foldingRange`.
+4. Save, edit, and close the buffer. The server should stay attached and Helix
+   should not report protocol errors.
 
-4. Edit, save, and close the file. The server must stay attached and Helix must
-   not report protocol errors.
-
-5. Quit Helix while the server is running (for example with `:q`). The server
-   should exit cleanly rather than hang.
-
-## Verifying the server logs
-
-Helix writes language-server stderr to its own log, usually
-`~/.cache/helix/helix.log`. Because `pico-lsp` sends routine logs to stderr
-(never stdout), you can also point it at a dedicated file with `--log-file`.
-Look for `pico-lsp started`, `initialized`, and `document changed` entries.
+5. Quit Helix while the server is running. It should exit cleanly rather than
+   hang.
 
 ## Included `.lua` files
 
 Helix attaches by file type. The server analyzes included `.lua` files,
-including diagnostics for closed includes, whenever it is attached to the
-owning `.p8` cart. Open the cart itself; automatic `.lua` attachment for
-cart-owned files is editor-specific and not part of the Helix config in v1.
+including closed includes, whenever the owning `.p8` cart is attached. v1 does
+not ship a Helix cart-ownership helper, so open the owning cart for analysis.
+If you attach Helix to `.lua` buffers in a PICO-8 project, avoid running
+`lua-language-server` on the same buffers.
+
+## Syntax highlighting
+
+v1 does not ship a PICO-8 tree-sitter grammar. LSP semantic tokens cover Lua
+code, but non-code `.p8` sections (`__gfx__`, `__map__`, `__sfx__`, and so on)
+do not have full syntax highlighting in Helix. A grammar is post-v1 work.
 
 ## Troubleshooting
 
 - `hx --health pico8` reports whether the language server command is found.
 - `hx --log /tmp/helix.log` writes Helix's own debug log to a separate file.
 - `pico-lsp --version` verifies which binary Helix would run.
-- If the server does not attach, check that `pico-lsp` is executable and on
-  `PATH`.
+- Use `--log-file` to capture server logs.
+- See [../../docs/troubleshooting.md](../../docs/troubleshooting.md) for more.

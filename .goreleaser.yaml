@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+project_name: pico-lsp
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: pico-lsp
+    main: ./cmd/pico-lsp
+    binary: pico-lsp
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/asimmons91/pico-lsp/internal/version.Version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: pico-lsp
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: false
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-SNAPSHOT-{{ .ShortCommit }}"
+
+changelog:
+  use: git
+  sort: desc
+  format: "{{ .Message }}"
+  filters:
+    exclude:
+      - "^chore"
+      - "^ci"
+      - "^docs"
+      - "^test"
+      - "^Merge pull request"
+      - "^Merge branch"
+  groups:
+    - title: Features
+      regexp: "^feat(\\(.+\\))?!?:"
+      order: 0
+    - title: Bug fixes
+      regexp: "^fix(\\(.+\\))?!?:"
+      order: 1
+    - title: Performance
+      regexp: "^perf(\\(.+\\))?!?:"
+      order: 2
+    - title: Refactors
+      regexp: "^refactor(\\(.+\\))?!?:"
+      order: 3
+    - title: Build and release
+      regexp: "^(build|release)(\\(.+\\))?!?:"
+      order: 4
+    - title: Other changes
+      order: 999
+
+release:
+  draft: false
+  prerelease: auto
+  header: |
+    Built with Go 1.27.4 from commit `{{ .FullCommit }}`.
+  footer: |
+    ---
+
+    **Install**
+
+    ```sh
+    # Linux/macOS: download the matching archive from this release, verify
+    # checksums.txt, and place pico-lsp on PATH.
+    # Windows: use the .zip archive.
+    # Developers: go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@{{ .Tag }}
+    ```
+
+    Release binaries are unsigned. See the installation and troubleshooting
+    documentation in the repository. Homebrew and Mason packaging are deferred
+    to post-v1.

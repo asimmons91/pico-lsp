@@ -211,7 +211,7 @@ func lintShadowedLocals(result *Result, severity Severity) {
 		shadowed := false
 		for parent := sym.Scope.Parent; parent != nil && !shadowed; parent = parent.Parent {
 			for _, other := range parent.symbols[sym.Canonical] {
-				if other == nil || other == sym || other.Builtin {
+				if other == nil || other == sym || other.Builtin || !declarationBefore(sym, other) {
 					continue
 				}
 				result.addLintDiagnostic(severity, CodeShadowedLocal,
@@ -221,6 +221,22 @@ func lintShadowedLocals(result *Result, severity Severity) {
 			}
 		}
 	}
+}
+
+func declarationBefore(inner, outer *Symbol) bool {
+	if inner == nil || outer == nil || inner.DeclSpan.IsEmpty() {
+		return false
+	}
+	spans := outer.Decls
+	if len(spans) == 0 {
+		spans = []source.Span{outer.DeclSpan}
+	}
+	for _, span := range spans {
+		if !span.IsEmpty() && span.FileID == inner.DeclSpan.FileID && span.Start < inner.DeclSpan.Start {
+			return true
+		}
+	}
+	return false
 }
 
 func lintEmptyBlocks(snap *cart.Snapshot, result *Result, severity Severity) {

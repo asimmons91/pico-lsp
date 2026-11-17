@@ -516,6 +516,12 @@ func (s *Server) Initialized(ctx context.Context, params *protocol.InitializedPa
 	s.diags.Enable()
 	s.log.Debug("client initialized notification received")
 	s.carts.AnalyzeOpen(ctx)
+	if s.Client() != nil && (s.watchedFilesDynamic || s.cfg.SupportsPull()) {
+		// Both registration and configuration pull are server-initiated
+		// requests. Release the read loop once so their responses can arrive
+		// while this handler is still running.
+		jsonrpc2.Async(ctx)
+	}
 	s.registerFileWatchers(ctx)
 	s.pullConfiguration(ctx)
 	return nil
@@ -576,6 +582,10 @@ func (s *Server) SetTrace(ctx context.Context, params *protocol.SetTraceParams) 
 // applies settings pushed by the client.
 func (s *Server) DidChangeConfiguration(ctx context.Context, params *protocol.DidChangeConfigurationParams) error {
 	if s.cfg.SupportsPull() {
+		if s.Client() != nil {
+			// Release the read loop before the server-initiated pull request.
+			jsonrpc2.Async(ctx)
+		}
 		s.pullConfiguration(ctx)
 		return nil
 	}
@@ -609,10 +619,6 @@ func (s *Server) pullConfiguration(ctx context.Context) {
 	if client == nil {
 		return
 	}
-
-	// Release the read loop before a server-initiated request so the response
-	// can be read while this handler is still running.
-	jsonrpc2.Async(ctx)
 
 	s.pullMu.Lock()
 	defer s.pullMu.Unlock()

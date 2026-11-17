@@ -84,6 +84,7 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 	lexed := syntax.Lex(cart.Flat, cart.Span)
 	cart.Tokens = CountTokens(lexed.Tokens)
 	cart.FileTokens = CountTokensByFile(lexed.Tokens)
+	cart.CountsAvailable = true
 	chunk, parseErrors := syntax.Parse(lexed.Tokens)
 
 	errors := make([]syntax.Error, 0, len(lexed.Errors)+len(parseErrors))

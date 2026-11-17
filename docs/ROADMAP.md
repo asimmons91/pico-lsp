@@ -45,7 +45,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Includes | Faithful PICO-8 | Non-recursive includes. Nested includes produce a warning. |
 | Include ownership | Nearest ancestor cart | A `.lua` file belongs to the nearest ancestor `.p8` that includes it. |
 | Built-in API | PICO-8 0.2.7 only | Reserve `pico8.apiVersion` for future versions. |
-| Install channels | Binaries + Homebrew + Mason | GitHub release archives, Homebrew tap, Mason package. |
+| Install channels | GitHub release binaries for v1 | Checksummed archives and `go install`; Homebrew tap and Mason package are post-v1. |
 | Distribution | Static Go binary | `go install` is documented for developers; release binaries are the primary user path. |
 | LSP library | `go.lsp.dev/protocol` + `go.lsp.dev/jsonrpc2` | Typed LSP 3.18 types with `UnimplementedServer`; pinned to v1.0.1. |
 | Position encoding | UTF-16 by default | Negotiate UTF-8 if the client supports it; UTF-16 must be correct first. |
@@ -63,7 +63,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Done |
 | M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Done |
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Done |
-| M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Planned |
+| M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | In progress |
 | M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
 
 Each milestone has a detailed spec:
@@ -82,12 +82,15 @@ API and configuration references:
 - [API](api.md)
 - [Configuration](configuration.md)
 - [Diagnostics](diagnostics.md)
+- [Install](install.md)
+- [Troubleshooting](troubleshooting.md)
+- [Release checklist](release-checklist.md)
 
 ## v1 definition of done
 
 The v1 release is complete when a user can:
 
-1. Install `pico-lsp` from GitHub release binaries, Homebrew, or Mason.
+1. Install `pico-lsp` from GitHub release binaries or `go install` (Homebrew and Mason are post-v1).
 2. Open a `.p8` cart in Neovim or Helix and have the server attach automatically.
 3. Edit carts and included `.lua` files with incremental document sync.
 4. See accurate syntax diagnostics, document symbols, and folding ranges.
@@ -232,11 +235,12 @@ If a target is missed, profile before adding architectural complexity.
 
 ## Release assumptions
 
-These are documented defaults, not blockers. Confirm or change them before M6.
+These defaults were confirmed for the v1 release.
 
-- **Repository/release names:** GitHub repo `asimmons91/pico-lsp`, Homebrew tap `asimmons91/homebrew-tap`, Mason package `pico-lsp`.
+- **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
 - **Release versioning:** milestones produce `v0.x` prereleases; M6 cuts `v1.0.0`.
-- **macOS/Windows signing:** not required for v1, but document the warning users may see for unsigned downloads.
+- **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
+- **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
 
 ## How this roadmap is maintained
 

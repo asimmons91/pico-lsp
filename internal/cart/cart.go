@@ -103,19 +103,20 @@ type Section struct {
 
 // Cart is the flattened cart and its source map.
 type Cart struct {
-	RootURI     uri.URI
-	Files       []*File
-	Segments    []Segment
-	Includes    []Include
-	Tabs        []Tab
-	Sections    []Section
-	Flat        []byte
-	Tokens      int
-	Chars       int
-	FileTokens  map[source.FileID]int
-	FileChars   map[source.FileID]int
-	Version     int
-	Diagnostics []Diagnostic
+	RootURI         uri.URI
+	Files           []*File
+	Segments        []Segment
+	Includes        []Include
+	Tabs            []Tab
+	Sections        []Section
+	Flat            []byte
+	Tokens          int
+	Chars           int
+	CountsAvailable bool
+	FileTokens      map[source.FileID]int
+	FileChars       map[source.FileID]int
+	Version         int
+	Diagnostics     []Diagnostic
 }
 
 // Snapshot is a cart plus its lexed and parsed representation.
@@ -221,7 +222,7 @@ func (DiskProvider) ReadLimit(u uri.URI, max int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 	info, err := file.Stat()
 	if err != nil {
 		return nil, err

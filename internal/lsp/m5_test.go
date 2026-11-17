@@ -712,3 +712,226 @@ func TestM5CartLimitDiagnosticsPublished(t *testing.T) {
 		}
 	}
 }
+
+func TestM5WatcherRegistrationAndConfigurationPullTogether(t *testing.T) {
+	client := newTestClient()
+	client.configValues = []protocol.LSPAny{
+		protocol.LSPAny([]byte(`{"typeChecking":"strict"}`)),
+	}
+	h := newHarness(t, client)
+	dynamic := true
+	h.initialize(t, &protocol.InitializeParams{
+		Capabilities: protocol.ClientCapabilities{
+			Workspace: &protocol.WorkspaceClientCapabilities{
+				Configuration:         boolPtr(true),
+				DidChangeWatchedFiles: &protocol.DidChangeWatchedFilesClientCapabilities{DynamicRegistration: &dynamic},
+			},
+		},
+	})
+
+	select {
+	case params := <-h.client.registrations:
+		if len(params.Registrations) != 1 || params.Registrations[0].Method != protocol.MethodWorkspaceDidChangeWatchedFiles {
+			t.Fatalf("registrations = %+v", params.Registrations)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("file watcher registration not sent")
+	}
+	select {
+	case <-h.client.configCalls:
+	case <-time.After(2 * time.Second):
+		t.Fatal("configuration pull not sent")
+	}
+	waitFor(t, "pulled configuration", func() bool {
+		return h.srv.cfg.Settings().TypeChecking == config.TypeCheckingStrict
+	})
+}
+
+func TestM5SharedLuaOnlyOwnerPublishesDiagnostics(t *testing.T) {
+	dir := t.TempDir()
+	sharedText := "local x = 1\nreturn x\nprint(x)\nuses_root_only()\n"
+	shared := writeTemp(t, dir, "shared.lua", sharedText)
+	aText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"shared.lua\"\nfunction uses_root_only() end\n"
+	bText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"shared.lua\"\n"
+	a := writeTemp(t, dir, "a.p8", aText)
+	b := writeTemp(t, dir, "b.p8", bText)
+
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, a, aText)
+	waitFor(t, "owner analysis", func() bool {
+		h.srv.carts.mu.Lock()
+		owner := h.srv.carts.byFile[shared]
+		h.srv.carts.mu.Unlock()
+		return owner == a
+	})
+	waitFor(t, "owner diagnostics", func() bool {
+		h.srv.diags.mu.Lock()
+		_, ok := h.srv.diags.last[shared]
+		h.srv.diags.mu.Unlock()
+		return ok
+	})
+
+	openDoc(t, h, ctx, b, bText)
+	waitFor(t, "non-owner analysis", func() bool {
+		h.srv.carts.mu.Lock()
+		_, ok := h.srv.carts.byRoot[b]
+		h.srv.carts.mu.Unlock()
+		return ok
+	})
+	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
+		t.Fatalf("barrier: %v", err)
+	}
+
+	h.srv.carts.mu.Lock()
+	owner := h.srv.carts.byFile[shared]
+	h.srv.carts.mu.Unlock()
+	if owner != a {
+		t.Fatalf("shared owner = %s, want %s", owner, a)
+	}
+	h.srv.diags.mu.Lock()
+	last := h.srv.diags.last[shared]
+	h.srv.diags.mu.Unlock()
+	for _, diag := range last.items {
+		if code, _ := diag.Code.(protocol.String); string(code) == "undefined-global" {
+			t.Fatalf("non-owner diagnostics published: %+v", last.items)
+		}
+	}
+
+	if err := h.server.DidClose(ctx, &protocol.DidCloseTextDocumentParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: a},
+	}); err != nil {
+		t.Fatalf("close owner: %v", err)
+	}
+	if err := os.Remove(a.FsPath()); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.srv.DidChangeWatchedFiles(ctx, &protocol.DidChangeWatchedFilesParams{
+		Changes: []protocol.FileEvent{{URI: a, Type: protocol.FileChangeTypeDeleted}},
+	}); err != nil {
+		t.Fatalf("delete owner: %v", err)
+	}
+	waitFor(t, "ownership after owner deletion", func() bool {
+		h.srv.carts.mu.Lock()
+		owner := h.srv.carts.byFile[shared]
+		h.srv.carts.mu.Unlock()
+		return owner == b
+	})
+	waitFor(t, "new owner diagnostics", func() bool {
+		h.srv.diags.mu.Lock()
+		last := h.srv.diags.last[shared]
+		h.srv.diags.mu.Unlock()
+		for _, diag := range last.items {
+			if code, _ := diag.Code.(protocol.String); string(code) == "undefined-global" {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func TestM5BudgetLensOmittedWhenCountsUnavailable(t *testing.T) {
+	text := "not a png cart"
+	root := writeTemp(t, t.TempDir(), "cart.p8.png", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+	lenses, err := h.server.CodeLens(ctx, &protocol.CodeLensParams{TextDocument: protocol.TextDocumentIdentifier{URI: root}})
+	if err != nil {
+		t.Fatalf("code lens: %v", err)
+	}
+	if len(lenses) != 0 {
+		t.Fatalf("unavailable-count lens = %+v", lenses)
+	}
+}
+
+func TestM5CartInfoTabIndexesAreZeroBased(t *testing.T) {
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx = 1\n-->8\ny = 2\n"
+	root := writeTemp(t, t.TempDir(), "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+	params, _ := protocol.Marshal(map[string]any{"textDocument": map[string]string{"uri": root.String()}})
+	result, err := h.srv.Request(ctx, RequestCartInfo, protocol.LSPAny(params))
+	if err != nil {
+		t.Fatalf("cartInfo: %v", err)
+	}
+	info := result.(CartInfo)
+	if len(info.Tabs) != 2 || info.Tabs[0].Index != 0 || info.Tabs[1].Index != 1 {
+		t.Fatalf("tabs = %+v, want zero-based indexes", info.Tabs)
+	}
+}
+
+func TestM5CreateIncludeActionInAnotherWorkspaceFolder(t *testing.T) {
+	base := t.TempDir()
+	gameDir := filepath.Join(base, "game")
+	sharedDir := filepath.Join(base, "shared")
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"../shared/missing.lua\"\nx = 1\n"
+	root := writeTemp(t, gameDir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{
+		WorkspaceFolders: protocol.NewNullable([]protocol.WorkspaceFolder{
+			{URI: uri.File(gameDir), Name: "game"},
+			{URI: uri.File(sharedDir), Name: "shared"},
+		}),
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+	params := waitDiagnostic(t, h.client, root)
+	codes := diagnosticCodes(params)
+	if containsString(codes, "include-outside-workspace") {
+		t.Fatalf("diagnostics = %v, unexpected outside-workspace warning", codes)
+	}
+	var missing *protocol.Diagnostic
+	for i := range params.Diagnostics {
+		if code, _ := params.Diagnostics[i].Code.(protocol.String); string(code) == "include-missing" {
+			missing = &params.Diagnostics[i]
+			break
+		}
+	}
+	if missing == nil {
+		t.Fatalf("diagnostics = %+v, missing include-missing", params.Diagnostics)
+	}
+	actions, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Range:        missing.Range,
+		Context:      protocol.CodeActionContext{Diagnostics: []protocol.Diagnostic{*missing}},
+	})
+	if err != nil {
+		t.Fatalf("code action: %v", err)
+	}
+	for _, action := range actions {
+		if candidate, ok := action.(*protocol.CodeAction); ok && strings.Contains(candidate.Title, "Create missing") {
+			return
+		}
+	}
+	t.Fatalf("missing create action in %+v", actions)
+}
+
+func TestM5IncludePathRangeWithApostrophe(t *testing.T) {
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib's file.lua\"\nx = 1\n"
+	root := writeTemp(t, t.TempDir(), "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+	params := waitDiagnostic(t, h.client, root)
+	for _, diag := range params.Diagnostics {
+		if code, _ := diag.Code.(protocol.String); string(code) != "include-missing" {
+			continue
+		}
+		if diag.Range.Start.Character != 10 || diag.Range.End.Character != 24 {
+			t.Fatalf("include path range = %+v, want 10..24", diag.Range)
+		}
+		return
+	}
+	t.Fatalf("diagnostics = %+v, missing include-missing", params.Diagnostics)
+}

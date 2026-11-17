@@ -2,7 +2,8 @@
 
 All diagnostics use `source: "pico-lsp"` and a stable `code`. Severity defaults
 come from [configuration.md](configuration.md); most rules can be changed or
-disabled there.
+disabled there. If diagnostics are missing or land in the wrong place, see
+[troubleshooting.md](troubleshooting.md).
 
 ## Cart and syntax
 

@@ -55,13 +55,6 @@ func (p *parser) advance() Token {
 
 func (p *parser) check(text string) bool { return p.current().Is(text) }
 
-func (p *parser) match(text string) (Token, bool) {
-	if p.check(text) {
-		return p.advance(), true
-	}
-	return Token{}, false
-}
-
 func (p *parser) expect(text string) Token {
 	if p.check(text) {
 		return p.advance()
@@ -800,10 +793,7 @@ func (p *parser) parsePrint() Stmt {
 
 func (p *parser) parseExprList() []Expr {
 	var list []Expr
-	for {
-		if p.eof() || p.check(")") || p.check("]") || p.check("}") || p.check(";") {
-			break
-		}
+	for !p.eof() && !p.check(")") && !p.check("]") && !p.check("}") && !p.check(";") {
 		expr := p.parseExpr(0)
 		if expr == nil {
 			break

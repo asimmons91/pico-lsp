@@ -30,10 +30,12 @@ func goldenBytes(t *testing.T, name string, got []byte) {
 	if err != nil {
 		t.Fatalf("read golden %s: %v (run UPDATE_GOLDEN=1 go test ./internal/lsp)", name, err)
 	}
-	if string(want) == string(got) {
+	wantText := strings.ReplaceAll(string(want), "\r\n", "\n")
+	gotText := strings.ReplaceAll(string(got), "\r\n", "\n")
+	if wantText == gotText {
 		return
 	}
-	t.Fatalf("golden %s mismatch (run UPDATE_GOLDEN=1 go test ./internal/lsp)\n%s", name, firstDifference(string(want), string(got)))
+	t.Fatalf("golden %s mismatch (run UPDATE_GOLDEN=1 go test ./internal/lsp)\n%s", name, firstDifference(wantText, gotText))
 }
 
 func goldenJSON(t *testing.T, name string, value any) {

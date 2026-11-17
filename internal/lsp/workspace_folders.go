@@ -20,11 +20,11 @@ func initializeFolders(params *protocol.InitializeParams) []uri.URI {
 			}
 		}
 	}
-	if len(out) == 0 && params.RootURI != nil && params.RootURI.IsFile() {
-		out = append(out, *params.RootURI)
+	if len(out) == 0 && params.RootURI != nil && params.RootURI.IsFile() { //nolint:staticcheck // Legacy rootUri fallback for older clients.
+		out = append(out, *params.RootURI) //nolint:staticcheck // Legacy rootUri fallback.
 	}
 	if len(out) == 0 {
-		if path, ok := params.RootPath.Get(); ok && path != "" {
+		if path, ok := params.RootPath.Get(); ok && path != "" { //nolint:staticcheck // Legacy rootPath fallback for older clients.
 			out = append(out, uri.File(path))
 		}
 	}

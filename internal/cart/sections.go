@@ -36,10 +36,6 @@ func splitLines(text string) []lineRef {
 	return lines
 }
 
-func lineText(text string, line lineRef) string {
-	return text[line.start:line.end]
-}
-
 func lineContent(text string, line lineRef) string {
 	return strings.TrimRight(text[line.start:line.end], "\r\n")
 }

@@ -103,7 +103,7 @@ func cartInfoFor(snap *cart.Snapshot) CartInfo {
 	}
 	for _, tab := range c.Tabs {
 		info.Tabs = append(info.Tabs, TabInfo{
-			Index:     tab.Index,
+			Index:     tab.Index - 1,
 			Name:      tab.Name,
 			StartLine: tab.StartLine,
 			EndLine:   tab.EndLine,

@@ -206,9 +206,10 @@ func (s *Server) createMissingIncludeAction(nav *navContext, diag protocol.Diagn
 			continue
 		}
 		rootDir := filepath.Dir(nav.snap.Cart.RootURI.FsPath())
-		allowed := s.includeAllowedRoot(rootDir)
+		allowedRoots := append([]uri.URI(nil), s.WorkspaceFolders()...)
+		allowedRoots = append(allowedRoots, uri.File(rootDir))
 		target := include.ResolvedURI.FsPath()
-		if !pathWithin(allowed, target) {
+		if !withinAllowedRoots(allowedRoots, target) {
 			continue
 		}
 		kind := protocol.CodeActionKindQuickFix

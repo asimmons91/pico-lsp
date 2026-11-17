@@ -19,7 +19,7 @@ func (s *Server) CodeLens(ctx context.Context, params *protocol.CodeLensParams) 
 		return nil, nil
 	}
 	nav, ok := s.navigationFor(ctx, params.TextDocument.URI)
-	if !ok || nav.snap == nil || nav.snap.Cart == nil || nav.file == nil {
+	if !ok || nav.snap == nil || nav.snap.Cart == nil || nav.file == nil || !nav.snap.Cart.CountsAvailable {
 		return nil, nil
 	}
 	if nav.file.URI != nav.snap.Cart.RootURI {

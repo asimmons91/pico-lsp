@@ -38,12 +38,12 @@ func TestDispatchCancelsAsyncRequest(t *testing.T) {
 	}
 	serverConn := jsonrpc2.NewConn(jsonrpc2.NewStream(serverPipe))
 	serverConn.Go(serverCtx, s.dispatch(next))
-	defer serverConn.Close()
+	defer func() { _ = serverConn.Close() }()
 
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	defer cancelClient()
 	_, clientConn, clientServer := protocol.NewClient(clientCtx, newTestClient(), jsonrpc2.NewStream(clientPipe))
-	defer clientConn.Close()
+	defer func() { _ = clientConn.Close() }()
 
 	callCtx, cancelCall := context.WithCancel(context.Background())
 	callErr := make(chan error, 1)

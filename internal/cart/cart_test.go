@@ -840,3 +840,22 @@ func TestM5StressFiftyIncludes(t *testing.T) {
 		t.Fatal("token count is zero")
 	}
 }
+
+func TestFileContributionsCRLFAtIncludeBoundary(t *testing.T) {
+	root := uri.File("/tmp/contrib-crlf/cart.p8")
+	lib := uri.File("/tmp/contrib-crlf/lib.lua")
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.lua\"\nx = 1\n"
+	p := newMapProvider()
+	p.files[lib] = "y = 2\r"
+	snap := loadText(t, p, root, text)
+	charSum := 0
+	for _, count := range snap.Cart.FileChars {
+		charSum += count
+	}
+	if charSum != snap.Cart.Chars {
+		t.Fatalf("file chars sum = %d, total = %d (flat %q)", charSum, snap.Cart.Chars, snap.Cart.Flat)
+	}
+	if snap.Cart.FileChars[1] != CountChars([]byte("y = 2\r")) {
+		t.Fatalf("included chars = %d, want %d", snap.Cart.FileChars[1], CountChars([]byte("y = 2\r")))
+	}
+}

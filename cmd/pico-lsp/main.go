@@ -45,17 +45,19 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return 2
 	}
 	if fs.NArg() > 0 {
-		fmt.Fprintf(stderr, "pico-lsp: unexpected argument %q\n", fs.Arg(0))
+		_, _ = fmt.Fprintf(stderr, "pico-lsp: unexpected argument %q\n", fs.Arg(0))
 		return 2
 	}
 	if *showVersion {
-		fmt.Fprintln(stdout, version.Current())
+		if _, err := fmt.Fprintln(stdout, version.Current()); err != nil {
+			return 1
+		}
 		return 0
 	}
 
 	level, err := parseLogLevel(*logLevel)
 	if err != nil {
-		fmt.Fprintf(stderr, "pico-lsp: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "pico-lsp: %v\n", err)
 		return 2
 	}
 
@@ -64,10 +66,10 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if *logFile != "" {
 		logHandle, err = os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 		if err != nil {
-			fmt.Fprintf(stderr, "pico-lsp: open log file: %v\n", err)
+			_, _ = fmt.Fprintf(stderr, "pico-lsp: open log file: %v\n", err)
 			return 1
 		}
-		defer logHandle.Close()
+		defer func() { _ = logHandle.Close() }()
 		logWriter = logHandle
 	}
 

@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -28,6 +29,9 @@ func largeCartText() string {
 func TestPerformanceTargets(t *testing.T) {
 	if raceDetectorEnabled {
 		t.Skip("timing targets are not meaningful under the race detector")
+	}
+	if runtime.GOOS != "linux" {
+		t.Skip("timing targets are measured on Linux runners")
 	}
 	text := largeCartText()
 	if len(text) < 64*1024 {
