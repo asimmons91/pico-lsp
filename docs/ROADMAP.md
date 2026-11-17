@@ -1,7 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** Planning  
-**Last updated:** 2026-11-17
+**Status:** In progress  
+**Last updated:** 2026-11-17  
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -61,7 +61,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M1 | Cart Model & Syntax Front-End | Understands `.p8`, includes, tabs, and the PICO-8 grammar; reports syntax errors | M0 | Done |
 | M2 | Semantic Core & Navigation | Scopes, symbols, PICO-8 built-ins, definitions, references, rename | M1 | Done |
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | In progress (manual editor checks pending) |
-| M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Planned |
+| M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | In progress (automated checks pass; manual editor checks pending) |
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Planned |
 | M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Planned |
 | M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
@@ -118,11 +118,16 @@ All diagnostics use `source: "pico-lsp"` and a stable `code`.
 | `include-unreadable` | Error | M1/M5 |
 | `undefined-global` | Warning | M2 |
 | `annotation-invalid` | Warning | M4 |
+| `annotation-unknown-type` | Warning | M4 |
+| `annotation-duplicate` | Warning | M4 |
+| `annotation-unknown-param` | Warning | M4 |
+| `annotation-missing-name` | Hint | M4 |
 | `assign-type-mismatch` | Warning | M4 |
 | `param-type-mismatch` | Warning | M4 |
 | `return-type-mismatch` | Warning | M4 |
 | `undefined-field` | Warning (exact classes only) | M4 |
 | `need-check-nil` | Off in `basic`; warning in `strict` | M4 |
+| `missing-fields` | Off in `basic`; warning in `strict` | M4 |
 | `deprecated` | Hint | M4 |
 | `token-limit` | Error when exceeded; warning at 90% | M5 |
 | `char-limit` | Error when exceeded; warning at 90% | M5 |

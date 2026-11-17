@@ -1,5 +1,5 @@
 {
-  "label": "function circfill(x, y, r, [col])",
+  "label": "function circfill(x: number, y: number, r: number, col?: number)",
   "parameters": [
     {
       "label": "x",

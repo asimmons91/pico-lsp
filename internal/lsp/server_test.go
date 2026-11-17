@@ -272,6 +272,7 @@ func TestInitializeCapabilities(t *testing.T) {
 		"referencesProvider":        res.Capabilities.ReferencesProvider,
 		"documentHighlightProvider": res.Capabilities.DocumentHighlightProvider,
 		"workspaceSymbolProvider":   res.Capabilities.WorkspaceSymbolProvider,
+		"inlayHintProvider":         res.Capabilities.InlayHintProvider,
 	} {
 		if _, ok := provider.(protocol.Boolean); !ok {
 			t.Errorf("%s = %T, want Boolean", name, provider)

@@ -84,7 +84,7 @@ func TestEndToEndHover(t *testing.T) {
 		{
 			name:    "user function",
 			pos:     positionAt(t, m3HoverCart, "move(dx, dy)", 1),
-			contain: []string{"```lua", "function move(dx, dy)", "Move the player.", "dx", "dy", "optional", "Returns", "cart.p8"},
+			contain: []string{"```lua", "function move(dx?: number, dy?: number): number", "Move the player.", "dx", "dy", "optional", "Returns", "cart.p8"},
 			golden:  "hover/user-function.md",
 		},
 		{
@@ -114,7 +114,7 @@ func TestEndToEndHover(t *testing.T) {
 		{
 			name:    "builtin",
 			pos:     positionAt(t, m3HoverCart, "circfill(", 2),
-			contain: []string{"function circfill(x, y, r, [col])", "Draw a filled circle", "PICO-8 0.2.7 API"},
+			contain: []string{"function circfill(x: number, y: number, r: number, col?: number)", "Draw a filled circle", "PICO-8 0.2.7 API"},
 			golden:  "hover/builtin.md",
 		},
 		{
@@ -256,7 +256,7 @@ end
 		offset  int
 		contain []string
 	}{
-		{name: "class field", needle: "p.score", offset: len("p.") + 1, contain: []string{"field score", "number", "optional", "points"}},
+		{name: "class field", needle: "p.score", offset: len("p.") + 1, contain: []string{"Player.score", "number", "optional", "points"}},
 		{name: "parameter", needle: "print(dx)", offset: len("print(") + 1, contain: []string{"parameter dx", "number", "optional", "horizontal"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

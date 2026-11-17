@@ -157,7 +157,7 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 		t.Fatalf("signature help = %+v", help)
 	}
 	label := help.Signatures[0].Label
-	if label != "function circfill(x, y, r, [col])" {
+	if label != "function circfill(x: number, y: number, r: number, col?: number)" {
 		t.Fatalf("builtin signature = %q", label)
 	}
 	if active := activeParameter(t, help); active != 2 {
@@ -184,7 +184,7 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 	// The innermost call wins.
 	pos = positionAt(t, m3SignatureCart, "max(1, 2)", len("max(1, "))
 	help = signatureHelp(t, h, ctx, root, pos)
-	if help == nil || help.Signatures[0].Label != "function max(x, y)" {
+	if help == nil || help.Signatures[0].Label != "function max(x: number, y: number): number" {
 		t.Fatalf("nested call signature = %+v", help)
 	}
 	if active := activeParameter(t, help); active != 1 {
@@ -197,7 +197,7 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 	if help == nil {
 		t.Fatal("user signature help is nil")
 	}
-	if got := help.Signatures[0].Label; got != "function move(dx, dy)" {
+	if got := help.Signatures[0].Label; got != "function move(dx: number, dy?: number)" {
 		t.Fatalf("user signature = %q", got)
 	}
 	if active := activeParameter(t, help); active != 1 {
@@ -225,7 +225,7 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 	if help == nil {
 		t.Fatal("method signature help is nil")
 	}
-	if got := help.Signatures[0].Label; got != "function player:step(dx)" {
+	if got := help.Signatures[0].Label; got != "function player:step(dx: number)" {
 		t.Fatalf("method signature = %q", got)
 	}
 	if active := activeParameter(t, help); active != 0 {
@@ -239,7 +239,7 @@ func TestEndToEndSignatureHelp(t *testing.T) {
 	if help == nil {
 		t.Fatal("incomplete signature help is nil")
 	}
-	if got := help.Signatures[0].Label; got != "function move(dx, dy)" {
+	if got := help.Signatures[0].Label; got != "function move(dx: number, dy?: number)" {
 		t.Fatalf("incomplete signature = %q", got)
 	}
 	if active := activeParameter(t, help); active != 0 {

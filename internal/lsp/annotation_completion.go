@@ -7,6 +7,7 @@ import (
 	"go.lsp.dev/protocol"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 )
 
 var annotationKeywords = []string{
@@ -145,11 +146,17 @@ func annotationClassNames(nav *navContext) []string {
 		if name == "" {
 			return
 		}
-		if _, ok := seen[name]; ok {
+		key := analysis.CanonicalName(name)
+		if _, ok := seen[key]; ok {
 			return
 		}
-		seen[name] = struct{}{}
+		seen[key] = struct{}{}
 		out = append(out, name)
+	}
+	if nav != nil && nav.semantics != nil {
+		for _, typ := range nav.semantics.TypeNames() {
+			add(types.Display(typ))
+		}
 	}
 	if nav != nil && nav.snap != nil {
 		for _, name := range analysis.AnnotationNames(nav.snap.Comments) {

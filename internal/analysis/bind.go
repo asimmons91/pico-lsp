@@ -9,17 +9,38 @@ import (
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
+// TypeCheckingMode controls type diagnostics.
+type TypeCheckingMode string
+
+const (
+	TypeCheckingOff    TypeCheckingMode = "off"
+	TypeCheckingBasic  TypeCheckingMode = "basic"
+	TypeCheckingStrict TypeCheckingMode = "strict"
+)
+
 // Options controls analysis diagnostics.
 type Options struct {
 	UndefinedGlobal Severity
+	TypeChecking    TypeCheckingMode
+}
+
+// typeCheckingMode returns the effective mode, defaulting to basic.
+func (o Options) typeCheckingMode() TypeCheckingMode {
+	switch o.TypeChecking {
+	case TypeCheckingOff, TypeCheckingStrict:
+		return o.TypeChecking
+	default:
+		return TypeCheckingBasic
+	}
 }
 
 // Analyze binds one cart snapshot. builtins may be nil, which disables
 // built-in name resolution while keeping every other feature working.
 func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Result {
 	result := &Result{
-		Table: NewSymbolTable(builtins),
-		meta:  metaFiles(snap),
+		Table:       NewSymbolTable(builtins),
+		meta:        metaFiles(snap),
+		funcSymbols: make(map[*syntax.FunctionExpr]*Symbol),
 	}
 	if snap == nil || snap.Cart == nil || snap.Chunk == nil {
 		result.finish()
@@ -57,6 +78,9 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	b.bindBlock(snap.Chunk.Block, chunkScope)
 	attachDocs(snap, result)
 	attachParamDocs(result)
+	attachTypeAnnotations(snap, result, opts)
+	result.finish()
+	inferTypes(snap, result, opts)
 	result.finish()
 	return result
 }
@@ -565,6 +589,9 @@ func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool, receiver *Symbol, selfSpan source.Span, functionSym *Symbol) {
 	if fn == nil {
 		return
+	}
+	if functionSym != nil {
+		b.result.funcSymbols[fn] = functionSym
 	}
 	fnScope := NewScope(outer)
 	fnScope.Labels = make(map[string]*Symbol)

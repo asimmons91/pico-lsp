@@ -6,6 +6,7 @@ import (
 
 	"go.lsp.dev/protocol"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/cart"
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
@@ -13,37 +14,47 @@ import (
 
 // ParamDoc is one LuaCATS parameter annotation.
 type ParamDoc struct {
-	Name     string
-	Type     string
-	Doc      string
-	Optional bool
+	Name       string
+	Type       string
+	ParsedType types.Type
+	Doc        string
+	Optional   bool
 }
 
 // DocComment is the subset of LuaCATS docs used by M3 hover and completion.
 // Type semantics are intentionally shallow here; M4 owns type checking.
 type DocComment struct {
-	Summary    string
-	Type       string
-	Class      string
-	Params     []ParamDoc
-	Returns    []string
-	Deprecated bool
-	Optional   bool
+	Span          source.Span
+	Summary       string
+	Type          string
+	Class         string
+	Enum          string
+	Params        []ParamDoc
+	Returns       []string
+	ParsedType    types.Type
+	ParsedReturns []types.Type
+	Deprecated    bool
+	Optional      bool
 }
 
 // ClassField is one shallow `---@field` declaration.
 type ClassField struct {
-	Name     string
-	Type     string
-	Doc      string
-	Optional bool
-	Span     source.Span
+	Name       string
+	Type       string
+	ParsedType types.Type
+	Doc        string
+	Optional   bool
+	Span       source.Span
 }
 
-// Class is the shallow class metadata M3 uses for member completion.
+// Class is the class metadata used for member completion and type checking.
 type Class struct {
-	Name   string
-	Fields []ClassField
+	Name     string
+	Fields   []ClassField
+	Record   *types.Record
+	Exact    bool
+	Parents  []string
+	DeclSpan source.Span
 }
 
 // ParseDocComments extracts summaries and common LuaCATS tags from contiguous
@@ -57,6 +68,9 @@ func ParseDocComments(comments []syntax.Comment) *DocComment {
 	for _, comment := range comments {
 		if comment.Kind != syntax.CommentDoc {
 			continue
+		}
+		if doc.Span.IsEmpty() {
+			doc.Span = comment.Span
 		}
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(comment.Text), "---"))
 		if text == "" {
@@ -82,26 +96,35 @@ func parseDocTag(doc *DocComment, text string) {
 	}
 	switch fields[0] {
 	case "@param":
-		if len(fields) < 3 {
+		if len(fields) < 2 {
 			return
 		}
-		name := strings.TrimSuffix(fields[1], "?")
-		param := ParamDoc{
-			Name:     name,
-			Optional: strings.HasSuffix(fields[1], "?"),
-			Type:     fields[2],
+		rest := strings.TrimSpace(text[len("@param"):])
+		name, rest := cutFirstField(rest)
+		if name == "" {
+			return
 		}
-		if len(fields) > 3 {
-			param.Doc = strings.Join(fields[3:], " ")
+		typeText, paramDoc := splitTrailingType(rest)
+		param := ParamDoc{
+			Name:     strings.TrimSuffix(name, "?"),
+			Optional: strings.HasSuffix(name, "?"),
+			Type:     typeText,
+			Doc:      paramDoc,
 		}
 		doc.Params = append(doc.Params, param)
 	case "@type":
-		if len(fields) > 1 {
-			doc.Type = strings.Join(fields[1:], " ")
+		rest := strings.TrimSpace(text[len("@type"):])
+		if rest != "" {
+			typeText, _ := splitTrailingType(rest)
+			doc.Type = typeText
 		}
 	case "@class":
 		if len(fields) > 1 {
 			doc.Class = strings.TrimSuffix(fields[1], ":")
+		}
+	case "@enum":
+		if len(fields) > 1 {
+			doc.Enum = strings.TrimSuffix(fields[1], ":")
 		}
 	case "@return":
 		if len(fields) > 1 {
@@ -110,6 +133,18 @@ func parseDocTag(doc *DocComment, text string) {
 	case "@deprecated":
 		doc.Deprecated = true
 	}
+}
+
+func cutFirstField(text string) (string, string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", ""
+	}
+	index := strings.IndexAny(text, " \t")
+	if index < 0 {
+		return text, ""
+	}
+	return text[:index], strings.TrimSpace(text[index:])
 }
 
 func attachDocs(snap *cart.Snapshot, result *Result) {
@@ -130,16 +165,18 @@ func attachDocs(snap *cart.Snapshot, result *Result) {
 		if file == nil || file.Index == nil {
 			continue
 		}
+		doc := ParseDocComments(docCommentsFor(file, snap.Comments, sym.DeclSpan.Start))
 		if sym.Kind == SymbolField {
 			// A field using a doc block above a call line is not a
 			// declaration, and fields embedded in a table/assignment line do
 			// not own a doc block above that line. Only a field that starts its
-			// own line can carry its own docs.
-			if len(sym.Decls) == 0 || !fieldAtLineStart(file, sym.DeclSpan) {
+			// own line can carry general docs; an explicit @type annotation is
+			// still associated with an assignment target.
+			if len(sym.Decls) == 0 || (!fieldAtLineStart(file, sym.DeclSpan) && (doc == nil || doc.Type == "")) {
 				continue
 			}
 		}
-		sym.Doc = ParseDocComments(docCommentsFor(file, snap.Comments, sym.DeclSpan.Start))
+		sym.Doc = doc
 	}
 	attachClassFields(result)
 }
@@ -173,26 +210,33 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 				current = nil
 				continue
 			}
-			name := strings.TrimSuffix(fields[1], ":")
+			name, exact, parents := parseClassHeader(text[len("@class"):])
+			if name == "" {
+				current = nil
+				continue
+			}
 			canonical := CanonicalName(name)
 			current = classes[canonical]
 			if current == nil {
 				current = &Class{Name: name}
 				classes[canonical] = current
 			}
+			current.Exact = current.Exact || exact
+			if len(parents) > 0 {
+				current.Parents = parents
+			}
+			if current.DeclSpan.IsEmpty() {
+				current.DeclSpan = comment.Span
+			}
 		case "@field":
-			if current == nil || len(fields) < 3 {
+			if current == nil {
 				current = nil
 				continue
 			}
-			field := ClassField{
-				Name:     strings.TrimSuffix(fields[1], "?"),
-				Optional: strings.HasSuffix(fields[1], "?"),
-				Type:     fields[2],
-				Span:     comment.Span,
-			}
-			if len(fields) > 3 {
-				field.Doc = strings.Join(fields[3:], " ")
+			field, ok := parseFieldAnnotation(text[len("@field"):], comment.Span)
+			if !ok {
+				current = nil
+				continue
 			}
 			current.Fields = append(current.Fields, field)
 		default:
@@ -202,6 +246,83 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 		}
 	}
 	return classes
+}
+
+func parseClassHeader(rest string) (name string, exact bool, parents []string) {
+	rest = strings.TrimSpace(rest)
+	exact = strings.Contains(rest, "(exact)")
+	rest = strings.ReplaceAll(rest, "(exact)", " ")
+	rest = strings.TrimSpace(rest)
+	namePart := rest
+	if idx := strings.Index(rest, ":"); idx >= 0 {
+		namePart = rest[:idx]
+		parents = splitTypeNames(rest[idx+1:])
+	}
+	fields := strings.Fields(namePart)
+	if len(fields) == 0 {
+		return "", false, nil
+	}
+	return strings.TrimSuffix(fields[0], ":"), exact, parents
+}
+
+func splitTypeNames(text string) []string {
+	text = strings.ReplaceAll(text, "(", " ")
+	text = strings.ReplaceAll(text, ")", " ")
+	parts := strings.Split(text, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		name := strings.Fields(strings.TrimSpace(part))
+		if len(name) > 0 {
+			out = append(out, name[0])
+		}
+	}
+	return out
+}
+
+func parseFieldAnnotation(rest string, span source.Span) (ClassField, bool) {
+	fields := strings.Fields(rest)
+	if len(fields) == 0 {
+		return ClassField{}, false
+	}
+	index := 0
+	if strings.HasPrefix(fields[0], "[") && strings.HasSuffix(fields[0], "]") {
+		index++
+	}
+	if index >= len(fields) {
+		return ClassField{}, false
+	}
+	name := fields[index]
+	if name == "" {
+		return ClassField{}, false
+	}
+	typeText, doc := splitTrailingType(strings.Join(fields[index+1:], " "))
+	return ClassField{
+		Name:     strings.TrimSuffix(name, "?"),
+		Optional: strings.HasSuffix(name, "?"),
+		Type:     typeText,
+		Doc:      doc,
+		Span:     span,
+	}, true
+}
+
+// splitTrailingType separates a leading type expression from trailing prose
+// without requiring the cart's type namespace.
+func splitTrailingType(text string) (string, string) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", ""
+	}
+	_, end, err := parseTypePrefix(text, func(string) (types.Type, bool) {
+		return types.AnyType, true
+	})
+	if err != nil || end <= 0 {
+		fields := strings.Fields(text)
+		if len(fields) <= 1 {
+			return text, ""
+		}
+		return fields[0], strings.Join(fields[1:], " ")
+	}
+	return strings.TrimSpace(text[:end]), strings.TrimSpace(text[end:])
 }
 
 func commentsAdjacent(snap *cart.Snapshot, previous, current syntax.Comment) bool {

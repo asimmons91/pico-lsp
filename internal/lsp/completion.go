@@ -11,6 +11,7 @@ import (
 	"go.lsp.dev/uri"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/builtin"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
@@ -224,13 +225,63 @@ func (s *Server) identifierCompletions(context *completionContext) ([]protocol.C
 
 func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, method bool, prefixStart, offset int, prefix string) ([]protocol.CompletionItem, bool) {
 	receiver = resolveAlias(receiver)
-	if receiver == nil || len(receiver.Fields) == 0 {
+	if receiver == nil {
 		return nil, false
 	}
 	canonicalPrefix := analysis.CanonicalName(prefix)
-	items := make([]protocol.CompletionItem, 0, len(receiver.Fields))
+	if receiver.Type != nil && (!isMemberType(receiver.Type) || types.IsAny(receiver.Type)) {
+		return nil, false
+	}
+	typeFields := types.Fields(receiver.Type)
+	if len(typeFields) == 0 && len(receiver.Fields) == 0 {
+		return nil, false
+	}
+	seen := make(map[string]struct{})
+	items := make([]protocol.CompletionItem, 0, len(receiver.Fields)+len(typeFields))
+	for _, field := range typeFields {
+		key := analysis.CanonicalName(field.Name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		if canonicalPrefix != "" && !strings.HasPrefix(key, canonicalPrefix) {
+			continue
+		}
+		_, isFunction := types.AsFunction(field.Type)
+		sym := receiver.Fields[key]
+		if method && !isFunction && (sym == nil || sym.Kind != analysis.SymbolMethod) {
+			continue
+		}
+		if method && sym != nil && sym.Kind != analysis.SymbolMethod {
+			continue
+		}
+		seen[key] = struct{}{}
+		if sym != nil {
+			kind := protocol.CompletionItemKindField
+			if sym.Kind == analysis.SymbolMethod || sym.Signature != "" || isFunction {
+				kind = protocol.CompletionItemKindMethod
+			}
+			item := s.makeSymbolItemWithKind(nav, sym, prefixStart, offset, kind)
+			if !isFunction {
+				item.Detail = protocol.NewOptional(memberDetail(field))
+			}
+			items = append(items, item)
+			continue
+		}
+		kind := protocol.CompletionItemKindField
+		detail := memberDetail(field)
+		if isFunction {
+			kind = protocol.CompletionItemKindMethod
+		}
+		item := s.makeTextItem(nav, field.Name, kind, detail, field.Name, false, prefixStart, offset)
+		item.SortText = protocol.NewOptional(key)
+		items = append(items, item)
+	}
 	for _, field := range receiver.Fields {
 		if field == nil {
+			continue
+		}
+		key := analysis.CanonicalName(field.Name)
+		if _, ok := seen[key]; ok {
 			continue
 		}
 		if method && field.Kind != analysis.SymbolMethod {
@@ -239,11 +290,18 @@ func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, m
 		if canonicalPrefix != "" && !strings.HasPrefix(field.Canonical, canonicalPrefix) {
 			continue
 		}
+		seen[key] = struct{}{}
 		kind := protocol.CompletionItemKindField
 		if field.Kind == analysis.SymbolMethod || field.Kind == analysis.SymbolFunction || field.Signature != "" {
 			kind = protocol.CompletionItemKindMethod
 		}
-		items = append(items, s.makeSymbolItemWithKind(nav, field, prefixStart, offset, kind))
+		item := s.makeSymbolItemWithKind(nav, field, prefixStart, offset, kind)
+		if typ := effectiveSymbolType(field); typ != nil {
+			if _, isFunction := types.AsFunction(typ); !isFunction && !types.IsAny(typ) {
+				item.Detail = protocol.NewOptional(field.Name + ": " + types.Display(typ))
+			}
+		}
+		items = append(items, item)
 	}
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].Label < items[j].Label
@@ -252,6 +310,26 @@ func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, m
 		items = items[:maxCompletionItems]
 	}
 	return items, len(items) >= maxCompletionItems
+}
+
+func isMemberType(t types.Type) bool {
+	switch types.Resolve(t).(type) {
+	case *types.Record, types.Record, types.Union:
+		return true
+	}
+	return false
+}
+
+func memberDetail(field types.FieldInfo) string {
+	detail := field.Name
+	if field.Optional {
+		detail += "?"
+	}
+	detail += ": " + types.Display(field.Type)
+	if field.Ambiguous {
+		detail += " (ambiguous)"
+	}
+	return detail
 }
 
 func (s *Server) makeSymbolItem(nav *navContext, sym *analysis.Symbol, start, end int) protocol.CompletionItem {
@@ -277,6 +355,11 @@ func (s *Server) makeSymbolItem(nav *navContext, sym *analysis.Symbol, start, en
 func (s *Server) makeSymbolItemWithKind(nav *navContext, sym *analysis.Symbol, start, end int, kind protocol.CompletionItemKind) protocol.CompletionItem {
 	data, _ := json.Marshal(completionData{Kind: "symbol", ID: sym.ID, Name: sym.Name, URI: nav.file.URI.String()})
 	item := s.makeTextItem(nav, sym.Name, kind, symbolCode(sym), sym.Name, false, start, end)
+	if typ := effectiveSymbolType(sym); typ != nil {
+		if _, isFunction := types.AsFunction(typ); !isFunction && !types.IsAny(typ) {
+			item.Detail = protocol.NewOptional(types.Display(typ))
+		}
+	}
 	item.Data = protocol.LSPAny(data)
 	item.FilterText = protocol.NewOptional(sym.Name)
 	item.SortText = protocol.NewOptional(sym.Canonical)
