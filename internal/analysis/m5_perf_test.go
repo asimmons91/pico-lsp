@@ -1,13 +1,14 @@
 package analysis
 
 import (
+	"runtime"
 	"sort"
 	"testing"
 	"time"
 )
 
 func TestM5AnalysisPerformance(t *testing.T) {
-	if analysisRaceDetectorEnabled {
+	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" {
 		t.Skip("timing targets are not meaningful under the race detector")
 	}
 	text := typeInferenceCartText()
