@@ -340,8 +340,9 @@ Resolved during implementation:
   unsafe for field rename because editing inside a string literal is out of
   scope for v1.
 - `self` is bound as an implicit method parameter, but it has no textual
-  declaration occurrence. Go-to-definition and rename refuse it rather than
-  editing a method name that is not a `self` declaration.
+  declaration occurrence. Go-to-definition points at the method name; rename
+  refuses it rather than editing a method name that is not a `self`
+  declaration.
 - Unresolved dynamic globals such as `_ENV`-created names and test-harness
   globals may still produce `undefined-global` warnings in the corpus. They are
   intentionally not hard-coded as built-ins.
