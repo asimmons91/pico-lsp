@@ -856,6 +856,7 @@ func (b *binder) bindTable(table *syntax.TableExpr, receiver *Symbol, scope *Sco
 		}
 
 		if fieldSym != nil {
+			fieldSym.InTableConstructor = true
 			if fn, ok := field.Value.(*syntax.FunctionExpr); ok {
 				setFunctionInfo(fieldSym, fieldSym.Name, fn)
 				b.bindFunction(fn, scope, false, nil, source.Span{}, fieldSym)

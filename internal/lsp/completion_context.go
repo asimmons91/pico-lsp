@@ -7,6 +7,7 @@ import (
 	"go.lsp.dev/protocol"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis"
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
@@ -119,6 +120,11 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 		}
 		if occ.Symbol == nil {
 			return nil
+		}
+		if typ, ok := n.semantics.FlowType(occ.Span); ok && typ != nil && !types.IsAny(typ) {
+			receiver := *occ.Symbol
+			receiver.Type = typ
+			return resolveAlias(&receiver)
 		}
 		return resolveAlias(occ.Symbol)
 	}

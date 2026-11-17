@@ -51,6 +51,52 @@ func symbolCode(sym *analysis.Symbol) string {
 	}
 }
 
+// singleRecord returns the record behind t when t is a record or a union with
+// exactly one non-nil record member.
+func singleRecord(t types.Type) *types.Record {
+	t = types.Resolve(t)
+	switch v := t.(type) {
+	case *types.Record:
+		return v
+	case types.Record:
+		return &v
+	case types.Union:
+		var found *types.Record
+		for _, member := range v.Members {
+			if types.IsNil(member) {
+				continue
+			}
+			record, ok := types.Resolve(member).(*types.Record)
+			if !ok || record == nil {
+				return nil
+			}
+			if found != nil && !strings.EqualFold(found.Name, record.Name) {
+				return nil
+			}
+			found = record
+		}
+		return found
+	}
+	return nil
+}
+
+// inheritedFrom returns the declaring record when sym is inherited from a
+// parent class rather than declared on the receiver's own class.
+func inheritedFrom(sym *analysis.Symbol) *types.Record {
+	if sym == nil || sym.Owner == nil || sym.Owner.Type == nil {
+		return nil
+	}
+	info, ok := types.LookupFieldInfo(sym.Owner.Type, sym.Name)
+	if !ok || info.Owner == nil {
+		return nil
+	}
+	owner := singleRecord(sym.Owner.Type)
+	if owner == nil || info.Owner == owner {
+		return nil
+	}
+	return info.Owner
+}
+
 func effectiveSymbolType(sym *analysis.Symbol) types.Type {
 	if sym == nil {
 		return nil
@@ -112,18 +158,35 @@ func typedFunctionSignature(sym *analysis.Symbol, fn *types.Function) string {
 }
 
 func symbolMarkdown(nav *navContext, sym *analysis.Symbol) string {
+	return symbolMarkdownWithType(nav, sym, nil)
+}
+
+// symbolMarkdownWithType renders hover content and lets callers prefer a
+// flow-narrowed type over the symbol's declared type.
+func symbolMarkdownWithType(nav *navContext, sym *analysis.Symbol, override types.Type) string {
 	if sym == nil {
 		return ""
 	}
 	var b strings.Builder
 	b.WriteString("```lua\n")
-	b.WriteString(symbolCode(sym))
+	if fn, ok := types.AsFunction(override); ok {
+		b.WriteString(typedFunctionSignature(sym, fn))
+	} else {
+		b.WriteString(symbolCode(sym))
+	}
 	b.WriteString("\n```")
 	if sym.Doc != nil && strings.TrimSpace(sym.Doc.Summary) != "" {
 		b.WriteString("\n\n")
 		b.WriteString(markdownInline(sym.Doc.Summary))
 	}
-	if sym.Doc != nil && sym.Doc.Type != "" {
+	if override != nil && !types.IsAny(override) {
+		b.WriteString("\n\n**Type:** `")
+		b.WriteString(types.Display(override))
+		b.WriteString("`")
+		if sym.Doc != nil && sym.Doc.Optional {
+			b.WriteString(" (optional)")
+		}
+	} else if sym.Doc != nil && sym.Doc.Type != "" {
 		b.WriteString("\n\n**Type:** `")
 		b.WriteString(sym.Doc.Type)
 		b.WriteString("`")
@@ -136,6 +199,11 @@ func symbolMarkdown(nav *navContext, sym *analysis.Symbol) string {
 			b.WriteString(types.Display(typ))
 			b.WriteString("`")
 		}
+	}
+	if owner := inheritedFrom(sym); owner != nil {
+		b.WriteString("\n\nInherited from `")
+		b.WriteString(owner.Name)
+		b.WriteString("`")
 	}
 	if record := namedRecord(effectiveSymbolType(sym)); record != nil {
 		fields := types.Fields(record)
@@ -273,6 +341,14 @@ func symbolDocumentation(sym *analysis.Symbol) string {
 			b.WriteString("\n\n")
 		}
 		b.WriteString("**Deprecated.**")
+	}
+	if owner := inheritedFrom(sym); owner != nil {
+		if b.Len() > 0 {
+			b.WriteString("\n\n")
+		}
+		b.WriteString("Inherited from `")
+		b.WriteString(owner.Name)
+		b.WriteString("`")
 	}
 	return truncateMarkdown(b.String())
 }

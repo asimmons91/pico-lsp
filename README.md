@@ -29,7 +29,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
   rename, and workspace symbols.
 - Completion, hover, signature help, semantic tokens, and inlay hints for user
   symbols and the PICO-8 0.2.7 API.
-- LuaCATS classes, aliases, enums, params, returns, and gradual flow-aware type
+- LuaCATS classes with inheritance and `(exact)` field checks, metatable factory
+  inference, aliases, enums, params, returns, and gradual flow-aware type
   inference with `off`, `basic`, and `strict` checking.
 - AST-guided `textDocument/formatting` that preserves shorthand, comments,
   annotations, includes, and non-code cart sections.

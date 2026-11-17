@@ -99,6 +99,13 @@ type Field struct {
 	Type     Type
 	Optional bool
 	Decl     source.Span
+	// StringKey marks a field created from a table string key. Identifier
+	// fields fold case; string keys remain case-sensitive.
+	StringKey bool
+	// Inherited marks a field or method declared on the class table. Such
+	// members are available through the metatable and are not required in
+	// instance literals.
+	Inherited bool
 }
 
 // Function is a callable type.
@@ -144,9 +151,9 @@ type TypeVar struct {
 func (TypeVar) typeNode() {}
 
 // NewRecord creates an open, empty record. Named records are open unless Exact
-// is set by the annotation parser.
+// is set by the annotation parser. Fields is allocated on the first AddField.
 func NewRecord(name string) *Record {
-	return &Record{Name: name, Fields: make(map[string]*Field), Open: true}
+	return &Record{Name: name, Open: true}
 }
 
 // AddField adds or replaces a field on r.
@@ -154,10 +161,18 @@ func (r *Record) AddField(field *Field) {
 	if r == nil || field == nil {
 		return
 	}
+	if field.Name == "" {
+		return
+	}
 	if r.Fields == nil {
 		r.Fields = make(map[string]*Field)
 	}
 	key := CanonicalName(field.Name)
+	if field.StringKey {
+		// String keys are case-sensitive, so keep them out of the folded
+		// identifier namespace.
+		key = stringKeyPrefix + field.Name
+	}
 	if key == "" {
 		return
 	}
@@ -170,6 +185,10 @@ func (r *Record) AddField(field *Field) {
 	}
 	r.Fields[key] = field
 }
+
+// stringKeyPrefix keeps case-sensitive string-key fields out of the folded
+// identifier namespace in Record.Fields.
+const stringKeyPrefix = "\x00"
 
 // CanonicalName ASCII-lowercases a type/field name, matching PICO-8 folding.
 func CanonicalName(name string) string {
@@ -336,37 +355,87 @@ func ContainsNil(t Type) bool {
 	return false
 }
 
-// Truthy returns the part of t that survives an `if t then` test.
+// Truthy returns the part of t that survives an `if t then` test. When no
+// member survives, it returns boolean to keep narrowing conservative.
 func Truthy(t Type) Type {
+	if part := TruthyPart(t); part != nil {
+		return part
+	}
+	return BooleanType
+}
+
+// TruthyPart returns the truthy members of t, or nil when none survive.
+func TruthyPart(t Type) Type {
 	t = Resolve(t)
 	switch v := t.(type) {
 	case Union:
 		out := make([]Type, 0, len(v.Members))
 		for _, member := range v.Members {
-			if IsNil(member) || isFalseLiteral(member) {
-				continue
+			if part := TruthyPart(member); part != nil {
+				out = append(out, part)
 			}
-			out = append(out, member)
 		}
 		if len(out) == 0 {
-			return BooleanType
+			return nil
 		}
 		return UnionOf(out...)
-	default:
-		if IsNil(t) || isFalseLiteral(t) {
-			return BooleanType
+	case Primitive:
+		switch v.Kind {
+		case KindAny:
+			return AnyType
+		case KindNil:
+			return nil
+		default:
+			return t
 		}
+	case Literal:
+		if value, ok := v.Value.(bool); ok && !value {
+			return nil
+		}
+		return t
+	case nil:
+		return nil
+	default:
 		return t
 	}
 }
 
-func isFalseLiteral(t Type) bool {
-	lit, ok := t.(Literal)
-	if !ok {
-		return false
+// Falsy returns the nil and false members of t, or nil when t is always truthy.
+func Falsy(t Type) Type {
+	t = Resolve(t)
+	switch v := t.(type) {
+	case Union:
+		out := make([]Type, 0, len(v.Members))
+		for _, member := range v.Members {
+			if part := Falsy(member); part != nil {
+				out = append(out, part)
+			}
+		}
+		if len(out) == 0 {
+			return nil
+		}
+		return UnionOf(out...)
+	case Primitive:
+		switch v.Kind {
+		case KindAny:
+			return AnyType
+		case KindNil:
+			return t
+		case KindBoolean:
+			return t
+		default:
+			return nil
+		}
+	case Literal:
+		if value, ok := v.Value.(bool); ok && !value {
+			return t
+		}
+		return nil
+	case nil:
+		return nil
+	default:
+		return nil
 	}
-	b, ok := lit.Value.(bool)
-	return ok && !b
 }
 
 // Widen converts literal types to their primitive counterparts for display

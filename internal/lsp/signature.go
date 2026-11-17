@@ -33,7 +33,10 @@ func (s *Server) SignatureHelp(ctx context.Context, params *protocol.SignatureHe
 		return nil, nil
 	}
 	call := nav.innermostCall(offset)
-	if call == nil || call.callee == nil || call.callee.Signature == "" {
+	if call == nil || call.callee == nil {
+		return nil, nil
+	}
+	if _, typed := types.AsFunction(call.callee.Type); !typed && call.callee.Signature == "" {
 		return nil, nil
 	}
 	return buildSignatureHelp(nav, call, offset), nil

@@ -21,6 +21,11 @@ func FuzzAnalyze(f *testing.F) {
 		"repeat local x = 1 until x\n",
 		"#include \"nope.lua\"\n",
 		"if (btn(0)) x += 1\n",
+		"---@class A: B\n---@class B: A\nlocal a = {}\n",
+		"---@class (exact) P\n---@field x number\n---@type P\nlocal p = {x = 1}\n",
+		"---@class C: (exact) D\n---@class D\nlocal c = {}\n",
+		"local p = setmetatable({}, {__index = C})\n",
+		"---@param x number?\nlocal function f(x)\n  assert(x)\n  if not x then return end\n  local y = x or 1\nend\n",
 	} {
 		f.Add(seed)
 	}

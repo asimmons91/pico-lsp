@@ -266,13 +266,16 @@ func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, m
 			}
 			item := s.makeSymbolItemWithKind(nav, sym, prefixStart, offset, kind)
 			if !isFunction {
-				item.Detail = protocol.NewOptional(memberDetail(field))
+				item.Detail = protocol.NewOptional(memberDetail(field, receiver.Type))
+			} else if suffix := inheritedSuffix(field, receiver.Type); suffix != "" {
+				detail, _ := item.Detail.Get()
+				item.Detail = protocol.NewOptional(detail + suffix)
 			}
 			items = append(items, item)
 			continue
 		}
 		kind := protocol.CompletionItemKindField
-		detail := memberDetail(field)
+		detail := memberDetail(field, receiver.Type)
 		if isFunction {
 			kind = protocol.CompletionItemKindMethod
 		}
@@ -330,7 +333,7 @@ func isMemberType(t types.Type) bool {
 	return false
 }
 
-func memberDetail(field types.FieldInfo) string {
+func memberDetail(field types.FieldInfo, receiver types.Type) string {
 	detail := field.Name
 	if field.Optional {
 		detail += "?"
@@ -339,7 +342,18 @@ func memberDetail(field types.FieldInfo) string {
 	if field.Ambiguous {
 		detail += " (ambiguous)"
 	}
-	return detail
+	return detail + inheritedSuffix(field, receiver)
+}
+
+func inheritedSuffix(field types.FieldInfo, receiver types.Type) string {
+	owner := field.Owner
+	if owner == nil || owner.Name == "" {
+		return ""
+	}
+	if record := singleRecord(receiver); record != nil && record == owner {
+		return ""
+	}
+	return " (from " + owner.Name + ")"
 }
 
 func (s *Server) makeSymbolItem(nav *navContext, sym *analysis.Symbol, start, end int) protocol.CompletionItem {

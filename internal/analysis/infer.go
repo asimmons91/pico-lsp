@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -54,6 +55,7 @@ func inferTypes(snap *cart.Snapshot, result *Result, opts Options) {
 	for pass := 0; pass < maxInferencePasses; pass++ {
 		inf.beginPass()
 		inf.inferBlock(snap.Chunk.Block, make(map[*Symbol]types.Type))
+		result.syncClassFields()
 		if !inf.applyCallSites() && pass >= 1 {
 			break
 		}
@@ -62,6 +64,7 @@ func inferTypes(snap *cart.Snapshot, result *Result, opts Options) {
 	inf.beginPass()
 	inf.inferBlock(snap.Chunk.Block, make(map[*Symbol]types.Type))
 	inf.applyCallSites()
+	result.syncClassFields()
 	inf.emitDeprecated()
 }
 
@@ -148,12 +151,7 @@ func (inf *inferer) paramSymbols(callee *Symbol) []*Symbol {
 	if callee == nil {
 		return nil
 	}
-	byName := make(map[string]*Symbol)
-	for _, sym := range inf.result.Table.Symbols {
-		if sym != nil && sym.Kind == SymbolParam && sym.Function == callee {
-			byName[CanonicalName(sym.Name)] = sym
-		}
-	}
+	byName := inf.result.paramSymbolsFor(callee)
 	out := make([]*Symbol, 0, len(callee.Params))
 	for _, name := range callee.Params {
 		out = append(out, byName[CanonicalName(name)])
@@ -186,10 +184,12 @@ func (inf *inferer) inferStmt(stmt syntax.Stmt, env map[*Symbol]types.Type) {
 			inf.inferExpr(st.Call, env)
 		}
 	case *syntax.DoStmt:
-		inf.inferBlock(st.Body, cloneEnv(env))
+		inf.inferBlock(st.Body, env)
 	case *syntax.WhileStmt:
 		inf.inferExpr(st.Cond, env)
-		inf.inferBlock(st.Body, cloneEnv(env))
+		bodyEnv := cloneEnv(env)
+		inf.applyNarrow(bodyEnv, st.Cond, true)
+		inf.inferBlock(st.Body, bodyEnv)
 	case *syntax.RepeatStmt:
 		bodyEnv := cloneEnv(env)
 		inf.inferBlock(st.Body, bodyEnv)
@@ -243,10 +243,13 @@ func (inf *inferer) inferLocal(st *syntax.LocalStmt, env map[*Symbol]types.Type)
 		declared := sym.Type
 		if sym.TypeExplicit && declared != nil {
 			if i < len(st.Values) {
-				inf.checkAssignment(sym, declared, valueType, spanOfExpr(valueAtExpr(st.Values, i)))
-				inf.attachTableFields(sym, valueAtExpr(st.Values, i), declared)
+				expr := valueAtExpr(st.Values, i)
+				if !classDefinitionLiteral(sym, expr) {
+					inf.checkAssignment(sym, declared, valueType, spanOfExpr(expr))
+				}
+				inf.attachTableFields(sym, expr, declared)
 			}
-			env[sym] = declared
+			env[sym] = refineFlowType(declared, valueType)
 			continue
 		}
 		valueType = types.Widen(valueType)
@@ -270,27 +273,42 @@ func (inf *inferer) inferAssign(st *syntax.AssignStmt, env map[*Symbol]types.Typ
 				valueType = firstType(valueTypes[i])
 			}
 			resultType := inf.binaryResultType(strings.TrimSuffix(st.Op.Text, "="), targetType, valueType)
-			inf.assignTarget(target, resultType, env, spanOfExpr(target))
+			inf.assignTarget(target, resultType, env, spanOfExpr(target), false)
 		}
 		return
 	}
 	for i, target := range st.Targets {
 		valueType := multiValueAt(valueTypes, i)
+		valueExpr := valueAtExpr(st.Values, i)
 		if name, ok := target.(*syntax.NameExpr); ok {
 			if sym := inf.symbolAt(name); sym != nil && sym.Doc != nil && sym.Doc.Enum != "" {
 				if enum := inf.result.Enums[CanonicalName(sym.Doc.Enum)]; enum != nil {
-					if table, ok := valueAtExpr(st.Values, i).(*syntax.TableExpr); ok {
+					if table, ok := valueExpr.(*syntax.TableExpr); ok {
 						inf.fillEnum(enum, table, env)
 					}
 					valueType = enum
 				}
 			}
 		}
-		inf.assignTarget(target, valueType, env, spanOfExpr(valueAtExpr(st.Values, i)))
+		skipShapeCheck := false
+		if name, ok := target.(*syntax.NameExpr); ok {
+			if sym := inf.symbolAt(name); sym != nil {
+				skipShapeCheck = classDefinitionLiteral(sym, valueExpr)
+			}
+		}
+		inf.assignTarget(target, valueType, env, spanOfExpr(valueExpr), skipShapeCheck)
 	}
 }
 
-func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env map[*Symbol]types.Type, valueSpan source.Span) {
+func classDefinitionLiteral(sym *Symbol, expr syntax.Expr) bool {
+	if sym == nil || sym.Doc == nil || sym.Doc.Class == "" || sym.Doc.Type != "" {
+		return false
+	}
+	_, ok := expr.(*syntax.TableExpr)
+	return ok
+}
+
+func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env map[*Symbol]types.Type, valueSpan source.Span, skipShapeCheck bool) {
 	if target == nil {
 		return
 	}
@@ -303,8 +321,10 @@ func (inf *inferer) assignTarget(target syntax.Expr, valueType types.Type, env m
 		declared := sym.Type
 		if sym.TypeExplicit && declared != nil {
 			declared = inf.applyCasts(sym, declared, t.Span())
-			inf.checkAssignment(sym, declared, valueType, valueSpan)
-			env[sym] = declared
+			if !skipShapeCheck {
+				inf.checkAssignment(sym, declared, valueType, valueSpan)
+			}
+			env[sym] = refineFlowType(declared, valueType)
 			return
 		}
 		valueType = types.Widen(valueType)
@@ -352,24 +372,56 @@ func (inf *inferer) inferIf(st *syntax.IfStmt, env map[*Symbol]types.Type) {
 		return
 	}
 	base := env
-	for i, branch := range st.Branches {
-		condType := inf.inferExpr(branch.Cond, base)
-		branchEnv := cloneEnv(base)
+	var conds []syntax.Expr
+	fallthroughEnvs := make([]map[*Symbol]types.Type, 0, len(st.Branches)+1)
+	for _, branch := range st.Branches {
+		branchBase := cloneEnv(base)
+		for _, previous := range conds {
+			inf.applyNarrow(branchBase, previous, false)
+		}
+		inf.inferExpr(branch.Cond, branchBase)
+		branchEnv := cloneEnv(branchBase)
 		inf.applyNarrow(branchEnv, branch.Cond, true)
 		inf.inferBlock(branch.Body, branchEnv)
-		if i == 0 && len(st.Branches) == 1 && st.Else == nil && blockAlwaysReturns(branch.Body) {
-			elseEnv := cloneEnv(base)
-			inf.applyNarrow(elseEnv, branch.Cond, false)
-			mergeEnv(env, elseEnv)
+		conds = append(conds, branch.Cond)
+		if !blockAlwaysReturns(branch.Body) {
+			fallthroughEnvs = append(fallthroughEnvs, branchEnv)
 		}
-		_ = condType
 	}
 	if st.Else != nil {
 		elseEnv := cloneEnv(base)
-		for _, branch := range st.Branches {
-			inf.applyNarrow(elseEnv, branch.Cond, false)
+		for _, cond := range conds {
+			inf.applyNarrow(elseEnv, cond, false)
 		}
 		inf.inferBlock(st.Else, elseEnv)
+		if !blockAlwaysReturns(st.Else) {
+			fallthroughEnvs = append(fallthroughEnvs, elseEnv)
+		}
+	} else {
+		elseEnv := cloneEnv(base)
+		for _, cond := range conds {
+			inf.applyNarrow(elseEnv, cond, false)
+		}
+		fallthroughEnvs = append(fallthroughEnvs, elseEnv)
+	}
+	if len(fallthroughEnvs) == 0 {
+		return
+	}
+	merged := fallthroughEnvs[0]
+	for _, branchEnv := range fallthroughEnvs[1:] {
+		for sym, typ := range branchEnv {
+			merged[sym] = types.Merge(merged[sym], typ)
+		}
+	}
+	// Only update symbols that were already in scope. Locals declared inside a
+	// branch do not escape it, and keeping them out avoids growing the flow
+	// environment for every conditional in a large cart.
+	for sym := range env {
+		if typ, ok := merged[sym]; ok {
+			env[sym] = typ
+		} else {
+			delete(env, sym)
+		}
 	}
 }
 
@@ -381,6 +433,14 @@ func (inf *inferer) inferGenericFor(st *syntax.GenericForStmt, env map[*Symbol]t
 	name := ""
 	if len(st.Values) > 0 {
 		name = callName(st.Values[0])
+		if call, ok := st.Values[0].(*syntax.CallExpr); ok {
+			name = callName(call.Func)
+			if len(call.Args) > 0 && iteratorName(name) {
+				// all/ipairs/pairs yield loop values from their collection
+				// argument, not from the function value itself.
+				iterType = firstType(inf.inferExpr(call.Args[0], env))
+			}
+		}
 	}
 	loopTypes := iteratorLoopTypes(name, iterType)
 	loopEnv := cloneEnv(env)
@@ -509,7 +569,11 @@ func (inf *inferer) inferFunction(fn *syntax.FunctionExpr, env map[*Symbol]types
 	}
 	state := &functionState{symbol: functionSym, fn: fnType, explicitReturn: explicitReturns}
 	inf.funcs = append(inf.funcs, state)
-	fnEnv := cloneEnv(env)
+	// Function bodies start from their parameter types rather than the outer
+	// flow environment. Narrowing from an enclosing block is not guaranteed to
+	// hold when the closure runs, and copying the whole environment per
+	// function dominates analysis time on larger carts.
+	fnEnv := make(map[*Symbol]types.Type)
 	if functionSym != nil {
 		for _, paramSym := range inf.paramSymbols(functionSym) {
 			if paramSym != nil && paramSym.Type != nil {
@@ -547,12 +611,7 @@ func (inf *inferer) selfSymbol(function *Symbol) *Symbol {
 	if function == nil {
 		return nil
 	}
-	for _, sym := range inf.result.Table.Symbols {
-		if sym != nil && sym.Kind == SymbolParam && sym.Function == function && strings.EqualFold(sym.Name, "self") {
-			return sym
-		}
-	}
-	return nil
+	return inf.result.paramSymbolsFor(function)["self"]
 }
 
 func (inf *inferer) currentFunction() *functionState {
@@ -623,7 +682,15 @@ func (inf *inferer) inferExpr(expr syntax.Expr, env map[*Symbol]types.Type) type
 	default:
 		typ = types.AnyType
 	}
-	return inf.applyAs(expr, typ)
+	typ = inf.applyAs(expr, typ)
+	if inf.final {
+		if name, ok := expr.(*syntax.NameExpr); ok {
+			if sym := inf.symbolAt(name); sym == nil || !types.Identical(typ, sym.Type) {
+				inf.result.recordFlow(name.Span(), typ)
+			}
+		}
+	}
+	return typ
 }
 
 func (inf *inferer) inferBinary(e *syntax.BinaryExpr, env map[*Symbol]types.Type) types.Type {
@@ -633,12 +700,22 @@ func (inf *inferer) inferBinary(e *syntax.BinaryExpr, env map[*Symbol]types.Type
 		rightEnv := cloneEnv(env)
 		inf.applyNarrow(rightEnv, e.Left, true)
 		right := inf.inferExpr(e.Right, rightEnv)
-		return types.UnionOf(types.Truthy(left), right)
+		if falsy := types.Falsy(left); falsy != nil {
+			return types.UnionOf(falsy, right)
+		}
+		return right
 	case "or":
 		rightEnv := cloneEnv(env)
 		inf.applyNarrow(rightEnv, e.Left, false)
 		right := inf.inferExpr(e.Right, rightEnv)
-		return types.UnionOf(types.RemoveNil(types.Truthy(left)), right)
+		truthy := types.TruthyPart(left)
+		if truthy == nil {
+			return right
+		}
+		if types.Falsy(left) == nil {
+			return truthy
+		}
+		return types.UnionOf(truthy, right)
 	}
 	right := firstType(inf.inferExpr(e.Right, env))
 	if inf.final && inf.mode == TypeCheckingStrict && requiresNonNil(e.Op.Text) {
@@ -694,7 +771,7 @@ func (inf *inferer) inferTable(e *syntax.TableExpr, env map[*Symbol]types.Type) 
 			continue
 		}
 		if str, ok := field.Key.(*syntax.StringExpr); ok && field.BracketKey {
-			record.AddField(&types.Field{Name: str.Value, Type: types.Widen(firstType(valueType)), Decl: str.Span()})
+			record.AddField(&types.Field{Name: str.Value, Type: types.Widen(firstType(valueType)), Decl: str.Span(), StringKey: true})
 			continue
 		}
 		inf.inferExpr(field.Key, env)
@@ -733,10 +810,11 @@ func (inf *inferer) inferField(e *syntax.FieldExpr, env map[*Symbol]types.Type) 
 		}
 		return types.AnyType
 	}
+	resultType := fieldType
 	if optional {
-		return types.Optional(fieldType)
+		resultType = types.Optional(fieldType)
 	}
-	return fieldType
+	return resultType
 }
 
 func (inf *inferer) inferIndex(e *syntax.IndexExpr, env map[*Symbol]types.Type) types.Type {
@@ -751,7 +829,18 @@ func (inf *inferer) inferIndex(e *syntax.IndexExpr, env map[*Symbol]types.Type) 
 		return value.Elem
 	case *types.Record:
 		if str, ok := e.Index.(*syntax.StringExpr); ok {
-			if fieldType, ok, optional := types.LookupField(value, str.Value); ok {
+			// String keys are case-sensitive in PICO-8 tables; identifier
+			// folding applies only to dot fields.
+			if fieldType, ok, optional := types.LookupFieldExact(value, str.Value); ok {
+				if optional {
+					return types.Optional(fieldType)
+				}
+				return fieldType
+			}
+		}
+	case types.Union:
+		if str, ok := e.Index.(*syntax.StringExpr); ok {
+			if fieldType, ok, optional := types.LookupFieldExact(value, str.Value); ok {
 				if optional {
 					return types.Optional(fieldType)
 				}
@@ -773,17 +862,79 @@ func (inf *inferer) inferCall(e *syntax.CallExpr, env map[*Symbol]types.Type) ty
 		inf.recordCall(callee, argTypes)
 	}
 	if callee == nil || callee.Builtin {
+		if name == "assert" && len(e.Args) > 0 {
+			inf.applyNarrow(env, e.Args[0], true)
+		}
 		if typ, ok := inf.specialCall(name, e.Args, argTypes, env); ok {
 			return typ
 		}
 	}
 	if callee != nil {
-		inf.checkCall(callee, argTypes, e.Args)
+		var origin *Symbol
+		if callee.Type == nil || types.IsAny(callee.Type) || !callee.TypeExplicit {
+			origin = inf.attachFieldCalleeType(e.Func, callee, env)
+		}
+		if origin != nil && origin != callee {
+			inf.recordCall(origin, argTypes)
+		}
+		explicit := callee.TypeExplicit || (origin != nil && origin.TypeExplicit)
+		inf.checkCall(callee, explicit, argTypes, e.Args)
 		if fn, ok := types.AsFunction(callee.Type); ok {
 			return callReturnType(fn)
 		}
 	}
 	return types.AnyType
+}
+
+// attachFieldCalleeType resolves a field call such as obj.method(...) through
+// the receiver's declared type. Colon calls already set method types during
+// inference; this covers dot calls and inherited methods. It returns the
+// class-table symbol that declared the member, when known.
+func (inf *inferer) attachFieldCalleeType(expr syntax.Expr, callee *Symbol, env map[*Symbol]types.Type) *Symbol {
+	fieldExpr, ok := expr.(*syntax.FieldExpr)
+	if !ok || fieldExpr == nil || callee == nil {
+		return nil
+	}
+	if len(callee.Decls) > 0 {
+		// The field is declared on this receiver. Do not fall back to an
+		// inherited method with the same name.
+		return nil
+	}
+	base := firstType(inf.inferExpr(fieldExpr.Base, env))
+	fieldType, found, _ := types.LookupField(base, fieldExpr.Name.Text)
+	if !found {
+		return nil
+	}
+	fn, ok := types.AsFunction(fieldType)
+	if !ok {
+		return nil
+	}
+	origin := inf.result.originFieldSymbol(base, fieldExpr.Name.Text)
+	if origin != nil {
+		if originFn, ok := types.AsFunction(origin.Type); ok {
+			fn = originFn
+		}
+	}
+	if callee.Type == nil || types.IsAny(callee.Type) {
+		callee.Type = fn
+	}
+	inf.adoptInheritedMember(callee, origin)
+	return origin
+}
+
+// adoptInheritedMember copies documentation and the display signature from a
+// declaring class-table symbol onto the provisional member used at a call or
+// access site.
+func (inf *inferer) adoptInheritedMember(member, origin *Symbol) {
+	if member == nil || origin == nil || member == origin {
+		return
+	}
+	if member.Doc == nil {
+		member.Doc = origin.Doc
+	}
+	if member.Signature == "" {
+		member.Signature = origin.Signature
+	}
 }
 
 func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]types.Type) types.Type {
@@ -799,22 +950,47 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 	for i, arg := range e.Args {
 		argTypes[i] = inf.inferExpr(arg, env)
 	}
+	var resultType types.Type = types.AnyType
 	if method != nil {
-		inf.recordCall(method, argTypes)
-		inf.checkCall(method, argTypes, e.Args)
-		if fn, ok := types.AsFunction(method.Type); ok {
-			return callReturnType(fn)
-		}
-		if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
-			if fn, ok := types.AsFunction(fieldType); ok {
-				if method.Type == nil {
+		declaredHere := len(method.Decls) > 0
+		var fn *types.Function
+		var origin *Symbol
+		if existing, ok := types.AsFunction(method.Type); ok {
+			fn = existing
+			if !declaredHere {
+				origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
+				if origin != nil {
+					if originFn, ok := types.AsFunction(origin.Type); ok {
+						fn = originFn
+					}
+				}
+			}
+		} else if !declaredHere {
+			if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
+				if resolved, ok := types.AsFunction(fieldType); ok {
+					fn = resolved
+					origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
+					if origin != nil {
+						if originFn, ok := types.AsFunction(origin.Type); ok {
+							fn = originFn
+						}
+					}
 					method.Type = fn
 				}
-				return callReturnType(fn)
 			}
 		}
+		inf.adoptInheritedMember(method, origin)
+		if origin != nil && origin != method {
+			inf.recordCall(origin, argTypes)
+		}
+		inf.recordCall(method, argTypes)
+		if fn != nil {
+			explicit := method.TypeExplicit || (origin != nil && origin.TypeExplicit)
+			inf.checkCall(method, explicit, argTypes, e.Args)
+			resultType = callReturnType(fn)
+		}
 	}
-	return types.AnyType
+	return resultType
 }
 
 func (inf *inferer) calleeSymbol(expr syntax.Expr) *Symbol {
@@ -841,8 +1017,8 @@ func (inf *inferer) recordCall(callee *Symbol, args []types.Type) {
 	}
 }
 
-func (inf *inferer) checkCall(callee *Symbol, args []types.Type, argExprs []syntax.Expr) {
-	if !inf.final || callee == nil || callee.Builtin || !callee.TypeExplicit {
+func (inf *inferer) checkCall(callee *Symbol, explicit bool, args []types.Type, argExprs []syntax.Expr) {
+	if !inf.final || callee == nil || callee.Builtin || !explicit {
 		return
 	}
 	fn, ok := types.AsFunction(callee.Type)
@@ -925,6 +1101,27 @@ func (inf *inferer) specialCall(name string, args []syntax.Expr, argTypes []type
 		return types.AnyType, true
 	case "type":
 		return types.StringType, true
+	case "assert":
+		if len(argTypes) > 0 {
+			if truthy := types.TruthyPart(argTypes[0]); truthy != nil {
+				return truthy, true
+			}
+			return firstType(argTypes[0]), true
+		}
+		return types.AnyType, true
+	case "setmetatable":
+		if len(argTypes) == 0 {
+			return types.AnyType, true
+		}
+		if len(argTypes) > 1 {
+			if class := metatableClass(argTypes[1]); class != nil {
+				return class, true
+			}
+		}
+		if !types.IsAny(argTypes[0]) {
+			return firstType(argTypes[0]), true
+		}
+		return types.AnyType, true
 	case "tostr", "chr", "sub":
 		return types.StringType, true
 	case "tonum", "ord":
@@ -935,25 +1132,103 @@ func (inf *inferer) specialCall(name string, args []syntax.Expr, argTypes []type
 	return nil, false
 }
 
+// refineFlowType keeps an assigned value's narrower type when it is assignable
+// to the declared type. It is used for the flow environment; the symbol's
+// declared type is unchanged.
+func refineFlowType(declared, value types.Type) types.Type {
+	if declared == nil || value == nil || types.IsAny(declared) || types.IsAny(value) {
+		return declared
+	}
+	candidate := types.Widen(value)
+	if !types.Assignable(candidate, declared, false) {
+		return declared
+	}
+	if types.IsNil(candidate) {
+		return types.NilType
+	}
+	if types.ContainsNil(declared) && !types.ContainsNil(candidate) {
+		if narrowed := types.RemoveNil(declared); types.Assignable(candidate, narrowed, false) {
+			declared = narrowed
+		}
+	}
+	if record, ok := candidate.(*types.Record); ok && record.Name == "" {
+		// An anonymous table literal is less useful than the declared record,
+		// array, or map type it was checked against.
+		return declared
+	}
+	if types.Assignable(declared, candidate, false) {
+		return declared
+	}
+	return candidate
+}
+
 func (inf *inferer) checkAssignment(sym *Symbol, declared, valueType types.Type, valueSpan source.Span) {
 	if !inf.final || declared == nil || valueType == nil || types.IsAny(declared) || types.IsAny(valueType) {
 		return
 	}
-	if inf.mode == TypeCheckingStrict {
-		if record, ok := types.Resolve(declared).(*types.Record); ok {
-			if valueRecord, ok := types.Resolve(valueType).(*types.Record); ok {
-				missing := missingFields(record, valueRecord)
-				if len(missing) > 0 {
-					inf.report(CodeMissingFields, fmt.Sprintf("missing fields: %s", strings.Join(missing, ", ")), valueSpan)
-					return
-				}
+	declaredRecord, declaredIsRecord := types.Resolve(declared).(*types.Record)
+	valueRecord, valueIsRecord := types.Resolve(valueType).(*types.Record)
+	if declaredIsRecord && declaredRecord != nil && (inf.mode == TypeCheckingStrict || declaredRecord.Exact) && valueIsRecord && valueRecord != nil {
+		reported := false
+		if missing := missingFields(declaredRecord, valueRecord); len(missing) > 0 {
+			inf.report(CodeMissingFields, fmt.Sprintf("missing fields: %s", strings.Join(missing, ", ")), valueSpan)
+			reported = true
+		}
+		if declaredRecord.Exact {
+			if extra := extraFields(declaredRecord, valueRecord); len(extra) > 0 {
+				inf.report(CodeAssignTypeMismatch, extraFieldsMessage(extra, declared), valueSpan)
+				reported = true
 			}
+		}
+		if reported {
+			return
 		}
 	}
 	if !types.Assignable(valueType, declared, inf.mode == TypeCheckingStrict) {
 		inf.report(CodeAssignTypeMismatch,
 			fmt.Sprintf("cannot assign %s to %s", types.Display(valueType), types.Display(declared)), valueSpan)
 	}
+}
+
+func extraFields(want, got *types.Record) []string {
+	if want == nil || got == nil {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var extra []string
+	for _, field := range got.Fields {
+		if field == nil {
+			continue
+		}
+		found := false
+		if field.StringKey {
+			_, found, _ = types.LookupFieldExact(want, field.Name)
+		} else {
+			_, found, _ = types.LookupField(want, field.Name)
+		}
+		if found {
+			continue
+		}
+		name := field.Name
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		extra = append(extra, name)
+	}
+	sort.Strings(extra)
+	return extra
+}
+
+func extraFieldsMessage(fields []string, declared types.Type) string {
+	if len(fields) == 1 {
+		return fmt.Sprintf("field %q does not exist on %s", fields[0], types.Display(declared))
+	}
+	quoted := make([]string, 0, len(fields))
+	for _, field := range fields {
+		quoted = append(quoted, fmt.Sprintf("%q", field))
+	}
+	return fmt.Sprintf("fields %s do not exist on %s", strings.Join(quoted, ", "), types.Display(declared))
 }
 
 func (inf *inferer) checkAssignmentValue(want, got types.Type, span source.Span) {
@@ -972,7 +1247,7 @@ func missingFields(want, got *types.Record) []string {
 	}
 	var missing []string
 	for _, field := range types.Fields(want) {
-		if field.Optional {
+		if field.Optional || field.Inherited {
 			continue
 		}
 		if _, ok, _ := types.LookupField(got, field.Name); !ok {
@@ -986,6 +1261,12 @@ func (inf *inferer) addRecordField(base types.Type, name string, fieldType types
 	base = types.Resolve(base)
 	record, ok := base.(*types.Record)
 	if !ok || record == nil || record.Exact {
+		return
+	}
+	// Named records are shared class types. Adding an instance assignment to
+	// the class would leak that field into every other instance; class-table
+	// fields are merged later by syncClassFields instead.
+	if record.Name != "" {
 		return
 	}
 	record.AddField(&types.Field{Name: name, Type: fieldType, Optional: optional})
@@ -1116,10 +1397,12 @@ func (inf *inferer) applyNarrow(env map[*Symbol]types.Type, cond syntax.Expr, tr
 		}
 		base := inf.symbolType(sym, e.Span(), env)
 		if truthy {
-			env[sym] = types.Truthy(base)
+			if narrowed := types.TruthyPart(base); narrowed != nil {
+				env[sym] = narrowed
+			}
 		} else {
-			if types.ContainsNil(base) {
-				env[sym] = types.NilType
+			if narrowed := types.Falsy(base); narrowed != nil {
+				env[sym] = narrowed
 			}
 		}
 	case *syntax.UnaryExpr:
@@ -1164,7 +1447,8 @@ func (inf *inferer) applyNarrowBinary(env map[*Symbol]types.Type, e *syntax.Bina
 	notEqual := e.Op.Text == "~=" || e.Op.Text == "!="
 	matchesEquality := e.Op.Text == "==" && truthy
 	matchesInequality := notEqual && !truthy
-	if !matchesEquality && !matchesInequality {
+	rejectsType := (e.Op.Text == "==" && !truthy) || (notEqual && truthy)
+	if !matchesEquality && !matchesInequality && !rejectsType {
 		return
 	}
 	call, literal := typeCall(e.Left, e.Right)
@@ -1191,7 +1475,11 @@ func (inf *inferer) applyNarrowBinary(env map[*Symbol]types.Type, e *syntax.Bina
 	if narrowed == nil {
 		return
 	}
-	env[sym] = narrowed
+	if matchesEquality || matchesInequality {
+		env[sym] = narrowed
+		return
+	}
+	env[sym] = types.Remove(inf.symbolType(sym, call.Args[0].Span(), env), narrowed)
 }
 
 func (inf *inferer) fieldSymbol(expr *syntax.FieldExpr) *Symbol {
@@ -1331,6 +1619,14 @@ func canonical(name string) string {
 	return CanonicalName(name)
 }
 
+func iteratorName(name string) bool {
+	switch name {
+	case "all", "ipairs", "pairs":
+		return true
+	}
+	return false
+}
+
 func iteratorLoopTypes(name string, iter types.Type) []types.Type {
 	elem := iterElement(iter)
 	switch name {
@@ -1355,6 +1651,13 @@ func iterElement(t types.Type) types.Type {
 		for _, field := range types.Fields(value) {
 			out = append(out, field.Type)
 		}
+		// String-keyed fields are not offered as dot members, but iteration
+		// still sees their values.
+		for _, field := range value.Fields {
+			if field != nil && field.StringKey {
+				out = append(out, field.Type)
+			}
+		}
 		if len(out) > 0 {
 			return types.UnionOf(out...)
 		}
@@ -1371,6 +1674,116 @@ func iterElement(t types.Type) types.Type {
 		}
 	}
 	return types.AnyType
+}
+
+const maxMetatableDepth = 8
+
+// metatableClass infers the annotated class behind a setmetatable metatable
+// argument. It recognizes a class table directly, a table with __index = Class,
+// and an __index function whose first return is an annotated class. Anything
+// ambiguous falls back to nil so the caller keeps declaring the result any.
+func metatableClass(t types.Type) *types.Record {
+	return metatableClassDepth(t, 0)
+}
+
+func metatableClassDepth(t types.Type, depth int) *types.Record {
+	if t == nil || depth > maxMetatableDepth {
+		return nil
+	}
+	t = types.Resolve(t)
+	switch v := t.(type) {
+	case *types.Record:
+		if v == nil {
+			return nil
+		}
+		if v.Name != "" {
+			return v
+		}
+		if indexType, ok, _ := types.LookupField(v, "__index"); ok {
+			return indexClass(indexType, depth+1)
+		}
+	case types.Record:
+		record := v
+		if record.Name != "" {
+			return &record
+		}
+		if indexType, ok, _ := types.LookupField(&record, "__index"); ok {
+			return indexClass(indexType, depth+1)
+		}
+	case types.Union:
+		return unionClass(v, depth)
+	}
+	return nil
+}
+
+func indexClass(t types.Type, depth int) *types.Record {
+	if t == nil || depth > maxMetatableDepth {
+		return nil
+	}
+	t = types.Resolve(t)
+	switch v := t.(type) {
+	case *types.Record:
+		if v == nil {
+			return nil
+		}
+		if v.Name != "" {
+			return v
+		}
+	case types.Record:
+		record := v
+		if record.Name != "" {
+			return &record
+		}
+	case *types.Function:
+		return functionReturnClass(v)
+	case types.Function:
+		return functionReturnClass(&v)
+	case types.Union:
+		return unionClass(v, depth)
+	}
+	return nil
+}
+
+func unionClass(union types.Union, depth int) *types.Record {
+	var found *types.Record
+	for _, member := range union.Members {
+		if types.IsNil(member) {
+			continue
+		}
+		candidate := metatableClassDepth(member, depth+1)
+		if candidate == nil {
+			return nil
+		}
+		if found == nil {
+			found = candidate
+			continue
+		}
+		if !sameClass(found, candidate) {
+			return nil
+		}
+	}
+	return found
+}
+
+func functionReturnClass(fn *types.Function) *types.Record {
+	if fn == nil {
+		return nil
+	}
+	record, ok := types.Resolve(types.First(fn.Returns)).(*types.Record)
+	if !ok || record == nil || record.Name == "" {
+		return nil
+	}
+	return record
+}
+
+func sameClass(a, b *types.Record) bool {
+	if a == b {
+		return true
+	}
+	if a == nil || b == nil || a.Name == "" || b.Name == "" {
+		return false
+	}
+	return CanonicalName(a.Name) == CanonicalName(b.Name)
 }
 
 func nilComparison(left, right syntax.Expr) (*syntax.NameExpr, bool) {
@@ -1415,8 +1828,27 @@ func blockAlwaysReturns(block *syntax.Block) bool {
 	if block == nil || len(block.Stmts) == 0 {
 		return false
 	}
-	_, ok := block.Stmts[len(block.Stmts)-1].(*syntax.ReturnStmt)
-	return ok
+	return stmtAlwaysReturns(block.Stmts[len(block.Stmts)-1])
+}
+
+func stmtAlwaysReturns(stmt syntax.Stmt) bool {
+	switch s := stmt.(type) {
+	case *syntax.ReturnStmt:
+		return true
+	case *syntax.DoStmt:
+		return blockAlwaysReturns(s.Body)
+	case *syntax.IfStmt:
+		if s.Else == nil {
+			return false
+		}
+		for _, branch := range s.Branches {
+			if !blockAlwaysReturns(branch.Body) {
+				return false
+			}
+		}
+		return blockAlwaysReturns(s.Else)
+	}
+	return false
 }
 
 func cloneEnv(env map[*Symbol]types.Type) map[*Symbol]types.Type {
@@ -1425,12 +1857,6 @@ func cloneEnv(env map[*Symbol]types.Type) map[*Symbol]types.Type {
 		out[sym] = typ
 	}
 	return out
-}
-
-func mergeEnv(dst, src map[*Symbol]types.Type) {
-	for sym, typ := range src {
-		dst[sym] = typ
-	}
 }
 
 func setParamAt(params []types.Param, index int, param types.Param) []types.Param {

@@ -31,7 +31,7 @@ disabled there. If diagnostics are missing or land in the wrong place, see
 
 | Code | Default | Meaning |
 |---|---|---|
-| `annotation-invalid` | Warning | Unknown or malformed annotation. |
+| `annotation-invalid` | Warning | Unknown or malformed annotation, unknown or non-class parent, inheritance cycle, or invalid `(exact)` placement. |
 | `annotation-unknown-type` | Warning | Annotation references an unknown type. |
 | `annotation-duplicate` | Warning | Duplicate `@param` name. |
 | `annotation-unknown-param` | Warning | `@param` name is not in the function. |
@@ -41,12 +41,12 @@ disabled there. If diagnostics are missing or land in the wrong place, see
 
 | Code | Default | Meaning |
 |---|---|---|
-| `assign-type-mismatch` | Warning | Value is not assignable to an annotated target. |
+| `assign-type-mismatch` | Warning | Value is not assignable to an annotated target, including extra fields on an explicit `(exact)` class. |
 | `param-type-mismatch` | Warning | Call argument is not assignable to a parameter. |
 | `return-type-mismatch` | Warning | Return value is not assignable to an annotated return. |
-| `undefined-field` | Warning | Field is missing on an exact class (or any record in `strict`). |
+| `undefined-field` | Warning | Field is missing on an exact class and its parents (or any record in `strict`). |
 | `need-check-nil` | Off in `basic` | Optional value is used where non-nil is required. |
-| `missing-fields` | Off in `basic` | Table literal is missing required class fields. |
+| `missing-fields` | Warning for `(exact)` | Table literal is missing required fields of an explicit `(exact)` class; in `strict`, applies to any annotated record. |
 | `deprecated` | Hint | Deprecated symbol is used. |
 | `type-unknown` | Reserved | Type could not be inferred; unused in v1. |
 

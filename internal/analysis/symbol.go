@@ -94,6 +94,10 @@ type Symbol struct {
 	// DynamicFields records an access such as t[k] on this value. Renaming a
 	// field on this receiver is unsafe once this is set.
 	DynamicFields bool
+	// InTableConstructor marks fields declared inside a table literal, where a
+	// doc block above the line documents the local or assignment target, not
+	// the individual field.
+	InTableConstructor bool
 }
 
 // CanonicalName ASCII-lowercases name. PICO-8 has no case distinction for
@@ -183,6 +187,20 @@ type Result struct {
 	AsCasts              []AsDirective
 	DiagnosticDirectives []DiagnosticDirective
 
+	// flowTypes records the narrowed type of expression occurrences at the end
+	// of the final inference pass. Hover and completion use it to show
+	// flow-sensitive types without re-running inference.
+	flowTypes map[source.Span]types.Type
+	// classFieldLinks connects field symbols declared on a class table to the
+	// record fields used for inherited lookup and completion.
+	classFieldLinks map[*Symbol]*types.Field
+	// classFieldSymbols is the inverse of classFieldLinks, used to recover
+	// annotations from an inherited field type.
+	classFieldSymbols map[*types.Field]*Symbol
+	// paramIndex maps a function symbol to its parameter symbols by canonical
+	// name. It is built once after binding.
+	paramIndex map[*Symbol]map[string]*Symbol
+
 	occs           []Occurrence
 	byFile         map[source.FileID][]Occurrence
 	meta           map[source.FileID]bool
@@ -260,6 +278,48 @@ func (r *Result) TypeNames() map[string]types.Type {
 		out[name] = typ
 	}
 	return out
+}
+
+// FlowType returns the narrowed type recorded for an expression occurrence.
+func (r *Result) FlowType(span source.Span) (types.Type, bool) {
+	if r == nil || len(r.flowTypes) == 0 {
+		return nil, false
+	}
+	typ, ok := r.flowTypes[span]
+	return typ, ok
+}
+
+func (r *Result) recordFlow(span source.Span, typ types.Type) {
+	if r == nil || span.IsEmpty() || typ == nil {
+		return
+	}
+	if r.flowTypes == nil {
+		r.flowTypes = make(map[source.Span]types.Type)
+	}
+	r.flowTypes[span] = typ
+}
+
+// paramSymbolsFor returns the parameter symbols of function keyed by canonical
+// name. The index is built once for the whole cart.
+func (r *Result) paramSymbolsFor(function *Symbol) map[string]*Symbol {
+	if r == nil || r.Table == nil || function == nil {
+		return nil
+	}
+	if r.paramIndex == nil {
+		r.paramIndex = make(map[*Symbol]map[string]*Symbol)
+		for _, sym := range r.Table.Symbols {
+			if sym == nil || sym.Kind != SymbolParam || sym.Function == nil {
+				continue
+			}
+			byName := r.paramIndex[sym.Function]
+			if byName == nil {
+				byName = make(map[string]*Symbol)
+				r.paramIndex[sym.Function] = byName
+			}
+			byName[CanonicalName(sym.Name)] = sym
+		}
+	}
+	return r.paramIndex[function]
 }
 
 func (r *Result) lineForSpan(span source.Span) int {
