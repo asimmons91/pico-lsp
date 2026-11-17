@@ -882,6 +882,11 @@ func (inf *inferer) attachFieldCalleeType(expr syntax.Expr, callee *Symbol, env 
 	if !ok || fieldExpr == nil || callee == nil {
 		return nil
 	}
+	if len(callee.Decls) > 0 {
+		// The field is declared on this receiver. Do not fall back to an
+		// inherited method with the same name.
+		return nil
+	}
 	base := firstType(inf.inferExpr(fieldExpr.Base, env))
 	fieldType, found, _ := types.LookupField(base, fieldExpr.Name.Text)
 	if !found {
@@ -918,11 +923,12 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 	}
 	var resultType types.Type = types.AnyType
 	if method != nil {
+		declaredHere := len(method.Decls) > 0
 		var fn *types.Function
 		var origin *Symbol
 		if existing, ok := types.AsFunction(method.Type); ok {
 			fn = existing
-			if !method.TypeExplicit {
+			if !declaredHere {
 				origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
 				if origin != nil {
 					if originFn, ok := types.AsFunction(origin.Type); ok {
@@ -930,16 +936,16 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 					}
 				}
 			}
-		} else if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
-			if resolved, ok := types.AsFunction(fieldType); ok {
-				fn = resolved
-				origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
-				if origin != nil {
-					if originFn, ok := types.AsFunction(origin.Type); ok {
-						fn = originFn
+		} else if !declaredHere {
+			if fieldType, ok, _ := types.LookupField(receiver, e.Method.Text); ok {
+				if resolved, ok := types.AsFunction(fieldType); ok {
+					fn = resolved
+					origin = inf.result.originFieldSymbol(receiver, e.Method.Text)
+					if origin != nil {
+						if originFn, ok := types.AsFunction(origin.Type); ok {
+							fn = originFn
+						}
 					}
-				}
-				if method.Type == nil || types.IsAny(method.Type) {
 					method.Type = fn
 				}
 			}
@@ -1228,6 +1234,12 @@ func (inf *inferer) addRecordField(base types.Type, name string, fieldType types
 	base = types.Resolve(base)
 	record, ok := base.(*types.Record)
 	if !ok || record == nil || record.Exact {
+		return
+	}
+	// Named records are shared class types. Adding an instance assignment to
+	// the class would leak that field into every other instance; class-table
+	// fields are merged later by syncClassFields instead.
+	if record.Name != "" {
 		return
 	}
 	record.AddField(&types.Field{Name: name, Type: fieldType, Optional: optional})

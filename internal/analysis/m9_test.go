@@ -459,6 +459,10 @@ local e = setmetatable({hp = 1, damage = 2}, {__index = Enemy})
 e:heal(3)
 e:heal("bad")
 e.heal("worse")
+local obj = setmetatable({}, {__index = Enemy})
+---@type fun(x: string)
+obj.heal = function(x) return x end
+obj:heal("ok")
 local method = e.heal
 `
 	result := analyzeTextMode(t, text, TypeCheckingBasic)

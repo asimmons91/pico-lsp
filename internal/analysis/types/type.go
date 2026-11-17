@@ -432,7 +432,7 @@ func Falsy(t Type) Type {
 		}
 		return nil
 	case nil:
-		return t
+		return nil
 	default:
 		return nil
 	}
