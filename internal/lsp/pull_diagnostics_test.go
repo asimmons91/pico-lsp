@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -131,6 +132,95 @@ func TestPullDiagnosticsFullReportAndRelatedDocuments(t *testing.T) {
 	}
 
 	assertNoPushDiagnostics(t, h.client)
+	h.exit(t, true)
+}
+
+type goldenPullDiagnostic struct {
+	Code           string                      `json:"code"`
+	Severity       protocol.DiagnosticSeverity `json:"severity"`
+	Message        string                      `json:"message"`
+	StartLine      uint32                      `json:"startLine"`
+	StartCharacter uint32                      `json:"startCharacter"`
+	EndLine        uint32                      `json:"endLine"`
+	EndCharacter   uint32                      `json:"endCharacter"`
+}
+
+type goldenPullRelated struct {
+	File  string                 `json:"file"`
+	Kind  string                 `json:"kind"`
+	Items []goldenPullDiagnostic `json:"items"`
+}
+
+type goldenPullReport struct {
+	Kind            string                 `json:"kind"`
+	ResultIDPresent bool                   `json:"resultIdPresent"`
+	Items           []goldenPullDiagnostic `json:"items"`
+	Related         []goldenPullRelated    `json:"related"`
+}
+
+func goldenPullDiagnostics(items []protocol.Diagnostic) []goldenPullDiagnostic {
+	out := make([]goldenPullDiagnostic, 0, len(items))
+	for _, diag := range items {
+		code := ""
+		if value, ok := diag.Code.(protocol.String); ok {
+			code = string(value)
+		}
+		message := ""
+		switch value := diag.Message.(type) {
+		case protocol.String:
+			message = string(value)
+		case *protocol.MarkupContent:
+			message = value.Value
+		}
+		out = append(out, goldenPullDiagnostic{
+			Code:           code,
+			Severity:       diag.Severity,
+			Message:        message,
+			StartLine:      diag.Range.Start.Line,
+			StartCharacter: diag.Range.Start.Character,
+			EndLine:        diag.Range.End.Line,
+			EndCharacter:   diag.Range.End.Character,
+		})
+	}
+	return out
+}
+
+func TestPullDiagnosticsGoldenReport(t *testing.T) {
+	h := initializePullHarness(t, true, "")
+	root, _ := pullTestCart(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, mustReadFile(t, root))
+
+	report := pullDocument(t, h, ctx, root, nil)
+	full, ok := report.(*protocol.RelatedFullDocumentDiagnosticReport)
+	if !ok {
+		t.Fatalf("report type = %T, want full", report)
+	}
+
+	related := make([]goldenPullRelated, 0, len(full.RelatedDocuments))
+	for u, item := range full.RelatedDocuments {
+		relatedFull, ok := item.(*protocol.FullDocumentDiagnosticReport)
+		if !ok {
+			t.Fatalf("related report type = %T, want full", item)
+		}
+		related = append(related, goldenPullRelated{
+			File:  filepath.Base(u.FsPath()),
+			Kind:  relatedFull.Kind,
+			Items: goldenPullDiagnostics(relatedFull.Items),
+		})
+	}
+	slices.SortFunc(related, func(a, b goldenPullRelated) int {
+		return strings.Compare(a.File, b.File)
+	})
+
+	goldenJSON(t, "pull/report.json", goldenPullReport{
+		Kind:            full.Kind,
+		ResultIDPresent: full.ResultID != nil && *full.ResultID != "",
+		Items:           goldenPullDiagnostics(full.Items),
+		Related:         related,
+	})
+
 	h.exit(t, true)
 }
 
@@ -454,6 +544,31 @@ func TestDiagnosticResultIDDeterminism(t *testing.T) {
 	textChanged := &cart.File{URI: file.URI, Text: "print(2)"}
 	if got := diagnosticResultID(textChanged, items, settings); got == first {
 		t.Fatal("file text change did not change the result id")
+	}
+}
+
+func BenchmarkPullDiagnosticsCached(b *testing.B) {
+	dir := b.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n" +
+		strings.Repeat("local value = 1\n", 3500)
+	u := uri.File(filepath.Join(dir, "large.p8"))
+	if err := os.WriteFile(u.FsPath(), []byte(text), 0o644); err != nil {
+		b.Fatal(err)
+	}
+
+	srv := New(quietLogger(), config.New(quietLogger()))
+	ctx := context.Background()
+	srv.docs.Open(u, "pico8", 1, text)
+	srv.carts.Analyze(ctx, u)
+
+	params := &protocol.DocumentDiagnosticParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: u},
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := srv.Diagnostic(ctx, params); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 

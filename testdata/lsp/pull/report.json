@@ -1,0 +1,32 @@
+{
+  "kind": "full",
+  "resultIdPresent": true,
+  "items": [
+    {
+      "code": "undefined-global",
+      "severity": 2,
+      "message": "undefined global \"root_missing\"",
+      "startLine": 4,
+      "startCharacter": 0,
+      "endLine": 4,
+      "endCharacter": 12
+    }
+  ],
+  "related": [
+    {
+      "file": "shared.lua",
+      "kind": "full",
+      "items": [
+        {
+          "code": "undefined-global",
+          "severity": 2,
+          "message": "undefined global \"shared_missing\"",
+          "startLine": 0,
+          "startCharacter": 0,
+          "endLine": 0,
+          "endCharacter": 14
+        }
+      ]
+    }
+  ]
+}
