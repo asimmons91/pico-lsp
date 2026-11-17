@@ -13,6 +13,13 @@
 - Read the relevant milestone spec before implementing anything. Do not expand v1 scope without updating the roadmap.
 - If a locked decision changes, update `docs/ROADMAP.md` and every affected spec in the same change.
 
+## Planning and open decisions
+
+- While planning or thinking through an implementation, surface any open decision that affects architecture, scope, behavior, or technical tradeoffs. Prompt the user instead of silently choosing.
+- Present the options with a recommendation and keep the user informed as the plan or tradeoffs change.
+- Do not re-ask decisions already locked in `docs/ROADMAP.md` or a milestone spec.
+- Record newly resolved decisions in `docs/ROADMAP.md` or the affected milestone spec.
+
 ## Locked v1 scope
 
 - v1 = core LSP + type features. Formatter and `.p8.png` support are post-v1 (M7).
