@@ -115,9 +115,10 @@ corrupt the protocol stream.
 
 ## Included `.lua` files
 
-Included `.lua` files are not attached automatically in M0. The optional
-Neovim helper plugin that detects cart-owned `.lua` buffers is part of M6. For
-now, attach manually in a known PICO-8 project if you need to:
+M1 analyzes included `.lua` files (including closed includes) whenever the
+owning `.p8` cart is attached. The optional Neovim helper plugin that attaches
+cart-owned `.lua` buffers automatically is part of M6. For now, attach a `.lua`
+buffer manually in a known PICO-8 project if you need to:
 
 ```vim
 :lua vim.lsp.start({ name = "pico_lsp", cmd = { "pico-lsp" }, root_dir = vim.fn.getcwd() })

@@ -85,9 +85,10 @@ Look for `pico-lsp started`, `initialized`, and `document changed` entries.
 
 ## Included `.lua` files
 
-Helix attaches by file type. Included `.lua` files are not distinguished from
-unrelated Lua files in M0; cart-owned attachment and include-aware detection
-are later milestones. For now, prefer opening the `.p8` cart itself.
+Helix attaches by file type. The server analyzes included `.lua` files,
+including diagnostics for closed includes, whenever it is attached to the
+owning `.p8` cart. Open the cart itself; automatic `.lua` attachment for
+cart-owned files is editor-specific and not part of the Helix config in v1.
 
 ## Troubleshooting
 
