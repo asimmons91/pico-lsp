@@ -50,7 +50,7 @@ func (s *Server) DidChange(ctx context.Context, params *protocol.DidChangeTextDo
 		return nil
 	}
 
-	s.carts.Analyze(ctx, u)
+	s.carts.AnalyzeChange(ctx, u)
 	s.log.Debug("document changed",
 		"uri", u.String(),
 		"version", params.TextDocument.Version,

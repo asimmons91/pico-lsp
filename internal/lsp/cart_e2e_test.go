@@ -630,8 +630,10 @@ func TestEndToEndOwnershipChangeRefreshesSymbols(t *testing.T) {
 		t.Fatalf("didChange: %v", err)
 	}
 
-	// Remove the include again; the stale standalone snapshot must not win.
-	writeTemp(t, dir, "cart.p8", "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n")
+	// Remove the include again and touch the cart so ownership is re-resolved.
+	withoutInclude := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n"
+	cartURI := writeTemp(t, dir, "cart.p8", withoutInclude)
+	openDoc(t, h, ctx, cartURI, withoutInclude)
 	namesAfter := names()
 	if !containsString(namesAfter, "two") || containsString(namesAfter, "one") {
 		t.Fatalf("symbols after ownership change = %v, want two", namesAfter)

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"go.lsp.dev/protocol"
@@ -24,11 +25,12 @@ type CartManager struct {
 	diags *Diagnostics
 	log   *slog.Logger
 
-	mu       sync.Mutex
-	loader   *cart.Loader
-	resolver *cart.Resolver
-	byRoot   map[uri.URI]*cartEntry
-	byFile   map[uri.URI]uri.URI
+	mu        sync.Mutex
+	analyzeMu sync.Mutex
+	loader    *cart.Loader
+	resolver  *cart.Resolver
+	byRoot    map[uri.URI]*cartEntry
+	byFile    map[uri.URI]uri.URI
 }
 
 type cartEntry struct {
@@ -53,6 +55,8 @@ func NewCartManager(docs *DocumentStore, diags *Diagnostics, log *slog.Logger) *
 }
 
 func (m *CartManager) SetEncoding(encoding protocol.PositionEncodingKind) {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.loader.Encoding = encoding
@@ -109,12 +113,33 @@ func (m *CartManager) listDir(u uri.URI) ([]uri.URI, error) {
 // Analyze resolves the owning cart for u, reloads it, and publishes
 // diagnostics for every file in the cart.
 func (m *CartManager) Analyze(ctx context.Context, u uri.URI) {
+	m.analyze(ctx, u, true)
+}
+
+// AnalyzeChange re-analyzes u after an edit. Ownership only depends on `.p8`
+// include lists, so editing a `.lua` file does not invalidate the resolver's
+// cached ownership.
+func (m *CartManager) AnalyzeChange(ctx context.Context, u uri.URI) {
+	invalidate := strings.HasSuffix(strings.ToLower(u.Path()), ".p8")
+	m.analyze(ctx, u, invalidate)
+}
+
+func (m *CartManager) analyze(ctx context.Context, u uri.URI, invalidate bool) {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+
 	m.mu.Lock()
-	m.resolver.Invalidate()
-	root := m.resolver.Resolve(u)
-	previous := m.byRoot[root]
+	resolver := m.resolver
+	m.mu.Unlock()
+	if invalidate {
+		resolver.Invalidate()
+	}
+	root := resolver.Resolve(u)
+
 	snap, err := m.loader.Load(root)
 	if err != nil {
+		m.mu.Lock()
+		previous := m.byRoot[root]
 		m.mu.Unlock()
 		m.handleLoadError(ctx, u, root, previous, err)
 		return
@@ -124,6 +149,8 @@ func (m *CartManager) Analyze(ctx context.Context, u uri.URI) {
 		snap:  snap,
 		files: make(map[uri.URI]struct{}, len(snap.Cart.Files)),
 	}
+	m.mu.Lock()
+	previous := m.byRoot[root]
 	for _, file := range snap.Cart.Files {
 		entry.files[file.URI] = struct{}{}
 		m.byFile[file.URI] = root
@@ -146,7 +173,7 @@ func (m *CartManager) Analyze(ctx context.Context, u uri.URI) {
 // and diagnostics are intentionally gated until initialization completes.
 func (m *CartManager) AnalyzeOpen(ctx context.Context) {
 	for _, u := range m.docs.List() {
-		m.Analyze(ctx, u)
+		m.analyze(ctx, u, false)
 	}
 }
 
@@ -155,9 +182,10 @@ func (m *CartManager) AnalyzeOpen(ctx context.Context) {
 // kept as a stale snapshot.
 func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 	m.mu.Lock()
-	m.resolver.Invalidate()
-	root := m.resolver.Resolve(u)
+	resolver := m.resolver
 	m.mu.Unlock()
+	resolver.Invalidate()
+	root := resolver.Resolve(u)
 
 	if root == u {
 		if _, err := os.Stat(u.FsPath()); err != nil {
@@ -176,7 +204,15 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 			}
 			m.mu.Unlock()
 			for _, file := range removed {
-				m.diags.Clear(ctx, file)
+				if file == u {
+					m.diags.Clear(ctx, file)
+					continue
+				}
+				if _, open := m.docs.Get(file); open {
+					m.analyze(ctx, file, false)
+				} else {
+					m.diags.Clear(ctx, file)
+				}
 			}
 			m.diags.Clear(ctx, u)
 			return
@@ -262,7 +298,11 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, previous
 // demand if necessary.
 func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapshot, source.FileID, bool) {
 	m.mu.Lock()
-	root := m.resolver.Resolve(u)
+	resolver := m.resolver
+	m.mu.Unlock()
+	root := resolver.Resolve(u)
+
+	m.mu.Lock()
 	entry := m.byRoot[root]
 	m.mu.Unlock()
 
@@ -274,7 +314,7 @@ func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapsho
 		}
 	}
 	if entry == nil {
-		m.Analyze(ctx, u)
+		m.analyze(ctx, u, false)
 		m.mu.Lock()
 		entry = m.byRoot[root]
 		m.mu.Unlock()
