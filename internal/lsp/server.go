@@ -551,12 +551,6 @@ func (s *Server) applyDiagnosticTransport(ctx context.Context) {
 	s.diags.SetPushAllowed(ctx, push)
 }
 
-func (s *Server) pullDiagnosticsSupported() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.diagnosticPull
-}
-
 func (s *Server) relatedDocumentsSupported() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
