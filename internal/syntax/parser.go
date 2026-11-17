@@ -8,7 +8,7 @@ import (
 
 const (
 	maxParseErrors = 100
-	maxParseDepth  = 200
+	maxParseDepth  = 8192
 )
 
 // Parse builds an error-recovering AST from a token stream. The stream must

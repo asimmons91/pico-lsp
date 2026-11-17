@@ -437,7 +437,7 @@ func TestParseChainedComparisonAndBitwise(t *testing.T) {
 }
 
 func TestParseDeepNestingIsBounded(t *testing.T) {
-	parens := strings.Repeat("(", 2000) + "1" + strings.Repeat(")", 2000)
+	parens := strings.Repeat("(", maxParseDepth+100) + "1" + strings.Repeat(")", maxParseDepth+100)
 	lexed := Lex([]byte(parens), nil)
 	chunk, errs := Parse(lexed.Tokens)
 	if chunk == nil {
@@ -450,7 +450,7 @@ func TestParseDeepNestingIsBounded(t *testing.T) {
 		t.Fatalf("errors = %d, want <= %d", len(errs), maxParseErrors)
 	}
 
-	dos := strings.Repeat("do ", 2000)
+	dos := strings.Repeat("do ", maxParseDepth+100)
 	lexed = Lex([]byte(dos), nil)
 	chunk, errs = Parse(lexed.Tokens)
 	if chunk == nil {
@@ -591,7 +591,7 @@ func TestParseTableRecoveryDoesNotConsumeBlockEnd(t *testing.T) {
 }
 
 func TestParseDeepShorthandNestingIsBounded(t *testing.T) {
-	text := strings.Repeat("if (x) ", 2000) + "y=1"
+	text := strings.Repeat("if (x) ", maxParseDepth+100) + "y=1"
 	lexed := Lex([]byte(text), nil)
 	chunk, errs := Parse(lexed.Tokens)
 	if chunk == nil {
@@ -602,5 +602,25 @@ func TestParseDeepShorthandNestingIsBounded(t *testing.T) {
 	}
 	if len(errs) > maxParseErrors {
 		t.Fatalf("errors = %d, want <= %d", len(errs), maxParseErrors)
+	}
+}
+
+func TestParseAcceptsValidDeepExpressionsAndBlocks(t *testing.T) {
+	expr := strings.Repeat(`"a"..`, 500) + `"z"`
+	chunk, errs := parseText(t, "x="+expr)
+	if len(errs) != 0 {
+		t.Fatalf("concat errors = %v", errs)
+	}
+	if len(chunk.Block.Stmts) != 1 {
+		t.Fatalf("statements = %d", len(chunk.Block.Stmts))
+	}
+
+	blocks := strings.Repeat("do ", 500) + "x=1" + strings.Repeat(" end", 500)
+	chunk, errs = parseText(t, blocks)
+	if len(errs) != 0 {
+		t.Fatalf("block errors = %v", errs)
+	}
+	if len(chunk.Block.Stmts) != 1 {
+		t.Fatalf("statements = %d", len(chunk.Block.Stmts))
 	}
 }
