@@ -277,6 +277,25 @@ func TestEndToEndRenameAcrossFiles(t *testing.T) {
 	h.exit(t, true)
 }
 
+func TestTypedRenameText(t *testing.T) {
+	tests := []struct {
+		name        string
+		occurrences []analysis.Occurrence
+		want        string
+	}{
+		{name: "uppercase", occurrences: []analysis.Occurrence{{Text: "PLAYER"}, {Text: "PLAYER"}}, want: "HERO"},
+		{name: "lowercase", occurrences: []analysis.Occurrence{{Text: "player"}}, want: "hero"},
+		{name: "mixed", occurrences: []analysis.Occurrence{{Text: "Player"}, {Text: "PLAYER"}}, want: "hero"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := typedRenameText("hero", tt.occurrences); got != tt.want {
+				t.Fatalf("typedRenameText = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEndToEndMethodFieldDefinitionAndRename(t *testing.T) {
 	dir := t.TempDir()
 	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nobj = {}\nfunction obj:update()\n  self.x = 1\nend\nfunction _update()\n  obj:update()\n  print(obj.x)\nend\n"
