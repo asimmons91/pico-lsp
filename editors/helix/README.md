@@ -87,6 +87,19 @@ See [../../docs/configuration.md](../../docs/configuration.md) for every setting
 5. Quit Helix while the server is running. It should exit cleanly rather than
    hang.
 
+## Read-only `.p8.png` carts
+
+Helix does not have a portable command for opening virtual documents. Decode a
+PNG cart to a text file and open it:
+
+```sh
+pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
+hx /tmp/cart.p8
+```
+
+This is a static fallback; re-run the command after replacing the PNG. Editing
+the PNG requires exporting a text cart from PICO-8.
+
 ## Included `.lua` files
 
 Helix attaches by file type. The server analyzes included `.lua` files,

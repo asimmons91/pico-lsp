@@ -60,5 +60,23 @@ if #vim.lsp.get_clients({ name = "pico_lsp", bufnr = 0 }) > 0 then
   fail("helper attached an unrelated .lua buffer")
 end
 
+local png_fixture = root .. "/testdata/p8png/smoke.p8.png"
+if vim.fn.filereadable(png_fixture) == 1 then
+  vim.cmd("Pico8OpenPng " .. vim.fn.fnameescape(png_fixture))
+  if not vim.wait(5000, function()
+    return vim.api.nvim_buf_get_name(0):match("^pico8%-cart:") ~= nil
+      and #vim.lsp.get_clients({ name = "pico_lsp", bufnr = 0 }) > 0
+  end, 50) then
+    fail("Pico8OpenPng did not open an attached virtual buffer")
+  end
+  if vim.bo.modifiable then
+    fail("Pico8OpenPng opened a modifiable buffer")
+  end
+  vim.cmd("Pico8ReloadPng")
+  if vim.api.nvim_buf_get_name(0):match("^pico8%-cart:") == nil then
+    fail("Pico8ReloadPng replaced the virtual buffer")
+  end
+end
+
 print("nvim helper smoke: ok")
 vim.cmd("qa!")

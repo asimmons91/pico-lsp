@@ -2,10 +2,10 @@
 
 ## Current state
 
-- M0 (Foundation & Walking Skeleton) through M6 (Packaging, Editor Integration & v1) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis` (including `internal/analysis/types`), `internal/format`, `internal/builtin`, `internal/config`, and `internal/version`.
-- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global/type diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including type-aware member/annotation/include completion and resolve), hover, signature help, full semantic tokens, inlay hints, cart-budget code lens, `pico8/cartInfo`, PICO-8 lint diagnostics, and code actions. LuaCATS annotations, gradual inference, flow narrowing, and `off`/`basic`/`strict` type checking are implemented. The formatter is implemented. Release packaging, editor configs, and the v1 GitHub-only distribution path are in place.
-- M0 through M6 are Done; v1.0.0 is published as a GitHub release. M7 (formatter) is implemented. M8 (read-only `.p8.png` carts), M9 (type system I), and M10 (type system II) are planned for the same batched v1.1.0 release. Homebrew and Mason packaging remain in the post-v1 backlog.
-- CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests on Linux/macOS/Windows, golangci-lint, govulncheck, a six-target static build matrix, short fuzz passes (including the formatter), and a goreleaser snapshot. `.github/workflows/release.yml` publishes tagged GitHub releases; `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes.
+- M0 (Foundation & Walking Skeleton) through M6 (Packaging, Editor Integration & v1) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis` (including `internal/analysis/types`), `internal/format`, `internal/p8png`, `internal/builtin`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global/type diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including type-aware member/annotation/include completion and resolve), hover, signature help, full semantic tokens, inlay hints, cart-budget code lens, `pico8/cartInfo`, PICO-8 lint diagnostics, and code actions. LuaCATS annotations, gradual inference, flow narrowing, and `off`/`basic`/`strict` type checking are implemented. The formatter and read-only `.p8.png` virtual documents are implemented. Release packaging, editor configs, and the v1 GitHub-only distribution path are in place.
+- M0 through M6 are Done; v1.0.0 is published as a GitHub release. M7 (formatter) and M8 (read-only `.p8.png` carts) are implemented. M9 (type system I) and M10 (type system II) are planned for the same batched v1.1.0 release. Homebrew and Mason packaging remain in the post-v1 backlog.
+- CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests on Linux/macOS/Windows, golangci-lint, govulncheck, a six-target static build matrix, short fuzz passes (including the formatter and PNG decoder), and a goreleaser snapshot. `.github/workflows/release.yml` publishes tagged GitHub releases; `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
 - README, LICENSE, CHANGELOG, `.golangci.yml`, `.goreleaser.yaml`, install/troubleshooting/release docs, and Neovim/Helix integration files exist. The 51-cart corpus, token fixtures, and LSP golden fixtures live under `testdata/` (`testdata/lsp/`).
 - Do not invent or claim build/test results. Run the commands below and report the actual output.
@@ -86,6 +86,7 @@
 - `goreleaser check` and `goreleaser release --snapshot --clean` validate release packaging.
 - `editors/nvim/tests/run.sh` runs the headless Neovim helper smoke test after building `pico-lsp`.
 - `PICO_LSP_PERF=1 go test -run TestFormatPerformance -p 1 ./internal/format` runs the isolated formatter timing gate.
+- `pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png` decodes a read-only PNG cart for scripted/editor fallback use.
 
 ## Documentation rules
 

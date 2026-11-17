@@ -11,6 +11,9 @@ All notable changes to this project are documented here. The format follows
 - AST-guided `textDocument/formatting` for `.p8` and `.lua` documents, with
   shorthand/comment preservation, `.p8` section and tab safety, configurable
   blank-line capping, and formatter fuzz/corpus tests.
+- Read-only `.p8.png` support: uncompressed/new/old compression decode, P8SCII
+  mapping, `pico8/decodeCart`, `pico8-cart:` virtual documents, Neovim
+  `:Pico8OpenPng`/`:Pico8ReloadPng`, and `pico-lsp decode`.
 
 ### Changed
 

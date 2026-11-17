@@ -46,3 +46,6 @@ jobs:
 
       - name: Fuzz formatter
         run: go test -run=^$ -fuzz=FuzzFormatLua -fuzztime=60s ./internal/format
+
+      - name: Fuzz PNG decoder
+        run: go test -run=^$ -fuzz=FuzzDecode -fuzztime=60s ./internal/p8png

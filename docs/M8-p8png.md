@@ -1,6 +1,6 @@
 # M8 — Read-Only `.p8.png` Carts
 
-**Status:** Planned  
+**Status:** Done — implemented for the v1.1.0 batch.  
 **Depends on:** M7  
 **Release target:** v1.1.0 (batched with M7, M9, M10)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -13,7 +13,7 @@ exporting it to text first. The decoded cart is read-only; editing still require
 saving a text `.p8`.
 
 **Demo:** In Neovim, run `:Pico8OpenPng` on a `.p8.png` cart. A read-only
-`pico8-cart:///...` buffer opens with the same code intelligence as the
+`pico8-cart:/...` buffer opens with the same code intelligence as the
 equivalent `.p8`. Diagnostics land on the decoded source, `pico8/cartInfo`
 reports token/character counts, and a missing include resolves relative to the
 PNG cart's directory.
@@ -27,7 +27,7 @@ PNG cart's directory.
 - P8SCII-to-Unicode decoding, BOM/newline handling, tabs, and `#include`
   resolution relative to the PNG file.
 - A read-only virtual document interface served as
-  `pico8-cart:///<absolute-path-to-png>`.
+  `pico8-cart:/<absolute-source-path-without-.png>`.
 - A custom request to decode a PNG cart and return its virtual document text and
   metadata.
 - A Neovim helper command that opens the virtual buffer, sets `filetype=pico8`,
@@ -54,7 +54,8 @@ PNG cart's directory.
 ### Virtual document
 
 - The server exposes a read-only document URI:
-  `pico8-cart:///<absolute-png-path>` (Windows drive paths remain absolute).
+  `pico8-cart:/<absolute-source-path-without-.png>` (Windows drive paths remain
+  absolute).
 - The URI is a namespace for the decoded text, not a real filesystem path. The
   server must not call `os.Open` on it.
 - A decoded virtual document has the same `Cart`/`Snapshot` shape as a text
@@ -144,17 +145,17 @@ the virtual URI. It is cancellable and never writes to disk.
 
 ## Exit criteria
 
-- [ ] The decoder handles uncompressed, new-compressed, and old-compressed carts.
-- [ ] `pico8/decodeCart` returns a stable read-only virtual document.
-- [ ] Neovim `:Pico8OpenPng` opens the cart with LSP features and read-only
+- [x] The decoder handles uncompressed, new-compressed, and old-compressed carts.
+- [x] `pico8/decodeCart` returns a stable read-only virtual document.
+- [x] Neovim `:Pico8OpenPng` opens the cart with LSP features and read-only
       behavior.
-- [ ] `pico-lsp decode` works for Helix/scripted users.
-- [ ] Decoded token/character counts and cart info match the text cart.
-- [ ] Watcher changes invalidate the cache and republish diagnostics.
-- [ ] Corrupt/unsupported carts fail cleanly without panics.
-- [ ] `.p8.png` remains unsupported for writing/formatting.
-- [ ] README, install, troubleshooting, API, and editor docs are updated.
-- [ ] Performance and corpus tests pass.
+- [x] `pico-lsp decode` works for Helix/scripted users.
+- [x] Decoded token/character counts and cart info match the text cart.
+- [x] Watcher changes invalidate the cache and republish diagnostics.
+- [x] Corrupt/unsupported carts fail cleanly without panics.
+- [x] `.p8.png` remains unsupported for writing/formatting.
+- [x] README, install, troubleshooting, API, and editor docs are updated.
+- [x] Performance and corpus tests pass.
 
 ## Risks and mitigations
 

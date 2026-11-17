@@ -36,6 +36,7 @@ var protocolMethods = func() map[string]struct{} {
 		methods[info.Method] = struct{}{}
 	}
 	methods[RequestCartInfo] = struct{}{}
+	methods[RequestDecodeCart] = struct{}{}
 	return methods
 }()
 
@@ -89,6 +90,7 @@ type Server struct {
 	cfg      *config.Manager
 	diags    *Diagnostics
 	carts    *CartManager
+	png      *pngCache
 	builtins *builtin.API
 
 	client atomic.Value // protocol.Client
@@ -131,6 +133,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		cancels:  make(map[jsonrpc2.ID]context.CancelFunc),
 	}
 	s.docs = NewDocumentStore(s.encoding, log)
+	s.png = newPNGCache()
 	s.diags = NewDiagnostics(
 		func() protocol.Client { return s.Client() },
 		func() int { return s.cfg.Settings().MaxProblems },
@@ -607,6 +610,12 @@ func (s *Server) Request(ctx context.Context, method string, params any) (any, e
 			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
 		}
 		return s.cartInfoRequest(ctx, raw)
+	case RequestDecodeCart:
+		raw, ok := params.(protocol.LSPAny)
+		if !ok {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
+		}
+		return s.decodeCartRequest(ctx, raw)
 	default:
 		return nil, errUnhandledMethod
 	}

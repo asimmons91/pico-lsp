@@ -18,6 +18,9 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 	if params == nil {
 		return []protocol.CommandOrCodeAction{}, nil
 	}
+	if isVirtualCartURI(params.TextDocument.URI) {
+		return []protocol.CommandOrCodeAction{}, nil
+	}
 	nav, ok := s.navigationFor(ctx, params.TextDocument.URI)
 	if !ok || nav.file == nil || nav.file.Index == nil {
 		return []protocol.CommandOrCodeAction{}, nil

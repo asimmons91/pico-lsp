@@ -95,6 +95,17 @@ Only check archives you downloaded from the project's GitHub release. Release
 workflows generate the checksums from the same build artifacts that are
 uploaded.
 
+## Decode a `.p8.png` cart
+
+The server can open PNG carts read-only. For editors without virtual-document
+support, decode one to a text cart:
+
+```sh
+pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
+```
+
+The decoder never writes PNG files.
+
 ## Upgrade
 
 Download the new archive for the same platform, replace the existing binary,

@@ -36,6 +36,7 @@ type CartManager struct {
 	builtins  map[string]*analysis.Symbol
 	byRoot    map[uri.URI]*cartEntry
 	byFile    map[uri.URI]uri.URI
+	virtual   map[uri.URI]string
 }
 
 type cartEntry struct {
@@ -63,6 +64,7 @@ func NewCartManager(docs *DocumentStore, diags *Diagnostics, settings func() con
 		log:              log,
 		byRoot:           make(map[uri.URI]*cartEntry),
 		byFile:           make(map[uri.URI]uri.URI),
+		virtual:          make(map[uri.URI]string),
 	}
 	m.loader = cart.NewLoader(m.provider(), protocol.PositionEncodingKindUTF16, log)
 	m.resolver = cart.NewResolver(m.loader)
@@ -89,22 +91,32 @@ func (m *CartManager) provider() cart.Provider {
 	}
 }
 
-func (m *CartManager) fileSize(u uri.URI) (int64, error) {
+func (m *CartManager) textFor(u uri.URI) (string, bool) {
 	if text, ok := m.docs.Text(u); ok {
+		return text, true
+	}
+	m.mu.Lock()
+	text, ok := m.virtual[u]
+	m.mu.Unlock()
+	return text, ok
+}
+
+func (m *CartManager) fileSize(u uri.URI) (int64, error) {
+	if text, ok := m.textFor(u); ok {
 		return int64(len(text)), nil
 	}
 	return cart.DiskProvider{}.Size(u)
 }
 
 func (m *CartManager) readFile(u uri.URI) ([]byte, error) {
-	if text, ok := m.docs.Text(u); ok {
+	if text, ok := m.textFor(u); ok {
 		return []byte(text), nil
 	}
 	return cart.DiskProvider{}.Read(u)
 }
 
 func (m *CartManager) readFileLimit(u uri.URI, max int) ([]byte, error) {
-	if text, ok := m.docs.Text(u); ok {
+	if text, ok := m.textFor(u); ok {
 		data := []byte(text)
 		if max >= 0 && len(data) > max+1 {
 			data = data[:max+1]
@@ -112,6 +124,20 @@ func (m *CartManager) readFileLimit(u uri.URI, max int) ([]byte, error) {
 		return data, nil
 	}
 	return cart.DiskProvider{}.ReadLimit(u, max)
+}
+
+// SetVirtualText registers decoded text for a non-file pseudo URI.
+func (m *CartManager) SetVirtualText(u uri.URI, text string) {
+	m.mu.Lock()
+	m.virtual[u] = text
+	m.mu.Unlock()
+}
+
+// RemoveVirtualText removes a registered pseudo document.
+func (m *CartManager) RemoveVirtualText(u uri.URI) {
+	m.mu.Lock()
+	delete(m.virtual, u)
+	m.mu.Unlock()
 }
 
 func (m *CartManager) listDir(u uri.URI) ([]uri.URI, error) {
@@ -290,6 +316,26 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 func (m *CartManager) AnalyzeOpen(ctx context.Context) {
 	for _, u := range m.docs.List() {
 		_ = m.analyze(ctx, u, false)
+	}
+}
+
+// Forget removes a cached pseudo document and its diagnostics.
+func (m *CartManager) Forget(ctx context.Context, u uri.URI) {
+	m.analyzeMu.Lock()
+	defer m.analyzeMu.Unlock()
+	m.mu.Lock()
+	entry := m.byRoot[u]
+	delete(m.byRoot, u)
+	for file, owner := range m.byFile {
+		if owner == u {
+			delete(m.byFile, file)
+		}
+	}
+	m.mu.Unlock()
+	if entry != nil {
+		for file := range entry.files {
+			m.diags.Clear(ctx, file)
+		}
 	}
 }
 

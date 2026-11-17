@@ -122,11 +122,26 @@ func (s *Server) cartInfoRequest(ctx context.Context, params protocol.LSPAny) (a
 	if request.TextDocument.URI == "" {
 		return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "pico8/cartInfo: missing textDocument.uri")
 	}
-	snap, _, ok := s.carts.SnapshotFor(ctx, request.TextDocument.URI)
-	if !ok {
+	info, err := s.cartInfoForURI(ctx, request.TextDocument.URI)
+	if err != nil {
+		if isPNGURI(request.TextDocument.URI) {
+			return nil, jsonrpc2.Errorf(pngDecodeFailed, "pico8/cartInfo: %v", err)
+		}
 		return nil, jsonrpc2.Errorf(cartNotFoundCode, "cart-not-found: %s", request.TextDocument.URI.String())
 	}
-	return cartInfoFor(snap), nil
+	return info, nil
+}
+
+func (s *Server) cartInfoForURI(ctx context.Context, u uri.URI) (CartInfo, error) {
+	snap, err := s.snapshotForCart(ctx, u)
+	if err != nil {
+		return CartInfo{}, err
+	}
+	info := cartInfoFor(snap)
+	if isPNGURI(u) {
+		info.RootURI = u
+	}
+	return info, nil
 }
 
 // ExecuteCommand handles workspace/executeCommand.
@@ -159,11 +174,10 @@ func (s *Server) showCartInfo(ctx context.Context, params *protocol.ExecuteComma
 		return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid cart URI", CommandShowCartInfo)
 	}
 	u := uri.URI(raw)
-	snap, _, ok := s.carts.SnapshotFor(ctx, u)
-	if !ok {
-		return nil, jsonrpc2.Errorf(cartNotFoundCode, "cart-not-found: %s", u.String())
+	info, err := s.cartInfoForURI(ctx, u)
+	if err != nil {
+		return nil, jsonrpc2.Errorf(pngDecodeFailed, "pico8.showCartInfo: %v", err)
 	}
-	info := cartInfoFor(snap)
 	message := cartInfoSummary(info)
 	if client := s.Client(); client != nil {
 		kind := protocol.MessageTypeInfo
