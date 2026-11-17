@@ -842,6 +842,15 @@ func (inf *inferer) inferIndex(e *syntax.IndexExpr, env map[*Symbol]types.Type) 
 				return fieldType
 			}
 		}
+	case types.Union:
+		if str, ok := e.Index.(*syntax.StringExpr); ok {
+			if fieldType, ok, optional := types.LookupFieldExact(value, str.Value); ok {
+				if optional {
+					return types.Optional(fieldType)
+				}
+				return fieldType
+			}
+		}
 	}
 	return types.AnyType
 }
