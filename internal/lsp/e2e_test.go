@@ -27,6 +27,7 @@ type testClient struct {
 	diagnostics   chan *protocol.PublishDiagnosticsParams
 	messages      chan *protocol.ShowMessageParams
 	registrations chan *protocol.RegistrationParams
+	progress      chan *protocol.ProgressParams
 }
 
 func newTestClient() *testClient {
@@ -35,6 +36,7 @@ func newTestClient() *testClient {
 		diagnostics:   make(chan *protocol.PublishDiagnosticsParams, 8),
 		messages:      make(chan *protocol.ShowMessageParams, 8),
 		registrations: make(chan *protocol.RegistrationParams, 4),
+		progress:      make(chan *protocol.ProgressParams, 8),
 	}
 }
 
@@ -55,6 +57,11 @@ func (c *testClient) ShowMessage(ctx context.Context, params *protocol.ShowMessa
 
 func (c *testClient) RegisterCapability(ctx context.Context, params *protocol.RegistrationParams) error {
 	c.registrations <- params
+	return nil
+}
+
+func (c *testClient) Progress(ctx context.Context, params *protocol.ProgressParams) error {
+	c.progress <- params
 	return nil
 }
 

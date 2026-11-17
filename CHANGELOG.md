@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- LSP 3.17 pull diagnostics: `textDocument/diagnostic` full/unchanged reports,
+  related includes and tabs, bounded `workspace/diagnostic` with partial
+  results, deterministic result IDs, and `pico8.diagnostics.mode` for
+  `auto`/`push`/`pull` transport selection.
+
 ### Changed
 
 - Plan M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed

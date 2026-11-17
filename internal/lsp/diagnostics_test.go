@@ -163,3 +163,48 @@ func TestDiagnosticsNilClient(t *testing.T) {
 	d.Enable()
 	d.Publish(context.Background(), uri.File("/tmp/cart.p8"), nil, []protocol.Diagnostic{diagnostic("x")})
 }
+
+func TestDiagnosticsTruncateCopies(t *testing.T) {
+	d := NewDiagnostics(func() protocol.Client { return nil }, func() int { return 1 }, quietLogger())
+	items := []protocol.Diagnostic{diagnostic("one"), diagnostic("two")}
+
+	truncated := d.Truncate(items)
+	if len(truncated) != 1 {
+		t.Fatalf("truncated length = %d, want 1", len(truncated))
+	}
+	truncated[0] = diagnostic("mutated")
+	if got := items[0].Message; got != protocol.String("one") {
+		t.Fatalf("input mutated: %v", got)
+	}
+}
+
+func TestDiagnosticsPushTransportSwitch(t *testing.T) {
+	client := &fakeDiagnosticClient{}
+	d := NewDiagnostics(func() protocol.Client { return client }, func() int { return 100 }, quietLogger())
+	d.Enable()
+	ctx := context.Background()
+	u := uri.File("/tmp/cart.p8")
+
+	d.Publish(ctx, u, nil, []protocol.Diagnostic{diagnostic("first")})
+	d.SetPushAllowed(ctx, false)
+	if len(client.published) != 2 {
+		t.Fatalf("published %d times, want clear after disabling push", len(client.published))
+	}
+	if got := len(client.published[1].Diagnostics); got != 0 {
+		t.Fatalf("clear published %d diagnostics, want 0", got)
+	}
+
+	d.Publish(ctx, u, nil, []protocol.Diagnostic{diagnostic("second")})
+	if len(client.published) != 2 {
+		t.Fatal("published while push was disabled")
+	}
+
+	d.SetPushAllowed(ctx, true)
+	d.Publish(ctx, u, nil, []protocol.Diagnostic{diagnostic("second")})
+	if len(client.published) != 3 {
+		t.Fatalf("published %d times, want republish after enabling push", len(client.published))
+	}
+	if got := client.published[2].Diagnostics[0].Message; got != protocol.String("second") {
+		t.Fatalf("republished message = %v, want second", got)
+	}
+}

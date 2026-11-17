@@ -5,6 +5,25 @@ come from [configuration.md](configuration.md); most rules can be changed or
 disabled there. If diagnostics are missing or land in the wrong place, see
 [troubleshooting.md](troubleshooting.md).
 
+## Push and pull
+
+Clients that advertise `textDocument.diagnostic` can use pull diagnostics.
+`pico8.diagnostics.mode` controls the transport:
+
+- `auto` (default) pulls when the client supports it, otherwise pushes.
+- `push` always publishes; pull requests still return the same diagnostics.
+- `pull` answers pull requests and suppresses duplicate pushes. A client
+  without pull support receives pushed diagnostics plus one warning in the
+  server log.
+
+A text-document pull returns a full report with a stable `resultId`, or an
+unchanged report when the client sends the current `previousResultId`. Related
+documents from the same cart (includes and other tabs) are returned when the
+client advertises related-document support. `workspace/diagnostic` is bounded
+to open carts and can stream partial results. `pico8.maxProblems` truncates each
+original document independently, and pull reports use the same severity and
+suppression rules as pushed diagnostics.
+
 ## Cart and syntax
 
 | Code | Default | Meaning |

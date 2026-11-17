@@ -23,6 +23,7 @@ For installation and editor setup, see [install.md](install.md),
       "maxBlankLines": 2
     },
     "diagnostics": {
+      "mode": "auto",
       "undefinedGlobal": "warning",
       "unusedLocal": "off",
       "unreachableCode": "hint",
@@ -52,6 +53,7 @@ For installation and editor setup, see [install.md](install.md),
 | `typeChecking` | `off`, `basic`, `strict` | `basic` | Type-diagnostic mode. |
 | `inlayHints` | boolean | `false` | Show inferred local type hints. |
 | `maxProblems` | integer | `100` | Per-document diagnostic cap; `0` disables truncation. |
+| `diagnostics.mode` | `auto`, `push`, `pull` | `auto` | Diagnostic transport. `auto` pulls when the client supports it and pushes otherwise. |
 | `limits.codeLens` | boolean | `true` | Show the cart budget code lens. |
 | `limits.diagnostics` | boolean | `true` | Publish token/char limit diagnostics. |
 | `format.maxBlankLines` | integer | `2` | Maximum consecutive blank lines; `0` removes blank lines. |
@@ -66,6 +68,15 @@ types for hover and completion but publishes no type diagnostics.
 Diagnostic severity values are `off`, `hint`, `info`, `warning`, and `error`.
 Set a rule to `off` to disable it. Syntax errors and missing includes remain
 errors and cannot be disabled globally.
+
+`diagnostics.mode` selects the transport. In `auto` the server answers
+`textDocument/diagnostic` when the client advertises pull support and otherwise
+publishes diagnostics. `push` always publishes while still answering pull
+requests. `pull` suppresses duplicate push publication; if the client does not
+support pull diagnostics the server logs one warning and falls back to push.
+Switching transports clears or republishes diagnostics so the editor never
+keeps a stale set from the other mode. `pico8.maxProblems` applies per original
+document in both transports.
 
 Settings changes are applied without restarting the server. Open carts are
 re-analyzed and diagnostics are republished.

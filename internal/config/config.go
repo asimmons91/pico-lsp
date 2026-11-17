@@ -19,9 +19,10 @@ const (
 	// Section is the LSP configuration section owned by pico-lsp.
 	Section = "pico8"
 
-	DefaultAPIVersion   = "0.2.7"
-	DefaultTypeChecking = "basic"
-	DefaultMaxProblems  = 100
+	DefaultAPIVersion      = "0.2.7"
+	DefaultTypeChecking    = "basic"
+	DefaultMaxProblems     = 100
+	DefaultDiagnosticsMode = "auto"
 
 	DefaultUndefinedGlobal         = "warning"
 	DefaultUnusedLocal             = "off"
@@ -46,6 +47,10 @@ const (
 	TypeCheckingOff    = "off"
 	TypeCheckingBasic  = "basic"
 	TypeCheckingStrict = "strict"
+
+	DiagnosticsModeAuto = "auto"
+	DiagnosticsModePush = "push"
+	DiagnosticsModePull = "pull"
 )
 
 // Settings is the pico8 configuration section.
@@ -77,8 +82,9 @@ type LintSettings struct {
 	APIRanges bool `json:"apiRanges"`
 }
 
-// DiagnosticSettings overrides diagnostic severities.
+// DiagnosticSettings overrides diagnostic severities and transport mode.
 type DiagnosticSettings struct {
+	Mode                    string `json:"mode"`
 	UndefinedGlobal         string `json:"undefinedGlobal"`
 	UnusedLocal             string `json:"unusedLocal"`
 	UnreachableCode         string `json:"unreachableCode"`
@@ -109,6 +115,7 @@ func Default() Settings {
 			MaxBlankLines: 2,
 		},
 		Diagnostics: DiagnosticSettings{
+			Mode:                    DefaultDiagnosticsMode,
 			UndefinedGlobal:         DefaultUndefinedGlobal,
 			UnusedLocal:             DefaultUnusedLocal,
 			UnreachableCode:         DefaultUnreachableCode,
@@ -278,6 +285,7 @@ func (m *Manager) logSettings(message string, settings Settings) {
 		"typeChecking", settings.TypeChecking,
 		"inlayHints", settings.InlayHints,
 		"maxProblems", settings.MaxProblems,
+		"diagnosticsMode", settings.Diagnostics.Mode,
 	)
 }
 
@@ -327,6 +335,7 @@ type partialLintSettings struct {
 }
 
 type partialDiagnosticSettings struct {
+	Mode                    *string `json:"mode"`
 	UndefinedGlobal         *string `json:"undefinedGlobal"`
 	UnusedLocal             *string `json:"unusedLocal"`
 	UnreachableCode         *string `json:"unreachableCode"`
@@ -370,6 +379,9 @@ func (p partialSettings) apply(base Settings) Settings {
 		base.Lint.APIRanges = *p.Lint.APIRanges
 	}
 	if p.Diagnostics != nil {
+		if p.Diagnostics.Mode != nil {
+			base.Diagnostics.Mode = *p.Diagnostics.Mode
+		}
 		if p.Diagnostics.UndefinedGlobal != nil {
 			base.Diagnostics.UndefinedGlobal = *p.Diagnostics.UndefinedGlobal
 		}
@@ -462,6 +474,15 @@ func normalize(s Settings, log *slog.Logger) Settings {
 	}
 	if s.Format.MaxBlankLines < 0 {
 		s.Format.MaxBlankLines = d.Format.MaxBlankLines
+	}
+
+	switch s.Diagnostics.Mode {
+	case DiagnosticsModeAuto, DiagnosticsModePush, DiagnosticsModePull:
+	case "":
+		s.Diagnostics.Mode = d.Diagnostics.Mode
+	default:
+		log.Warn("invalid pico8.diagnostics.mode", "value", s.Diagnostics.Mode, "default", d.Diagnostics.Mode)
+		s.Diagnostics.Mode = d.Diagnostics.Mode
 	}
 
 	s.Diagnostics.UndefinedGlobal = normalizeSeverity(s.Diagnostics.UndefinedGlobal, d.Diagnostics.UndefinedGlobal, "undefinedGlobal", log)

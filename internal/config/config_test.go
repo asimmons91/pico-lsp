@@ -182,6 +182,33 @@ func TestApplyDidChangeNullFieldPreservesInitializationOptions(t *testing.T) {
 	}
 }
 
+func TestDiagnosticsMode(t *testing.T) {
+	m := New(testLogger())
+	if got := m.Settings().Diagnostics.Mode; got != DefaultDiagnosticsMode {
+		t.Fatalf("default mode = %q, want %q", got, DefaultDiagnosticsMode)
+	}
+
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"diagnostics":{"mode":"pull"}}}`))
+	if got := m.Settings().Diagnostics.Mode; got != DiagnosticsModePull {
+		t.Fatalf("mode = %q, want pull", got)
+	}
+
+	m.ApplyDidChange(lspValue(`{"pico8":{"diagnostics":{"mode":"bogus"}}}`))
+	if got := m.Settings().Diagnostics.Mode; got != DefaultDiagnosticsMode {
+		t.Fatalf("invalid mode = %q, want %q", got, DefaultDiagnosticsMode)
+	}
+
+	m.SetPullSupported(true)
+	if err := m.Pull(context.Background(), &fakeClient{
+		values: []protocol.LSPAny{lspValue(`{"diagnostics":{"mode":"push"}}`)},
+	}); err != nil {
+		t.Fatalf("Pull: %v", err)
+	}
+	if got := m.Settings().Diagnostics.Mode; got != DiagnosticsModePush {
+		t.Fatalf("pulled mode = %q, want push", got)
+	}
+}
+
 func TestZeroMaxProblemsDisablesTruncation(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyInitializationOptions(lspValue(`{"pico8":{"maxProblems":0}}`))

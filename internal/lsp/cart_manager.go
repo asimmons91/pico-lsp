@@ -476,18 +476,21 @@ func (m *CartManager) documentVersion(u uri.URI) *int32 {
 	return nil
 }
 
-func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantics *analysis.Result, previous *cartEntry) {
+// collectDiagnostics builds the canonical diagnostic set for one analyzed
+// cart snapshot. Every diagnostic stays attached to its original file URI.
+func (m *CartManager) collectDiagnostics(snap *cart.Snapshot, semantics *analysis.Result) map[uri.URI][]protocol.Diagnostic {
 	items := make(map[uri.URI][]protocol.Diagnostic)
+	if snap == nil || snap.Cart == nil {
+		return items
+	}
 	settings := m.settings()
-	if snap != nil && snap.Cart != nil {
-		items[snap.Cart.RootURI] = append(items[snap.Cart.RootURI], cartLimitDiagnostics(snap, settings)...)
-		for _, diag := range m.includeDiagnostics(snap, settings) {
-			file := snap.Cart.File(diag.span.FileID)
-			if file == nil {
-				continue
-			}
-			items[file.URI] = append(items[file.URI], newDiagnostic(file.Index, diag.span.Start, diag.span.End, diag.severity, diag.code, diag.message))
+	items[snap.Cart.RootURI] = append(items[snap.Cart.RootURI], cartLimitDiagnostics(snap, settings)...)
+	for _, diag := range m.includeDiagnostics(snap, settings) {
+		file := snap.Cart.File(diag.span.FileID)
+		if file == nil {
+			continue
 		}
+		items[file.URI] = append(items[file.URI], newDiagnostic(file.Index, diag.span.Start, diag.span.End, diag.severity, diag.code, diag.message))
 	}
 	add := func(span source.Span, severity protocol.DiagnosticSeverity, code, message string) {
 		file := snap.Cart.File(span.FileID)
@@ -513,6 +516,23 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantic
 		}
 	}
 
+	for _, fileItems := range items {
+		sort.SliceStable(fileItems, func(i, j int) bool {
+			if fileItems[i].Range.Start.Line != fileItems[j].Range.Start.Line {
+				return fileItems[i].Range.Start.Line < fileItems[j].Range.Start.Line
+			}
+			return fileItems[i].Range.Start.Character < fileItems[j].Range.Start.Character
+		})
+	}
+	return items
+}
+
+func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantics *analysis.Result, previous *cartEntry) {
+	if snap == nil || snap.Cart == nil {
+		return
+	}
+	items := m.collectDiagnostics(snap, semantics)
+
 	for _, file := range snap.Cart.Files {
 		if !m.ownsFile(snap.Cart.RootURI, file.URI) {
 			m.log.Debug("skipping diagnostics for non-owned file",
@@ -526,12 +546,6 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantic
 			}
 			continue
 		}
-		sort.SliceStable(fileItems, func(i, j int) bool {
-			if fileItems[i].Range.Start.Line != fileItems[j].Range.Start.Line {
-				return fileItems[i].Range.Start.Line < fileItems[j].Range.Start.Line
-			}
-			return fileItems[i].Range.Start.Character < fileItems[j].Range.Start.Character
-		})
 		m.diags.Publish(ctx, file.URI, m.documentVersion(file.URI), fileItems)
 	}
 
