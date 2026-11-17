@@ -1,6 +1,6 @@
 # M3 — Language Intelligence & Built-in API
 
-**Status:** Planned  
+**Status:** In progress — implementation and automated checks complete; manual editor verification pending
 **Depends on:** M2  
 **Blocks:** M4  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -359,17 +359,36 @@ CartSnapshot (AST + symbols + builtins)
 - Helix completion/hover/signature.
 - Compare built-in docs against the official manual for a sample of 20 functions.
 
+## Implementation notes
+
+- `internal/builtin/pico8-0.2.7.lua` remains the single source of truth. Its
+  `---` summaries, `---@param name? type` annotations, and `---@type number`
+  constants are parsed into completion/signature/hover metadata.
+- Parameter types are intentionally shallow until M4. Polymorphic values use
+  `any`; table, function, string, boolean, thread, and numeric positions use
+  their PICO-8-facing type names.
+- Member completion uses direct table construction, field assignments,
+  methods, `self`, and shallow `---@class`/`---@type` fields. There is no
+  inference beyond those names.
+- Include path completion stays inside the cart directory when no workspace
+  folder is configured. With a workspace folder, typed `../` paths are allowed
+  as long as the resolved directory remains inside that folder.
+- Completion is capped at 1000 items; semantic tokens at 20000 tokens. Both
+  truncations are logged and deterministic.
+- Semantic token requests are full-document only. The stable legend is defined
+  in `internal/lsp/semantic_tokens.go` and checked by a test.
+
 ## Exit criteria
 
-- [ ] Completion works for locals, globals, fields/methods, built-ins, snippets, annotations, and include paths.
-- [ ] Completion resolve attaches docs without bloating initial responses.
-- [ ] Hover covers user symbols, built-ins, includes, shorthand, and peek operators.
-- [ ] Signature help computes the active parameter correctly in nested code.
-- [ ] Semantic tokens are stable, non-overlapping, and correct for UTF-16.
-- [ ] The 0.2.7 API stub is complete and coverage-tested.
-- [ ] No standard Lua library names appear in completion or built-ins.
-- [ ] Performance targets are met.
-- [ ] Neovim and Helix manual tests pass.
+- [x] Completion works for locals, globals, fields/methods, built-ins, snippets, annotations, and include paths.
+- [x] Completion resolve attaches docs without bloating initial responses.
+- [x] Hover covers user symbols, built-ins, includes, shorthand, and peek operators.
+- [x] Signature help computes the active parameter correctly in nested code.
+- [x] Semantic tokens are stable, non-overlapping, and correct for UTF-16.
+- [x] The 0.2.7 API stub is complete and coverage-tested.
+- [x] No standard Lua library names appear in completion or built-ins.
+- [x] Performance targets are met by `TestPerformanceTargets` after cache warm-up.
+- [ ] Neovim and Helix manual tests pass. (Not runnable in this environment; run before marking M3 done.)
 
 ## Risks and mitigations
 

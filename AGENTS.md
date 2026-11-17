@@ -2,12 +2,12 @@
 
 ## Current state
 
-- M0 (Foundation & Walking Skeleton), M1 (Cart Model & Syntax Front-End), and M2 (Semantic Core & Navigation) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis`, `internal/builtin`, `internal/config`, and `internal/version`.
-- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, and workspace symbols.
-- M3 and later are not implemented. There is no completion, hover, signature help, semantic tokens, type checking, token-budget UI, or formatter yet.
+- M0 (Foundation & Walking Skeleton), M1 (Cart Model & Syntax Front-End), M2 (Semantic Core & Navigation), and M3 (Language Intelligence & Built-in API) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis`, `internal/builtin`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including member/annotation/include completion and resolve), hover, signature help, and full semantic tokens.
+- M3 automated checks pass; manual Neovim/Helix verification is still pending before M3 can be marked Done. M4 and later are not implemented. There is no type checking, token-budget UI, or formatter yet.
 - CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests, a short fuzz pass, and a static build on pull requests. `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes. M6 expands this with lint, build matrices, and release workflows.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
-- No README, lint config, or release tooling exists yet. The 51-cart corpus and token fixtures live under `testdata/`.
+- No README, lint config, or release tooling exists yet. The 51-cart corpus, token fixtures, and M3 LSP golden fixtures live under `testdata/` (`testdata/lsp/`).
 - Do not invent or claim build/test results. Run the commands below and report the actual output.
 
 ## Source of truth
@@ -67,11 +67,11 @@
 - Use imperative, lowercase descriptions with no trailing period. Mark breaking changes
   with `!` and/or a `BREAKING CHANGE:` footer.
 - Push the branch and open a PR; do not bypass the `Protect main` ruleset.
-- After opening the PR, run the `/review` OpenCode command against the PR
-  (pass its URL or number). Review locally unless the user asks for posted
-  comments. Address the findings, commit the fixes, and push them to the same
-  branch/PR; do not open a separate PR for review fixes.
-- If `/review` is incomplete or fails, re-run it or report the gap; never treat
+- After opening the PR, load the `code-review` skill with the `skill` tool and
+  review the PR against it (pass its URL or number). Review locally unless the
+  user asks for posted comments. Address the findings, commit the fixes, and
+  push them to the same branch/PR; do not open a separate PR for review fixes.
+- If the review is incomplete or fails, re-run it or report the gap; never treat
   missing coverage as a clean review.
 
 ## Commands

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/asimmons91/pico-lsp/internal/cart"
 	"github.com/asimmons91/pico-lsp/internal/source"
 )
 
@@ -65,10 +66,23 @@ type Symbol struct {
 	Decls []source.Span
 	Uses  []source.Span
 
+	// Doc is the parsed LuaCATS/doc-comment metadata for user and built-in
+	// declarations.
+	Doc *DocComment
+	// Signature is a user-facing signature such as `function move(p, dx, dy)`.
+	Signature string
+	// Params contains the declared parameter names, including `...` when used.
+	Params []string
+	// Function links parameter symbols, including implicit self, to the
+	// function declaration that owns them.
+	Function *Symbol
+
 	// Fields maps canonical field names declared on this value. Owner is set
-	// for field symbols and points at the receiver.
+	// for field symbols and points at the receiver. Alias links implicit method
+	// `self` to its receiver.
 	Fields map[string]*Symbol
 	Owner  *Symbol
+	Alias  *Symbol
 
 	// DynamicFields records an access such as t[k] on this value. Renaming a
 	// field on this receiver is unsafe once this is set.
@@ -143,9 +157,91 @@ type Result struct {
 	Table       *SymbolTable
 	Diagnostics []Diagnostic
 
-	occs   []Occurrence
-	byFile map[source.FileID][]Occurrence
-	meta   map[source.FileID]bool
+	// Classes holds shallow `---@class` metadata used by M3 member completion.
+	Classes map[string]*Class
+
+	occs       []Occurrence
+	byFile     map[source.FileID][]Occurrence
+	meta       map[source.FileID]bool
+	scopes     []*Scope
+	chunkScope *Scope
+	cart       *cart.Cart
+}
+
+// ScopeAt returns the innermost lexical scope containing offset. It falls back
+// to the scope of the closest preceding occurrence, then to the chunk scope.
+func (r *Result) ScopeAt(fileID source.FileID, offset int) *Scope {
+	if r == nil {
+		return nil
+	}
+	var best *Scope
+	bestLen := int(^uint(0) >> 1)
+	for _, scope := range r.scopes {
+		if scope == nil || scope.Span.FileID != fileID || scope.Span.IsEmpty() {
+			continue
+		}
+		if offset < scope.Span.Start || offset > scope.Span.End {
+			continue
+		}
+		if length := scope.Span.Len(); length <= bestLen {
+			best = scope
+			bestLen = length
+		}
+	}
+	if best != nil {
+		return best
+	}
+	for i := len(r.occs) - 1; i >= 0; i-- {
+		occ := &r.occs[i]
+		if occ.Span.FileID != fileID || occ.Span.Start > offset {
+			continue
+		}
+		if occ.Scope == nil {
+			continue
+		}
+		// The nearest occurrence is a useful fallback for positions at a
+		// boundary, but it can point into a function that has already ended.
+		// Walk outward until a scope is known to contain the offset. Scopes in
+		// another file cannot be checked against this offset, so keep them for
+		// included code, where the enclosing span is mapped to the cart file.
+		for scope := occ.Scope; scope != nil; scope = scope.Parent {
+			if scope == r.chunkScope || scope.Span.FileID != fileID || scope.Span.IsEmpty() || offset <= scope.Span.End {
+				return scope
+			}
+		}
+		return r.chunkScope
+	}
+	return r.chunkScope
+}
+
+// VisibleSymbolsAt returns declarations visible at offset in fileID, accounting
+// for the flattened order of included files. A declaration in another file is
+// visible only when its include appears before the cursor.
+func (r *Result) VisibleSymbolsAt(scope *Scope, fileID source.FileID, offset int) []*Symbol {
+	if scope == nil {
+		return nil
+	}
+	return scope.visibleSymbolsBefore(func(candidate *Symbol) bool {
+		return r.declarationBefore(candidate.DeclSpan, fileID, offset)
+	})
+}
+
+func (r *Result) declarationBefore(decl source.Span, fileID source.FileID, offset int) bool {
+	if decl.FileID == fileID {
+		return decl.Start <= offset
+	}
+	if r == nil || r.cart == nil {
+		return false
+	}
+	declFlat, ok := r.cart.FlatPosition(decl.FileID, decl.Start)
+	if !ok {
+		return false
+	}
+	currentFlat, ok := r.cart.FlatPosition(fileID, offset)
+	if !ok {
+		return false
+	}
+	return declFlat <= currentFlat
 }
 
 // Occurrences returns occurrences in fileID in source order.

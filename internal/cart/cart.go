@@ -298,6 +298,30 @@ func (c *Cart) FileID(u uri.URI) source.FileID {
 	return -1
 }
 
+// FlatPosition maps a byte offset in fileID to its position in the flattened
+// program. It returns false when the offset is not covered by a segment.
+// Repeated includes of one file are ambiguous; the earliest occurrence wins.
+func (c *Cart) FlatPosition(fileID source.FileID, offset int) (int, bool) {
+	if c == nil || offset < 0 {
+		return 0, false
+	}
+	best := -1
+	for _, segment := range c.Segments {
+		if segment.FileID != fileID {
+			continue
+		}
+		length := segment.FlatEnd - segment.FlatStart
+		if offset < segment.FileOffset || offset > segment.FileOffset+length {
+			continue
+		}
+		flat := segment.FlatStart + (offset - segment.FileOffset)
+		if best < 0 || flat < best {
+			best = flat
+		}
+	}
+	return best, best >= 0
+}
+
 // Span maps a flattened byte range to an original file. Ranges that cross a
 // segment boundary are clamped to the segment containing the start.
 func (l *Loader) readFile(u uri.URI, max int) ([]byte, error) {

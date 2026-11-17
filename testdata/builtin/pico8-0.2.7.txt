@@ -130,9 +130,7 @@ t
 time
 tline
 tonum
-tonumber
 tostr
-tostring
 type
 unpack
 _update

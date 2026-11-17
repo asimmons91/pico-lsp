@@ -1,0 +1,23 @@
+[
+  {
+    "label": "type",
+    "kind": 14,
+    "detail": "---@type",
+    "filterText": "type",
+    "sortText": "type",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 5,
+          "character": 4
+        },
+        "end": {
+          "line": 5,
+          "character": 6
+        }
+      },
+      "newText": "type"
+    }
+  }
+]

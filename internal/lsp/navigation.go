@@ -20,6 +20,9 @@ type navContext struct {
 }
 
 func (s *Server) navigationFor(ctx context.Context, u uri.URI) (*navContext, bool) {
+	if u == "" || !u.IsFile() || u.Path() == "" || u.Path() == "/" {
+		return nil, false
+	}
 	snap, semantics, fileID, ok := s.carts.SemanticsFor(ctx, u)
 	if !ok || semantics == nil {
 		return nil, false
