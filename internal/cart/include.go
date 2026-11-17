@@ -291,7 +291,8 @@ func (f *flattener) appendIncluded(text string, lines []lineRef, fileID source.F
 			if f.includeCountLimit(span) {
 				return
 			}
-			resolved, err := resolveInclude(dir, path)
+			name, _ := splitIncludeTarget(path)
+			resolved, err := resolveInclude(dir, name)
 			if err != nil {
 				f.diags = append(f.diags, Diagnostic{
 					Code:     CodeIncludeUnreadable,

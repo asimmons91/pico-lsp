@@ -362,7 +362,7 @@ parser → AST + comments + parse errors
 
 - `.p8` section parsing: empty cart, header only, code only, all sections, unknown sections, no trailing newline, CRLF.
 - Tab boundaries and synthesis of tab names.
-- Include flattening: simple, nested (warning), missing, duplicate, quoted path, Windows separators, file with no trailing newline, include inside a long string/comment (must not be treated as a directive).
+- Include flattening: simple, nested (warning), missing, duplicate, quoted path, Windows separators, file with no trailing newline, `.p8` all-tabs and `:tab` targets, BOM-prefixed `.lua`, input limits, and includes inside long strings/comments or continued short strings (must not be treated as directives).
 - Source map: every token span maps to the correct file/offset; include directive spans.
 - Token counting: one test per rule above plus 50+ real-cart fixtures, including an include-bearing cart.
 - Lexer: one test per dialect construct, plus invalid bytes.
