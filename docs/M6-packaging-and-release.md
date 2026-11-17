@@ -173,7 +173,7 @@ Additional guidance:
   end)
   ```
 
-- Document `:LspLog` and `--log-file` for troubleshooting.
+- Document `vim.lsp.log.get_filename()` and `--log-file` for troubleshooting.
 - Document how to disable formatting providers if another formatter is configured (formatter is post-v1, so this is future-proofing).
 
 ### Helix
@@ -188,8 +188,7 @@ file-types = ["p8"]
 comment-token = "--"
 language-servers = ["pico-lsp"]
 
-[[language-server]]
-name = "pico-lsp"
+[language-server.pico-lsp]
 command = "pico-lsp"
 ```
 
