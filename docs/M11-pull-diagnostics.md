@@ -53,7 +53,9 @@ normal pushed diagnostics.
 - `pico8.diagnostics.mode`:
   - `auto` (default): pull when the client supports it, otherwise push.
   - `push`: always publish; pull requests still answer correctly.
-  - `pull`: only answer pull requests; do not publish identical snapshots.
+  - `pull`: answer pull requests and suppress duplicate pushes. If the client
+    does not advertise pull support, log one warning and fall back to push so a
+    configuration mistake cannot hide all diagnostics.
 - `textDocument/diagnostic` returns a full report for the requested document.
   Unknown or unopened documents return a JSON-RPC error rather than an empty
   report that hides a client bug.
