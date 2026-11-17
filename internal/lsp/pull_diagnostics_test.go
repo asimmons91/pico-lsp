@@ -224,6 +224,34 @@ func TestPullDiagnosticsGoldenReport(t *testing.T) {
 	h.exit(t, true)
 }
 
+func TestPullDiagnosticsForIncludedFile(t *testing.T) {
+	h := initializePullHarness(t, true, "")
+	root, include := pullTestCart(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, mustReadFile(t, root))
+	openDoc(t, h, ctx, include, mustReadFile(t, include))
+
+	report := pullDocument(t, h, ctx, include, nil)
+	full, ok := report.(*protocol.RelatedFullDocumentDiagnosticReport)
+	if !ok {
+		t.Fatalf("report type = %T, want full", report)
+	}
+	if !containsString(diagnosticMessageCodes(full.Items), "undefined-global") {
+		t.Fatalf("include diagnostic codes = %v, want undefined-global", diagnosticMessageCodes(full.Items))
+	}
+	related, ok := full.RelatedDocuments[root].(*protocol.FullDocumentDiagnosticReport)
+	if !ok {
+		t.Fatalf("related report type = %T, want full", full.RelatedDocuments[root])
+	}
+	if !containsString(diagnosticMessageCodes(related.Items), "undefined-global") {
+		t.Fatalf("root related codes = %v, want undefined-global", diagnosticMessageCodes(related.Items))
+	}
+
+	assertNoPushDiagnostics(t, h.client)
+	h.exit(t, true)
+}
+
 func TestPullDiagnosticsUnchangedAndStaleResultIDs(t *testing.T) {
 	h := initializePullHarness(t, false, "")
 	root, _ := pullTestCart(t)
