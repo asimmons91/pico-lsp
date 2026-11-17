@@ -151,9 +151,9 @@ type TypeVar struct {
 func (TypeVar) typeNode() {}
 
 // NewRecord creates an open, empty record. Named records are open unless Exact
-// is set by the annotation parser.
+// is set by the annotation parser. Fields is allocated on the first AddField.
 func NewRecord(name string) *Record {
-	return &Record{Name: name, Fields: make(map[string]*Field), Open: true}
+	return &Record{Name: name, Open: true}
 }
 
 // AddField adds or replaces a field on r.

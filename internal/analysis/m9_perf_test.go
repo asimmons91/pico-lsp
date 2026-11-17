@@ -14,11 +14,14 @@ func annotatedTypeCartText() string {
 	b.WriteString("---@class Base\n---@field x number\n---@field hp number\nlocal Base = {}\n")
 	b.WriteString("---@param dx number\nfunction Base:move(dx)\n  self.x += dx\nend\n")
 	b.WriteString("---@class Child: Base\n---@field y number\nlocal Child = {}\n")
-	for i := 0; i < 450; i++ {
-		fmt.Fprintf(&b, "local obj_%03d = setmetatable({x = %d, y = %d}, {__index = Child})\n", i, i, i)
+	for i := 0; i < 600; i++ {
+		fmt.Fprintf(&b, "local value_%03d = %d + #tostr(%d)\n", i, i, i)
 	}
-	for i := 0; i < 120; i++ {
-		fmt.Fprintf(&b, "---@param p Child?\nlocal function use_%03d(p)\n  assert(p)\n  local before_%03d = p\n  local x_%03d = p.x\n  if not p then return end\n  local after_%03d = p or obj_000\n  return after_%03d.x\nend\n", i, i, i, i, i)
+	for i := 0; i < 50; i++ {
+		fmt.Fprintf(&b, "---@class Holder_%03d\n---@field value number\n\n", i)
+		fmt.Fprintf(&b, "---@type Holder_%03d\nlocal holder_%03d = {value = %d}\n", i, i, i)
+		fmt.Fprintf(&b, "local obj_%03d = setmetatable({x = %d, y = %d}, {__index = Child})\n", i, i, i)
+		fmt.Fprintf(&b, "---@param p Child?\nlocal function use_%03d(p)\n  assert(p)\n  local before = p\n  local x = p.x\n  if not p then return end\n  local after = p or obj_000\n  return after.x\nend\n", i)
 	}
 	b.WriteString("-- ")
 	for b.Len() < 64*1024 {
