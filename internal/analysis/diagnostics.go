@@ -34,6 +34,7 @@ const (
 	CodeUndefinedField     = "undefined-field"
 	CodeNeedCheckNil       = "need-check-nil"
 	CodeMissingFields      = "missing-fields"
+	CodeOperatorMismatch   = "operator-type-mismatch"
 	CodeDeprecated         = "deprecated"
 	CodeTypeUnknown        = "type-unknown"
 )

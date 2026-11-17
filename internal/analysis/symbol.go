@@ -83,6 +83,11 @@ type Symbol struct {
 	// TypeExplicit is true when Type came from a user annotation rather than
 	// inference.
 	TypeExplicit bool
+	// Overloads holds explicit @overload signatures in declaration order.
+	Overloads []*types.Function
+	// FromClass marks field symbols populated from a class annotation. Their
+	// field types may need substitution for a generic instance receiver.
+	FromClass bool
 
 	// Fields maps canonical field names declared on this value. Owner is set
 	// for field symbols and points at the receiver. Alias links implicit method
@@ -199,7 +204,9 @@ type Result struct {
 	classFieldSymbols map[*types.Field]*Symbol
 	// paramIndex maps a function symbol to its parameter symbols by canonical
 	// name. It is built once after binding.
-	paramIndex map[*Symbol]map[string]*Symbol
+	paramIndex    map[*Symbol]map[string]*Symbol
+	callArguments map[source.Span][]types.Type
+	nextGenericID int
 
 	occs           []Occurrence
 	byFile         map[source.FileID][]Occurrence
@@ -287,6 +294,24 @@ func (r *Result) FlowType(span source.Span) (types.Type, bool) {
 	}
 	typ, ok := r.flowTypes[span]
 	return typ, ok
+}
+
+// CallArguments returns the inferred argument types for a call opened at span.
+func (r *Result) CallArguments(span source.Span) []types.Type {
+	if r == nil || len(r.callArguments) == 0 {
+		return nil
+	}
+	return r.callArguments[span]
+}
+
+func (r *Result) recordCallArguments(span source.Span, args []types.Type) {
+	if r == nil || span.IsEmpty() || len(args) == 0 {
+		return
+	}
+	if r.callArguments == nil {
+		r.callArguments = make(map[source.Span][]types.Type)
+	}
+	r.callArguments[span] = args
 }
 
 func (r *Result) recordFlow(span source.Span, typ types.Type) {

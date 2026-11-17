@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Type system II: generic classes and functions with defaults, overload
+  selection in hover/signature help/call checking, explicit operator
+  annotations for binary, unary, comparison, and call operators, tagged-union
+  narrowing for string and number tags, and the `operator-type-mismatch` hint.
 - Type system I: class inheritance with multi-level field and method lookup,
   inherited-member completion/hover/signature help, `(exact)` class field
   checks, `setmetatable` factory inference, and stronger flow narrowing for

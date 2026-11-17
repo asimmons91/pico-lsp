@@ -88,7 +88,19 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 		alias.Underlying = parsed
 	}
 
-	for _, class := range result.Classes {
+	type classResolution struct {
+		class    *Class
+		record   *types.Record
+		resolver TypeResolver
+	}
+	classNames := make([]string, 0, len(result.Classes))
+	for name := range result.Classes {
+		classNames = append(classNames, name)
+	}
+	sort.Strings(classNames)
+	resolutions := make(map[string]*classResolution, len(classNames))
+	for _, name := range classNames {
+		class := result.Classes[name]
 		if class == nil {
 			continue
 		}
@@ -99,10 +111,70 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 		}
 		record.Exact = class.Exact
 		record.Open = !class.Exact
+		classParams := make(map[string]*types.GenericParam)
+		for _, decl := range class.GenericDecls {
+			canonical := CanonicalName(decl.Name)
+			if canonical == "" {
+				continue
+			}
+			param := &types.GenericParam{ID: result.nextGenericID, Name: decl.Name}
+			result.nextGenericID++
+			classParams[canonical] = param
+			record.TypeParams = append(record.TypeParams, param)
+		}
+		resolutions[name] = &classResolution{
+			class:  class,
+			record: record,
+			resolver: func(name string) (types.Type, bool) {
+				if param := classParams[CanonicalName(name)]; param != nil {
+					return param, true
+				}
+				return resolver(name)
+			},
+		}
+	}
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		classParams := make(map[string]*types.GenericParam, len(res.record.TypeParams))
+		for _, param := range res.record.TypeParams {
+			classParams[CanonicalName(param.Name)] = param
+		}
+		for _, decl := range res.class.GenericDecls {
+			if strings.TrimSpace(decl.Default) == "" {
+				continue
+			}
+			param := classParams[CanonicalName(decl.Name)]
+			if param == nil {
+				continue
+			}
+			parsed, err := parseType(decl.Default, res.resolver)
+			if err != nil {
+				result.addTypeParseError(mode, err, res.class.DeclSpan, fmt.Sprintf("generic %q default", decl.Name))
+				continue
+			}
+			param.Default = parsed
+		}
+	}
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		class := res.class
+		record := res.record
+		classResolver := res.resolver
 		for _, parent := range class.Parents {
-			parentType, ok := resolver(parent)
-			if !ok {
-				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("unknown parent class %q", parent), class.DeclSpan, SeverityWarning)
+			parentType, err := parseType(parent, classResolver)
+			if err != nil {
+				var unknown *unknownTypeError
+				if errors.As(err, &unknown) {
+					result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("unknown parent class %q", parent), class.DeclSpan, SeverityWarning)
+				} else {
+					result.addTypeParseError(mode, err, class.DeclSpan, fmt.Sprintf("parent class %q", parent))
+				}
 				continue
 			}
 			parentRecord, _ := types.Resolve(parentType).(*types.Record)
@@ -110,7 +182,7 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("%q is not a parent class", parent), class.DeclSpan, SeverityWarning)
 				continue
 			}
-			if parentRecord == record {
+			if templateRecord(parentRecord) == record {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("class %q cannot inherit itself", class.Name), class.DeclSpan, SeverityWarning)
 				continue
 			}
@@ -125,7 +197,7 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("field %q is missing a type", field.Name), field.Span, SeverityWarning)
 				continue
 			}
-			parsed, err := parseType(field.Type, resolver)
+			parsed, err := parseType(field.Type, classResolver)
 			if err != nil {
 				field.ParsedType = types.AnyType
 				result.addTypeParseError(mode, err, field.Span, fmt.Sprintf("field %q", field.Name))
@@ -138,6 +210,22 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 				Optional: field.Optional,
 				Decl:     field.Span,
 			})
+		}
+		attachClassOperators(result, class, classResolver, mode)
+	}
+
+	// Parent applications created before a parent's fields/operators were
+	// attached are refreshed now that the whole hierarchy is resolved.
+	for _, name := range classNames {
+		res := resolutions[name]
+		if res == nil {
+			continue
+		}
+		for i, parent := range res.record.Parents {
+			if parent == nil || parent.Template == nil {
+				continue
+			}
+			res.record.Parents[i] = types.Instantiate(parent.Template, parent.TypeArgs)
 		}
 	}
 
@@ -237,14 +325,82 @@ func (r *Result) resolveType(name string) (types.Type, bool) {
 	return typ, ok
 }
 
+func genericResolver(params []*types.GenericParam, fallback TypeResolver) TypeResolver {
+	byName := make(map[string]*types.GenericParam, len(params))
+	for _, param := range params {
+		if param != nil {
+			byName[CanonicalName(param.Name)] = param
+		}
+	}
+	return func(name string) (types.Type, bool) {
+		if param := byName[CanonicalName(name)]; param != nil {
+			return param, true
+		}
+		return fallback(name)
+	}
+}
+
+func (r *Result) classGenericResolver(owner *Symbol, fallback TypeResolver) TypeResolver {
+	if r == nil || owner == nil || owner.Doc == nil {
+		return fallback
+	}
+	className := owner.Doc.Class
+	if className == "" {
+		className = classTypeName(owner.Doc.Type)
+	}
+	class := r.Classes[CanonicalName(className)]
+	if class == nil || class.Record == nil || len(class.Record.TypeParams) == 0 {
+		return fallback
+	}
+	return genericResolver(class.Record.TypeParams, fallback)
+}
+
 func attachSymbolTypes(result *Result, resolver TypeResolver, mode TypeCheckingMode) {
 	for _, sym := range result.Table.Symbols {
 		if sym == nil || sym.Doc == nil {
 			continue
 		}
 		doc := sym.Doc
+		symResolver := resolver
+		if sym.Owner != nil && (sym.Kind == SymbolField || sym.Kind == SymbolMethod || sym.Kind == SymbolFunction) {
+			symResolver = result.classGenericResolver(sym.Owner, symResolver)
+		}
+		if sym.Kind == SymbolParam && sym.Function != nil {
+			symResolver = result.classGenericResolver(sym.Function.Owner, symResolver)
+			if sym.Function.Doc != nil && len(sym.Function.Doc.ParsedGenerics) > 0 {
+				symResolver = genericResolver(sym.Function.Doc.ParsedGenerics, symResolver)
+			}
+		}
+		if doc.Class == "" && len(doc.Generics) > 0 {
+			genericByName := make(map[string]*types.GenericParam)
+			for _, decl := range doc.Generics {
+				param := &types.GenericParam{ID: result.nextGenericID, Name: decl.Name}
+				result.nextGenericID++
+				genericByName[CanonicalName(decl.Name)] = param
+				doc.ParsedGenerics = append(doc.ParsedGenerics, param)
+			}
+			outer := symResolver
+			scoped := func(name string) (types.Type, bool) {
+				if param := genericByName[CanonicalName(name)]; param != nil {
+					return param, true
+				}
+				return outer(name)
+			}
+			for i, decl := range doc.Generics {
+				if strings.TrimSpace(decl.Default) == "" || i >= len(doc.ParsedGenerics) {
+					continue
+				}
+				parsed, err := parseType(decl.Default, scoped)
+				if err != nil {
+					result.addTypeParseError(mode, err, docSpan(doc, sym.DeclSpan), fmt.Sprintf("generic %q default", decl.Name))
+					continue
+				}
+				doc.ParsedGenerics[i].Default = parsed
+			}
+			symResolver = scoped
+		}
 		if doc.Type != "" {
-			parsed, err := parseType(doc.Type, resolver)
+			parsed, err := parseType(doc.Type, symResolver)
 			if err != nil {
 				result.addTypeParseError(mode, err, docSpan(doc, sym.DeclSpan), fmt.Sprintf("type for %q", sym.Name))
 			} else {
@@ -256,7 +412,7 @@ func attachSymbolTypes(result *Result, resolver TypeResolver, mode TypeCheckingM
 			if strings.TrimSpace(param.Type) == "" {
 				continue
 			}
-			parsed, err := parseType(param.Type, resolver)
+			parsed, err := parseType(param.Type, symResolver)
 			if err != nil {
 				result.addTypeParseError(mode, err, docSpan(doc, sym.DeclSpan), fmt.Sprintf("parameter %q", param.Name))
 				continue
@@ -264,12 +420,29 @@ func attachSymbolTypes(result *Result, resolver TypeResolver, mode TypeCheckingM
 			param.ParsedType = parsed
 		}
 		for _, raw := range doc.Returns {
-			parsed, _, err := parseTypeListPrefix(raw, resolver)
+			parsed, _, err := parseTypeListPrefix(raw, symResolver)
 			if err != nil {
 				result.addTypeParseError(mode, err, docSpan(doc, sym.DeclSpan), "return type")
 				continue
 			}
 			doc.ParsedReturns = append(doc.ParsedReturns, parsed...)
+		}
+		for _, raw := range doc.Overloads {
+			parsed, _, err := parseTypePrefix(raw, symResolver)
+			if err != nil {
+				result.addTypeParseError(mode, err, docSpan(doc, sym.DeclSpan), "overload")
+				continue
+			}
+			fn, ok := types.AsFunction(parsed)
+			if !ok {
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "overload must be a function type", docSpan(doc, sym.DeclSpan), SeverityWarning)
+				continue
+			}
+			for i := range fn.Params {
+				fn.Params[i].Explicit = true
+			}
+			fn.Generics = doc.ParsedGenerics
+			doc.ParsedOverloads = append(doc.ParsedOverloads, fn)
 		}
 		if doc.Class != "" {
 			class := result.Classes[CanonicalName(doc.Class)]
@@ -311,12 +484,14 @@ func attachFunctionType(result *Result, sym *Symbol, doc *DocComment, resolver T
 		for i := range fnType.Params {
 			fnType.Params[i].Explicit = true
 		}
+		fnType.Generics = doc.ParsedGenerics
 		sym.Type = fnType
 		sym.TypeExplicit = true
+		sym.Overloads = doc.ParsedOverloads
 		setParamSymbolTypes(result, sym, fnType)
 		return
 	}
-	fn := &types.Function{}
+	fn := &types.Function{Generics: doc.ParsedGenerics}
 	explicit := false
 	for _, paramName := range sym.Params {
 		name := paramName
@@ -351,6 +526,7 @@ func attachFunctionType(result *Result, sym *Symbol, doc *DocComment, resolver T
 	}
 	sym.Type = fn
 	sym.TypeExplicit = explicit
+	sym.Overloads = doc.ParsedOverloads
 	setParamSymbolTypes(result, sym, fn)
 }
 
@@ -554,7 +730,7 @@ func validateAnnotations(snap *cart.Snapshot, result *Result, mode TypeCheckingM
 		tag := strings.ToLower(strings.TrimSuffix(fields[0], ":"))
 		switch tag {
 		case "@class":
-			name, _, _, valid := parseClassHeader(text[len("@class"):])
+			name, _, _, _, valid := parseClassHeader(text[len("@class"):])
 			if name == "" {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "class annotation is missing a name", comment.Span, SeverityWarning)
 				continue
@@ -572,7 +748,11 @@ func validateAnnotations(snap *cart.Snapshot, result *Result, mode TypeCheckingM
 			}
 		case "@return", "@type", "@diagnostic", "@deprecated", "@meta":
 			// Recognized.
-		case "@generic", "@overload", "@operator", "@module", "@package",
+		case "@generic", "@overload", "@operator":
+			if len(fields) < 2 {
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("%s annotation is missing a value", tag), comment.Span, SeverityWarning)
+			}
+		case "@module", "@package",
 			"@private", "@protected", "@public", "@version", "@async",
 			"@nodiscard", "@see", "@source", "@vararg":
 			// Deferred annotations parse and are intentionally ignored.
@@ -716,6 +896,7 @@ func classCyclePath(start *types.Record) []*types.Record {
 	if start == nil {
 		return nil
 	}
+	start = templateRecord(start)
 	path := make([]*types.Record, 0, 4)
 	visited := map[*types.Record]bool{start: true}
 	var walk func(*types.Record, int) bool
@@ -725,6 +906,7 @@ func classCyclePath(start *types.Record) []*types.Record {
 		}
 		path = append(path, current)
 		for _, parent := range current.Parents {
+			parent = templateRecord(parent)
 			if parent == start {
 				return true
 			}
@@ -743,6 +925,16 @@ func classCyclePath(start *types.Record) []*types.Record {
 		return nil
 	}
 	return path
+}
+
+func templateRecord(record *types.Record) *types.Record {
+	if record == nil {
+		return nil
+	}
+	if record.Template != nil {
+		return record.Template
+	}
+	return record
 }
 
 // cycleOwner reports whether start sorts first in the cycle. Reporting only
@@ -821,12 +1013,80 @@ func (r *Result) originFieldSymbol(t types.Type, name string) *Symbol {
 	if !ok || info.Owner == nil {
 		return nil
 	}
+	owner := info.Owner
+	if owner.Template != nil {
+		owner = owner.Template
+	}
 	canonical := CanonicalName(name)
-	for _, field := range info.Owner.Fields {
+	for _, field := range owner.Fields {
 		if field == nil || CanonicalName(field.Name) != canonical {
 			continue
 		}
 		return r.classFieldSymbols[field]
 	}
 	return nil
+}
+
+var luaOperatorNames = map[string]bool{
+	"add": true, "sub": true, "mul": true, "div": true, "idiv": true,
+	"mod": true, "pow": true, "unm": true, "band": true, "bor": true,
+	"bxor": true, "bnot": true, "shl": true, "shr": true, "concat": true,
+	"len": true, "eq": true, "lt": true, "le": true, "call": true,
+	"rotl": true, "rotr": true,
+}
+
+func attachClassOperators(result *Result, class *Class, resolver TypeResolver, mode TypeCheckingMode) {
+	if result == nil || class == nil || class.Record == nil || len(class.Operators) == 0 {
+		return
+	}
+	for _, raw := range class.Operators {
+		name := strings.ToLower(strings.TrimSpace(raw.Name))
+		if !luaOperatorNames[name] {
+			result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("unknown operator %q", raw.Name), raw.Span, SeverityWarning)
+			continue
+		}
+		if strings.TrimSpace(raw.Result) == "" {
+			result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("operator %q is missing a result type", name), raw.Span, SeverityWarning)
+			continue
+		}
+		if name == "call" {
+			text := "fun(" + raw.Operand + "): " + raw.Result
+			parsed, err := parseType(text, resolver)
+			if err != nil {
+				result.addTypeParseError(mode, err, raw.Span, "call operator")
+				continue
+			}
+			fn, ok := types.AsFunction(parsed)
+			if !ok {
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "call operator must be a function signature", raw.Span, SeverityWarning)
+				continue
+			}
+			for i := range fn.Params {
+				fn.Params[i].Explicit = true
+			}
+			if class.Record.Operators == nil {
+				class.Record.Operators = make(map[string]*types.Operator)
+			}
+			class.Record.Operators[name] = &types.Operator{Name: name, Call: fn}
+			continue
+		}
+		resultType, err := parseType(raw.Result, resolver)
+		if err != nil {
+			result.addTypeParseError(mode, err, raw.Span, fmt.Sprintf("operator %q result", name))
+			continue
+		}
+		var operandType types.Type
+		if strings.TrimSpace(raw.Operand) != "" {
+			parsedOperand, err := parseType(raw.Operand, resolver)
+			if err != nil {
+				result.addTypeParseError(mode, err, raw.Span, fmt.Sprintf("operator %q operand", name))
+				continue
+			}
+			operandType = parsedOperand
+		}
+		if class.Record.Operators == nil {
+			class.Record.Operators = make(map[string]*types.Operator)
+		}
+		class.Record.Operators[name] = &types.Operator{Name: name, Operand: operandType, Result: resultType}
+	}
 }

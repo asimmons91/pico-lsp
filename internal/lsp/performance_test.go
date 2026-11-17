@@ -57,7 +57,7 @@ func TestPerformanceTargets(t *testing.T) {
 	}
 
 	measure := func(name string, target time.Duration, fn func()) time.Duration {
-		const iterations = 10
+		const iterations = 25
 		samples := make([]time.Duration, 0, iterations)
 		for i := 0; i < iterations; i++ {
 			start := time.Now()

@@ -1,6 +1,6 @@
 # M10 — Type System II: Generics, Overloads, Operators, Unions
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** M9  
 **Release target:** v1.1.0 (batched with M7–M9)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -127,16 +127,58 @@ local function identity(x) end
 
 ## Exit criteria
 
-- [ ] `---@generic` functions and classes instantiate and infer correctly.
-- [ ] `---@overload` drives signature help and best-match checking with safe
+- [x] `---@generic` functions and classes instantiate and infer correctly.
+- [x] `---@overload` drives signature help and best-match checking with safe
       fallback.
-- [ ] Operator annotations check explicit operator use and appear in hover.
-- [ ] Tagged-union narrowing works with no scope leaks.
-- [ ] Type display is readable and truncated deterministically.
-- [ ] New diagnostics are documented, configurable where appropriate, and
+- [x] Operator annotations check explicit operator use and appear in hover.
+- [x] Tagged-union narrowing works with no scope leaks.
+- [x] Type display is readable and truncated deterministically.
+- [x] New diagnostics are documented, configurable where appropriate, and
       corpus-validated.
-- [ ] Existing M9/default behavior and performance budgets do not regress.
-- [ ] Tests, docs, and migration notes are updated.
+- [x] Existing M9/default behavior and performance budgets do not regress.
+- [x] Tests, docs, and migration notes are updated.
+
+## Implementation notes
+
+- Generic parameters are scoped `*types.GenericParam` nodes. Class parameters
+  live on the class record; function parameters live on the function type. The
+  annotation parser resolves names through a declaration-local resolver, so
+  names from a class or function cannot leak into global type completion.
+- Generic classes are instantiated as specialized record copies with
+  substituted fields, parents, and operators. Nested instantiations
+  (`Box<Box<number>>`), generic parent classes, and trailing defaults are
+  supported. The template record remains the named type for `---@type Box`.
+- Generic functions bind parameters from argument types at each call and
+  substitute parameter and return types. Unbound parameters use their declared
+  default and then `any`. Recursive or ambiguous bindings are bounded and do not
+  produce diagnostics.
+- Overloads are stored beside the primary signature. Candidate selection scores
+  arity and assignability, prefers exact matches, and returns `any` without a
+  diagnostic when candidates tie or none fit. Signature help exposes every
+  candidate and chooses the active signature from the recorded argument types;
+  clients can cycle the list.
+- Operator annotations accept the standard LuaCATS names plus `rotl`/`rotr` for
+  PICO-8 rotations. Binary, unary, comparison, and `call` operators substitute
+  generic parameters, inherit through class parents, and appear in class hover.
+  Operand mismatches use the `operator-type-mismatch` hint and are suppressible.
+- Tagged-union narrowing matches a dot field against string or number literals
+  in `==`/`~=`/`!=` conditions and composes with `and`, `or`, early returns, and
+  loop conditions. Narrowing is dropped after a field assignment to the same
+  receiver. Unrelated or non-literal tags are not narrowed.
+- User-defined type guards are deferred: no established LuaCATS/PICO-8 syntax
+  can be adopted without introducing a project-specific dialect.
+- `TestM10AnnotatedInferencePerformance` covers generic, overload, operator, and
+  tagged-union constructs in a separate 64 KB annotated timing cart.
+
+## Migration notes
+
+- No configuration changes are required. Existing carts keep their current
+  behavior; generics, overloads, and operators only affect explicitly
+  annotated code.
+- `---@generic`, `---@overload`, and `---@operator` are no longer ignored.
+  Malformed declarations now report `annotation-invalid`.
+- `operator-type-mismatch` is a hint and can be suppressed with
+  `---@diagnostic` like other type diagnostics.
 
 ## Risks and mitigations
 

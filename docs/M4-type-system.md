@@ -91,7 +91,12 @@ if (btn(0)) move(player, -1, 0)
 
 Parse and ignore without errors, but do not implement semantics in v1:
 
-`@generic`, `@overload`, `@operator`, `@module`, `@package`, `@private`, `@protected`, `@public`, `@version`, `@async`, `@nodiscard`, `@see`, `@source`, `@vararg`.
+`@generic`, `@overload`, `@operator`, `@module`, `@package`, `@private`,
+`@protected`, `@public`, `@version`, `@async`, `@nodiscard`, `@see`,
+`@source`, `@vararg`.
+
+`@generic`, `@overload`, and `@operator` were deferred in M4 and are implemented
+by [M10](M10-type-system-2.md).
 
 Unknown annotations produce an `annotation-invalid` hint, not a hard error.
 
