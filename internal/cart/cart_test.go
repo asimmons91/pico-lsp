@@ -3,6 +3,7 @@ package cart
 import (
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -777,5 +778,20 @@ func TestIncludeOversizedIsRejectedBeforeReading(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("diagnostics = %+v", snap.Cart.Diagnostics)
+	}
+}
+
+func TestDiskProviderReadLimit(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "large.lua")
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", 100)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data, err := (DiskProvider{}).ReadLimit(uri.File(path), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(data) != 11 {
+		t.Fatalf("read %d bytes, want max+1 = 11", len(data))
 	}
 }

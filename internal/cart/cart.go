@@ -4,6 +4,7 @@ package cart
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,11 +138,19 @@ type SizeProvider interface {
 	Size(uri.URI) (int64, error)
 }
 
+// LimitedReader optionally reads at most max+1 bytes. Returning the extra byte
+// lets the loader distinguish exactly-at-limit input from oversized input
+// without allocating the whole file.
+type LimitedReader interface {
+	ReadLimit(uri.URI, int) ([]byte, error)
+}
+
 // ProviderFuncs adapts functions into a Provider.
 type ProviderFuncs struct {
-	ReadFunc func(uri.URI) ([]byte, error)
-	ListFunc func(uri.URI) ([]uri.URI, error)
-	SizeFunc func(uri.URI) (int64, error)
+	ReadFunc      func(uri.URI) ([]byte, error)
+	ListFunc      func(uri.URI) ([]uri.URI, error)
+	SizeFunc      func(uri.URI) (int64, error)
+	ReadLimitFunc func(uri.URI, int) ([]byte, error)
 }
 
 func (p ProviderFuncs) Read(u uri.URI) ([]byte, error) {
@@ -163,6 +172,20 @@ func (p ProviderFuncs) Size(u uri.URI) (int64, error) {
 		return 0, fmt.Errorf("cart: no size provider")
 	}
 	return p.SizeFunc(u)
+}
+
+func (p ProviderFuncs) ReadLimit(u uri.URI, max int) ([]byte, error) {
+	if p.ReadLimitFunc != nil {
+		return p.ReadLimitFunc(u, max)
+	}
+	data, err := p.Read(u)
+	if err != nil {
+		return nil, err
+	}
+	if max >= 0 && len(data) > max+1 {
+		data = data[:max+1]
+	}
+	return data, nil
 }
 
 // DiskProvider reads files and directories from the local filesystem.
@@ -188,6 +211,25 @@ func (DiskProvider) Size(u uri.URI) (int64, error) {
 		return 0, fmt.Errorf("not a regular file")
 	}
 	return info.Size(), nil
+}
+
+func (DiskProvider) ReadLimit(u uri.URI, max int) ([]byte, error) {
+	file, err := os.Open(u.FsPath())
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("not a regular file")
+	}
+	if max < 0 {
+		max = 0
+	}
+	return io.ReadAll(io.LimitReader(file, int64(max)+1))
 }
 
 func (DiskProvider) List(u uri.URI) ([]uri.URI, error) {
@@ -258,6 +300,20 @@ func (c *Cart) FileID(u uri.URI) source.FileID {
 
 // Span maps a flattened byte range to an original file. Ranges that cross a
 // segment boundary are clamped to the segment containing the start.
+func (l *Loader) readFile(u uri.URI, max int) ([]byte, error) {
+	if lr, ok := l.Provider.(LimitedReader); ok {
+		return lr.ReadLimit(u, max)
+	}
+	data, err := l.Provider.Read(u)
+	if err != nil {
+		return nil, err
+	}
+	if max >= 0 && len(data) > max+1 {
+		data = data[:max+1]
+	}
+	return data, nil
+}
+
 // sizeOf returns a known file size when the provider supports it.
 func (l *Loader) sizeOf(u uri.URI) (int64, bool) {
 	sp, ok := l.Provider.(SizeProvider)

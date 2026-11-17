@@ -67,9 +67,10 @@ func (m *CartManager) SetEncoding(encoding protocol.PositionEncodingKind) {
 
 func (m *CartManager) provider() cart.Provider {
 	return cart.ProviderFuncs{
-		ReadFunc: m.readFile,
-		ListFunc: m.listDir,
-		SizeFunc: m.fileSize,
+		ReadFunc:      m.readFile,
+		ListFunc:      m.listDir,
+		SizeFunc:      m.fileSize,
+		ReadLimitFunc: m.readFileLimit,
 	}
 }
 
@@ -85,6 +86,17 @@ func (m *CartManager) readFile(u uri.URI) ([]byte, error) {
 		return []byte(text), nil
 	}
 	return cart.DiskProvider{}.Read(u)
+}
+
+func (m *CartManager) readFileLimit(u uri.URI, max int) ([]byte, error) {
+	if text, ok := m.docs.Text(u); ok {
+		data := []byte(text)
+		if max >= 0 && len(data) > max+1 {
+			data = data[:max+1]
+		}
+		return data, nil
+	}
+	return cart.DiskProvider{}.ReadLimit(u, max)
 }
 
 func (m *CartManager) listDir(u uri.URI) ([]uri.URI, error) {

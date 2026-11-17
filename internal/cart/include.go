@@ -379,7 +379,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 		return false
 	}
 
-	data, readErr := f.loader.Provider.Read(resolved)
+	data, readErr := f.loader.readFile(resolved, max)
 	if readErr != nil {
 		record := Include{Path: path, ResolvedURI: resolved, DirectiveSpan: span}
 		if errors.Is(readErr, os.ErrNotExist) {

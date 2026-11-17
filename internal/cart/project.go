@@ -89,8 +89,9 @@ func (r *Resolver) cartIncludes(cartURI, target uri.URI) bool {
 	if size, ok := r.loader.sizeOf(cartURI); ok && size > int64(r.loader.maxSize()) {
 		return false
 	}
-	data, err := r.loader.Provider.Read(cartURI)
-	if err != nil {
+	max := r.loader.maxSize()
+	data, err := r.loader.readFile(cartURI, max)
+	if err != nil || len(data) > max {
 		return false
 	}
 	text := string(data)

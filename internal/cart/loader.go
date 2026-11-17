@@ -23,7 +23,7 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 		return l.emptySnapshot(rootURI, "", fmt.Sprintf("cart is larger than the supported size (%d bytes)", l.maxSize())), nil
 	}
 
-	data, err := l.Provider.Read(rootURI)
+	data, err := l.readFile(rootURI, l.maxSize())
 	if err != nil {
 		return nil, fmt.Errorf("cart: read %s: %w", rootURI.String(), err)
 	}
