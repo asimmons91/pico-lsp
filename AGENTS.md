@@ -56,9 +56,12 @@
 - Use imperative, lowercase descriptions with no trailing period. Mark breaking changes
   with `!` and/or a `BREAKING CHANGE:` footer.
 - Push the branch and open a PR; do not bypass the `Protect main` ruleset.
-- After opening the PR, run the `/review` skill against it. Address the review
-  findings, commit the fixes, and push them to the same branch/PR; do not open a
-  separate PR for review fixes.
+- After opening the PR, run the `code-review` skill against it (the `/review`
+  workflow where available). Review locally unless the user asks for posted
+  comments. Address the findings, commit the fixes, and push them to the same
+  branch/PR; do not open a separate PR for review fixes.
+- If the review is incomplete or fails, re-run it or report the gap; never treat
+  missing coverage as a clean review.
 
 ## Commands
 
