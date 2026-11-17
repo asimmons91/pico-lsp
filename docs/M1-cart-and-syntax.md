@@ -103,11 +103,11 @@ PICO-8 pastes included file contents in place of the `#include` line. Includes a
 Algorithm:
 
 1. Read the root cart text from the open-document overlay if available, otherwise from disk.
-2. Find `#include` directives at the start of a line (after optional whitespace), outside long strings/comments. Match the directive case-sensitively as `#include`; PICO-8 source is lowercase. Trim whitespace; treat the rest of the line as the path. Support optional surrounding quotes for editor ergonomics.
-3. Resolve the path relative to the cart's directory. Accept `/` and `\` separators. Reject NUL bytes and paths that escape the workspace root only if a configured security boundary exists; v1 permits `..` within the workspace.
-4. Read the included file from its overlay if open, otherwise from disk. Cap file size (for example, 1 MB) and report `include-unreadable` for binary/oversized files.
-5. Append the file contents to the flattened buffer with a trailing newline if missing.
-6. Record an `Include{Path, ResolvedURI, DirectiveSpan, FileSpan, Missing, Nested}` for editor features.
+2. Find `#include` directives at the start of a line (after optional whitespace), outside long strings/comments and continued short strings. Match the directive case-sensitively as `#include`; PICO-8 source is lowercase. Trim whitespace; treat the rest of the line as the path. Support optional surrounding quotes for editor ergonomics.
+3. Resolve the path relative to the cart's directory. Accept `/` and `\` separators. A target may be a `.lua` file, a `.p8` cart (all tabs), or a `.p8` cart with a `:<hex>` suffix selecting a zero-based tab, matching PICO-8. Reject NUL bytes; `..` is permitted.
+4. Read the included file from its overlay if open, otherwise from disk. Reject non-regular files, cap one file at 1 MB, cap the assembled program at 1 MB, and cap a cart at 512 includes. Report `include-unreadable` for binary, oversized, or over-limit input.
+5. Replace the directive text with the included code and preserve the directive line's terminator when another code line follows. A leading UTF-8 BOM in an included `.lua` file is ignored for analysis but retained in the original file text so positions still map to the client's bytes.
+6. Record an `Include{Path, ResolvedURI, DirectiveSpan, FileSpan, Missing, Nested}` for editor features. For `.p8` includes, `FileSpan` covers the selected tab's code.
 7. Do **not** recursively process `#include` lines inside the included file. If one is found, leave it in the flattened text and emit `include-nested` on the included file's directive line. The parser may then report a syntax error; that is faithful to PICO-8.
 8. Missing files produce `include-missing` at the directive and contribute no text. Keep analyzing the rest of the cart.
 9. Duplicate includes are pasted each time, matching PICO-8. Do not silently deduplicate.
@@ -148,6 +148,7 @@ Requirements:
 - Every token and AST node gets a span `{FileID, Start, End}` in original-file byte offsets.
 - Tokens never expose flattened offsets to features. Mapping happens once in the lexer.
 - Files that are included twice may appear multiple times in `Segments`; spans are still valid per file. Duplicate definitions are a semantic concern for M2.
+- A synthetic newline inserted after an include has no source-map segment; it maps to a zero-width position at the end of the preceding segment.
 - Include directive spans point at the root/included file line that contained the directive.
 - Reflatten and reparse the whole cart whenever any member file changes. This is cheap within PICO-8 limits.
 
@@ -192,7 +193,7 @@ Cross-check at least 20 carts against PICO-8's `info()` or `shrinko8 --count`. S
 
 - Produce tokens with kind, original text, value, and original-file span.
 - Preserve all comments and doc comments separately, in source order. The parser uses them for doc comments; M4 uses them for LuaCATS.
-- Token kinds include: identifiers, keywords, numbers, strings, operators, punctuation, comments, `#include` placeholder, `-->8`, and EOF.
+- Token kinds include: identifiers, keywords, numbers, strings, operators, punctuation, comments, `#include` placeholder, and EOF. A `-->8` tab marker is preserved as a tab comment and cart metadata, not as a parser token, so it never causes a syntax error.
 - Distinguish `%` unary peek from `%` binary modulo by parser context, not lexer guessing.
 - Handle `...`, `..`, `.`, `..=`, `::`, `!=`, `~=`, `^^`, `<<>`, `>><`, `>>>`, and all compound assignment forms with maximal munch.
 - Reject invalid bytes with a diagnostic, not a panic. Preserve offsets.
@@ -248,7 +249,7 @@ Use PICO-8's precedence, not Lua 5.3/5.4's:
 - Cap errors at 100 per parse; add a final “too many errors” diagnostic.
 - Synchronize at statement starts and block terminators:
   `local`, `function`, `if`, `for`, `while`, `repeat`, `return`, `break`, `goto`, `?`,
-  `end`, `else`, `elseif`, `until`, `#include`, `-->8`, EOF.
+  `end`, `else`, `elseif`, `until`, `#include`, EOF.
 - Guarantee forward progress: every recovery loop consumes at least one token.
 - On missing `end`/`until`/`)`, report at the last token and close the block implicitly so later code is still analyzed.
 - Truncated input at any byte offset must produce a bounded number of diagnostics without panic or hang.
@@ -363,7 +364,7 @@ parser → AST + comments + parse errors
 - Tab boundaries and synthesis of tab names.
 - Include flattening: simple, nested (warning), missing, duplicate, quoted path, Windows separators, file with no trailing newline, include inside a long string/comment (must not be treated as a directive).
 - Source map: every token span maps to the correct file/offset; include directive spans.
-- Token counting: one test per rule above plus 20 real-cart fixtures.
+- Token counting: one test per rule above plus 50+ real-cart fixtures, including an include-bearing cart.
 - Lexer: one test per dialect construct, plus invalid bytes.
 - Parser: expressions/precedence, statements, methods, table constructors, labels/goto, shorthand rules.
 - Error recovery: truncated valid programs at every byte offset; missing `end`; stray `else`; `@x = 1`.
@@ -396,7 +397,7 @@ parser → AST + comments + parse errors
 - [x] Parser handles all expression/statement forms and recovers from truncated input.
 - [x] Syntax diagnostics point at the correct file and range.
 - [x] Document symbols work in Neovim and Helix. Folding ranges are advertised and verified in Neovim; Helix 25.07 has no folding UI or LSP folding consumer.
-- [x] Token and character counts match shrinko8 for the 50-cart fixture set.
+- [x] Token and character counts match shrinko8 for the 51-cart fixture set, including an include-bearing cart.
 - [x] 50+ real carts parse without panic, hang, or syntax diagnostics.
 - [x] `go test -race ./...` passes.
 

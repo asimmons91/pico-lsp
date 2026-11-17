@@ -79,5 +79,7 @@ The golden token and character counts in `../tokens/` were generated with
 python3 shrinko8.py path/to/cart.p8 --count
 ```
 
-Only carts without `#include` are used for shrinko8 count fixtures, because the
-assembled-cart counter intentionally flattens includes before counting.
+The golden set includes `jesstelford__pecs/example/particles.p8`. shrinko8
+expands includes recursively, while the server follows PICO-8's non-recursive
+rule; that cart has no nested includes, so both tools count the same assembled
+program.
