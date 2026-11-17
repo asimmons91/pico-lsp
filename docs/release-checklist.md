@@ -1,7 +1,7 @@
 # Release checklist
 
-This checklist covers the v1 GitHub-only release process. Homebrew and Mason
-publishing are deferred to post-v1.
+This checklist covers the v1.x GitHub-only release process. Homebrew and Mason
+publishing are deferred to post-v1. The current release is **v1.1.0**.
 
 ## Pre-release
 
@@ -20,13 +20,15 @@ publishing are deferred to post-v1.
       accurate.
 - [x] Known limitations are documented: formatter, `.p8.png`, VS Code/Zed,
       Homebrew/Mason deferral, unsigned binaries.
-- [x] `CHANGELOG.md` has a dated `1.0.0` section.
+- [x] `CHANGELOG.md` has a dated `1.1.0` section.
 - [x] `LICENSE` and the PICO-8 trademark disclaimer are present.
 - [x] The test cart `testdata/smoke.p8` opens and attaches in Neovim.
 - [x] The optional Neovim helper attaches included `.lua` buffers and ignores
       unrelated Lua buffers.
 - [x] Helix opens `testdata/smoke.p8` and attaches; run the manual feature matrix
-      before publishing if Helix behavior changed.
+      before publishing if Helix behavior changed. The v1.1.0 release re-ran the
+      automated and Neovim checks; the manual Helix matrix was last run for v1.0.0
+      and Helix integration was unchanged.
 - [x] No stdout writes occur outside LSP framing.
 - [x] No telemetry or network calls are added.
 
@@ -37,8 +39,8 @@ publishing are deferred to post-v1.
 - [x] Create the annotated tag:
 
   ```sh
-  git tag -a v1.0.0 -m "pico-lsp v1.0.0"
-  git push origin v1.0.0
+  git tag -a v1.1.0 -m "pico-lsp v1.1.0"
+  git push origin v1.1.0
   ```
 
 - [x] Watch the `Release` workflow complete.
@@ -51,7 +53,7 @@ publishing are deferred to post-v1.
 
 ## Post-release
 
-- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.0.0`
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.1.0`
       builds for a developer.
 - [x] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, formatter, `.p8.png`,

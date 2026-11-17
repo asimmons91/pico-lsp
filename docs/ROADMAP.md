@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.0.0 released  
+**Status:** v1.1.0 released  
 **Last updated:** 2026-11-17  
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
