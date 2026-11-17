@@ -167,3 +167,14 @@ func TestM10GenericDisplayTruncates(t *testing.T) {
 		t.Fatalf("deep generic display too long: %d bytes", len(got))
 	}
 }
+
+func TestM10RecursiveGenericRecord(t *testing.T) {
+	node := genericRecord("Node", &GenericParam{ID: 1, Name: "T"})
+	node.AddField(&Field{Name: "value", Type: node.TypeParams[0]})
+	node.AddField(&Field{Name: "next", Type: node})
+	applied := Instantiate(node, []Type{NumberType})
+	next, ok, _ := LookupField(applied, "next")
+	if !ok || Display(next) != "Node<number>" {
+		t.Fatalf("recursive generic field = %s", Display(next))
+	}
+}
