@@ -47,7 +47,10 @@ func TestM9AnnotatedInferencePerformance(t *testing.T) {
 		{mode: TypeCheckingBasic, target: 10 * time.Millisecond},
 		{mode: TypeCheckingStrict, target: 20 * time.Millisecond},
 	} {
-		const iterations = 15
+		const iterations = 30
+		// Warm caches and allocator state before sampling; CI runners can
+		// briefly throttle the first batch of work.
+		_ = Analyze(snap, builtins, Options{UndefinedGlobal: SeverityWarning, TypeChecking: tc.mode})
 		samples := make([]time.Duration, 0, iterations)
 		for i := 0; i < iterations; i++ {
 			start := time.Now()
