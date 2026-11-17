@@ -48,7 +48,7 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 		result:      result,
 		table:       table,
 		opts:        opts,
-		labels:      []*labelScope{{labels: chunkScope.Labels}},
+		labels:      []*labelScope{{labels: chunkScope.Labels, function: chunkScope}},
 		selfAliases: make(map[*Symbol]*Symbol),
 	}
 	b.collectLabels(snap.Chunk.Block, chunkScope)
@@ -282,7 +282,8 @@ func (p *prebinder) preExpr(expr syntax.Expr, scope *preScope) {
 // Binding pass.
 
 type labelScope struct {
-	labels map[string]*Symbol
+	labels   map[string]*Symbol
+	function *Scope
 }
 
 type binder struct {
@@ -521,7 +522,7 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 		b.addDecl(param, sym, fnScope)
 	}
 
-	labels := &labelScope{labels: fnScope.Labels}
+	labels := &labelScope{labels: fnScope.Labels, function: fnScope}
 	b.labels = append(b.labels, labels)
 	b.collectLabels(fn.Body, fnScope)
 	b.bindBlock(fn.Body, NewScope(fnScope))
@@ -534,11 +535,19 @@ func (b *binder) bindGoto(st *syntax.GotoStmt, scope *Scope) {
 		return
 	}
 	sym := labels.labels[CanonicalName(st.Name.Text)]
+	occ := Occurrence{
+		Span:       st.Name.Span(),
+		Text:       st.Name.Text,
+		Scope:      scope,
+		LabelScope: labels.function,
+	}
 	if sym == nil {
+		b.result.addOccurrence(occ)
 		b.addDiagnostic(CodeUnknownLabel, fmt.Sprintf("unknown label %q", st.Name.Text), st.Name.Span(), SeverityWarning)
 		return
 	}
-	b.addUse(st.Name, sym, scope, false)
+	occ.Symbol = sym
+	b.result.addOccurrence(occ)
 }
 
 func (b *binder) currentLabels() *labelScope {
@@ -701,7 +710,7 @@ func (b *binder) bindTable(table *syntax.TableExpr, receiver *Symbol, scope *Sco
 		return
 	}
 	for _, field := range table.Fields {
-		fieldSym := receiver
+		var fieldSym *Symbol
 		if !field.BracketKey {
 			if key, ok := field.Key.(*syntax.NameExpr); ok {
 				if receiver != nil {
@@ -714,13 +723,11 @@ func (b *binder) bindTable(table *syntax.TableExpr, receiver *Symbol, scope *Sco
 			if receiver != nil && !receiver.Builtin {
 				receiver.DynamicFields = true
 			}
-			fieldSym = nil
 		} else {
 			if receiver != nil && !receiver.Builtin {
 				receiver.DynamicFields = true
 			}
 			b.bindExpr(field.Key, scope)
-			fieldSym = nil
 		}
 
 		if nested, ok := field.Value.(*syntax.TableExpr); ok && fieldSym != nil {

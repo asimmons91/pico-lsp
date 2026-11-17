@@ -99,6 +99,11 @@ type Occurrence struct {
 	Scope  *Scope
 	Write  bool
 	Decl   bool
+
+	// LabelScope identifies a goto occurrence and the function whose labels it
+	// targets. Labels are function-scoped, so this is not necessarily Scope or
+	// one of its ancestors.
+	LabelScope *Scope
 }
 
 // SymbolTable is the cart's symbol store.
@@ -317,6 +322,18 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 			if other := sym.Scope.Labels[newCanonical]; other != nil && other != sym {
 				return other
 			}
+		}
+		for i := range r.occs {
+			occ := &r.occs[i]
+			if occ.Symbol != nil || occ.LabelScope == nil || occ.LabelScope != sym.Scope {
+				continue
+			}
+			if CanonicalName(occ.Text) != newCanonical {
+				continue
+			}
+			// An unresolved goto with the new name would start targeting this
+			// renamed label.
+			return &Symbol{Name: occ.Text, Canonical: newCanonical}
 		}
 		return nil
 	}

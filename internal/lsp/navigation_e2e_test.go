@@ -605,8 +605,8 @@ func TestEndToEndWorkspaceSymbols(t *testing.T) {
 	cancelled, cancelRequest := context.WithCancel(context.Background())
 	cancelRequest()
 	_, err = h.srv.Symbols(cancelled, &protocol.WorkspaceSymbolParams{Query: ""})
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("cancelled workspace symbols error = %v, want context.Canceled", err)
+	if !errors.Is(err, protocol.ErrRequestCancelled) {
+		t.Fatalf("cancelled workspace symbols error = %v, want ErrRequestCancelled", err)
 	}
 
 	h.exit(t, true)

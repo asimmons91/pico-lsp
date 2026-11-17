@@ -329,6 +329,38 @@ func TestFunctionDeclarationUpdatesVisibleLocal(t *testing.T) {
 	}
 }
 
+func TestArrayTableFieldsDoNotLeakToOuterReceiver(t *testing.T) {
+	text := "t = {{x = 1}, {y = 2}}\nprint(t)\n"
+	result, _ := analyzeText(t, text)
+	tSym := result.Table.Globals["t"]
+	if tSym == nil {
+		t.Fatal("missing t")
+	}
+	if len(tSym.Fields) != 0 {
+		t.Fatalf("outer fields = %v, want none from array elements", fieldNames(tSym))
+	}
+}
+
+func TestArrayTableFieldsDoNotMergeWithOuterField(t *testing.T) {
+	text := "t = {x = 1, {x = 2}}\n"
+	result, _ := analyzeText(t, text)
+	tSym := result.Table.Globals["t"]
+	if tSym == nil || tSym.Fields["x"] == nil {
+		t.Fatal("missing outer field x")
+	}
+	if got := len(tSym.Fields["x"].Decls); got != 1 {
+		t.Fatalf("outer field x has %d declarations, want only the named field", got)
+	}
+}
+
+func TestArrayTableValuesStillBindExpressions(t *testing.T) {
+	text := "t = {{x = missing}}\n"
+	result, _ := analyzeText(t, text)
+	if len(diagnosticsWithCode(result, CodeUndefinedGlobal)) != 1 {
+		t.Fatalf("diagnostics = %+v, want undefined-global for missing", result.Diagnostics)
+	}
+}
+
 func TestFieldOnUnknownReceiverIsNotInvented(t *testing.T) {
 	text := "foo.x = 1\n"
 	result, _ := analyzeText(t, text)
@@ -420,6 +452,30 @@ func TestRenameConflictBuiltinUse(t *testing.T) {
 	x := result.OccurrenceAt(0, strings.Index(text, "x = 1")).Symbol
 	if conflict := result.RenameConflict(x, "print"); conflict == nil {
 		t.Fatal("x -> print should conflict with the built-in use")
+	}
+}
+
+func TestRenameConflictLabelCapturesUnknownGoto(t *testing.T) {
+	text := "::old::\ngoto new\n"
+	result, _ := analyzeText(t, text)
+	label := result.OccurrenceAt(0, strings.Index(text, "old")).Symbol
+	if label == nil {
+		t.Fatal("missing label old")
+	}
+	if conflict := result.RenameConflict(label, "new"); conflict == nil {
+		t.Fatal("label old -> new should conflict with unresolved goto new")
+	}
+}
+
+func TestRenameConflictLabelIgnoresNestedFunctionGoto(t *testing.T) {
+	text := "::old::\nfunction f() goto new end\n"
+	result, _ := analyzeText(t, text)
+	label := result.OccurrenceAt(0, strings.Index(text, "old")).Symbol
+	if label == nil {
+		t.Fatal("missing label old")
+	}
+	if conflict := result.RenameConflict(label, "new"); conflict != nil {
+		t.Fatalf("label old -> new conflict = %+v, want none across function scope", conflict)
 	}
 }
 

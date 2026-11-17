@@ -3,13 +3,109 @@ package lsp
 import (
 	"context"
 	"errors"
+	"net"
 	"testing"
+	"time"
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
 
 	"github.com/asimmons91/pico-lsp/internal/config"
 )
+
+func TestDispatchCancelsAsyncRequest(t *testing.T) {
+	s := New(quietLogger(), config.New(quietLogger()))
+	if _, err := s.Initialize(context.Background(), &protocol.InitializeParams{}); err != nil {
+		t.Fatalf("Initialize: %v", err)
+	}
+
+	serverPipe, clientPipe := net.Pipe()
+	serverCtx, cancelServer := context.WithCancel(context.Background())
+	defer cancelServer()
+
+	started := make(chan struct{})
+	handlerErr := make(chan error, 1)
+	next := func(ctx context.Context, req *jsonrpc2.Request) (any, error) {
+		if req.Method() != protocol.MethodWorkspaceSymbol {
+			return nil, jsonrpc2.ErrMethodNotFound
+		}
+		// Match a long-running handler that releases the read loop.
+		jsonrpc2.Async(ctx)
+		close(started)
+		<-ctx.Done()
+		handlerErr <- ctx.Err()
+		return nil, protocol.ErrRequestCancelled
+	}
+	serverConn := jsonrpc2.NewConn(jsonrpc2.NewStream(serverPipe))
+	serverConn.Go(serverCtx, s.dispatch(next))
+	defer serverConn.Close()
+
+	clientCtx, cancelClient := context.WithCancel(context.Background())
+	defer cancelClient()
+	_, clientConn, clientServer := protocol.NewClient(clientCtx, newTestClient(), jsonrpc2.NewStream(clientPipe))
+	defer clientConn.Close()
+
+	callCtx, cancelCall := context.WithCancel(context.Background())
+	callErr := make(chan error, 1)
+	go func() {
+		_, err := clientServer.Symbols(callCtx, &protocol.WorkspaceSymbolParams{Query: ""})
+		callErr <- err
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("workspace symbol request did not start")
+	}
+	cancelCall()
+
+	select {
+	case err := <-handlerErr:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("handler context error = %v, want context.Canceled", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("workspace symbol handler was not canceled")
+	}
+	select {
+	case err := <-callErr:
+		if err == nil {
+			t.Fatal("workspace symbol call succeeded after cancellation")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("workspace symbol call did not return")
+	}
+}
+
+func TestHandleCancelCancelsRegisteredRequest(t *testing.T) {
+	s := New(quietLogger(), config.New(quietLogger()))
+
+	for _, tc := range []struct {
+		name   string
+		id     jsonrpc2.ID
+		params string
+	}{
+		{name: "numeric id", id: jsonrpc2.NewNumberID(42), params: `{"id":42}`},
+		{name: "string id", id: jsonrpc2.NewStringID("abc"), params: `{"id":"abc"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			s.registerCancel(tc.id, cancel)
+			s.handleCancel(jsonrpc2.RawMessage(tc.params))
+			if !errors.Is(ctx.Err(), context.Canceled) {
+				t.Fatalf("context error = %v, want context.Canceled", ctx.Err())
+			}
+			s.unregisterCancel(tc.id)
+		})
+	}
+}
+
+func TestHandleCancelIgnoresUnknownAndMalformed(t *testing.T) {
+	s := New(quietLogger(), config.New(quietLogger()))
+	s.handleCancel(jsonrpc2.RawMessage(`{"id":99}`))
+	s.handleCancel(jsonrpc2.RawMessage(`{`))
+	s.handleCancel(jsonrpc2.RawMessage(`{"id":{}}`))
+}
 
 func TestRecoverPanicRequest(t *testing.T) {
 	s := New(quietLogger(), config.New(quietLogger()))

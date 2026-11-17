@@ -333,7 +333,9 @@ Resolved during implementation:
   copied from `pico8-ls`.
 - Workspace symbols scan the client's workspace folders lazily. When no folders
   are configured, they fall back to the carts behind open documents. The scan is
-  capped at 500 results, 2000 files, and a 5 second budget.
+  capped at 500 results, 2000 files, and a 5 second budget. The scan releases
+  the JSON-RPC read loop and honors `$/cancelRequest`, returning
+  `RequestCancelled` when interrupted.
 - A dot or method access that appears before its declaration creates a
   provisional field symbol. A later declaration merges with the earlier use, so
   rename does not miss forward references. Provisional fields have no
@@ -346,6 +348,8 @@ Resolved during implementation:
   declaration occurrence. Go-to-definition points at the method name; rename
   refuses it rather than editing a method name that is not a `self`
   declaration.
+- Label rename refuses when an unresolved `goto` with the new name exists in
+  the same function, since the renamed label would silently capture it.
 - Unresolved dynamic globals such as `_ENV`-created names and test-harness
   globals may still produce `undefined-global` warnings in the corpus. They are
   intentionally not hard-coded as built-ins.

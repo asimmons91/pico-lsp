@@ -99,6 +99,9 @@ type Server struct {
 	workspaceMu      sync.Mutex
 	workspaceFolders []uri.URI
 
+	cancelMu sync.Mutex
+	cancels  map[jsonrpc2.ID]context.CancelFunc
+
 	pullMu sync.Mutex
 
 	exitCode int
@@ -121,6 +124,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		encoding: protocol.PositionEncodingKindUTF16,
 		trace:    protocol.TraceValueOff,
 		exitDone: make(chan struct{}),
+		cancels:  make(map[jsonrpc2.ID]context.CancelFunc),
 	}
 	s.docs = NewDocumentStore(s.encoding, log)
 	s.diags = NewDiagnostics(
@@ -212,8 +216,60 @@ func (s *Server) ShuttingDown() bool {
 // Diagnostics exposes the publisher for tests and later milestones.
 func (s *Server) Diagnostics() *Diagnostics { return s.diags }
 
-// dispatch adds lifecycle checks, panic recovery, and request logging around
-// every protocol handler.
+// cancellableRequestContext preserves the jsonrpc2 request values (notably
+// the Async release token) while exposing the per-request cancellation channel.
+type cancellableRequestContext struct {
+	context.Context
+	values context.Context
+}
+
+func (c cancellableRequestContext) Value(key any) any {
+	return c.values.Value(key)
+}
+
+func (s *Server) registerCancel(id jsonrpc2.ID, cancel context.CancelFunc) {
+	s.cancelMu.Lock()
+	if s.cancels == nil {
+		s.cancels = make(map[jsonrpc2.ID]context.CancelFunc)
+	}
+	s.cancels[id] = cancel
+	s.cancelMu.Unlock()
+}
+
+func (s *Server) unregisterCancel(id jsonrpc2.ID) {
+	s.cancelMu.Lock()
+	delete(s.cancels, id)
+	s.cancelMu.Unlock()
+}
+
+func (s *Server) handleCancel(raw jsonrpc2.RawMessage) {
+	var params protocol.CancelParams
+	if err := protocol.Unmarshal(raw, &params); err != nil {
+		s.log.Debug("ignoring malformed cancellation request", "error", err)
+		return
+	}
+
+	var id jsonrpc2.ID
+	switch value := params.ID.(type) {
+	case protocol.Integer:
+		id = jsonrpc2.NewNumberID(int64(value))
+	case protocol.String:
+		id = jsonrpc2.NewStringID(string(value))
+	default:
+		s.log.Debug("ignoring cancellation request with invalid id")
+		return
+	}
+
+	s.cancelMu.Lock()
+	cancel := s.cancels[id]
+	s.cancelMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// dispatch adds lifecycle checks, panic recovery, cancellation, and request
+// logging around every protocol handler.
 func (s *Server) dispatch(next jsonrpc2.Handler) jsonrpc2.Handler {
 	return func(ctx context.Context, req *jsonrpc2.Request) (result any, err error) {
 		method := strings.Clone(req.Method())
@@ -246,6 +302,23 @@ func (s *Server) dispatch(next jsonrpc2.Handler) jsonrpc2.Handler {
 			}
 			s.log.Debug("ignoring unknown notification", "method", method)
 			return nil, nil
+		}
+
+		if method == protocol.MethodCancelRequest {
+			s.handleCancel(req.Params())
+			return nil, nil
+		}
+
+		if isCall {
+			id := req.ID()
+			parent := jsonrpc2.DetachContext(ctx)
+			if parent == nil {
+				parent = context.Background()
+			}
+			cancelCtx, cancel := context.WithCancel(parent)
+			s.registerCancel(id, cancel)
+			ctx = cancellableRequestContext{Context: cancelCtx, values: ctx}
+			defer s.unregisterCancel(id)
 		}
 
 		result, err = next(ctx, req)
@@ -489,14 +562,9 @@ func (s *Server) DidChangeConfiguration(ctx context.Context, params *protocol.Di
 	return nil
 }
 
-// Request handles non-standard methods. $/cancelRequest is accepted as a no-op
-// in M0; handlers are synchronous and short-lived, so there is nothing to
-// cancel yet.
+// Request handles non-standard methods. $/cancelRequest is handled by dispatch
+// before this method is reached.
 func (s *Server) Request(ctx context.Context, method string, params any) (any, error) {
-	if method == protocol.MethodCancelRequest {
-		s.log.Debug("ignoring cancellation request")
-		return nil, nil
-	}
 	return nil, errUnhandledMethod
 }
 

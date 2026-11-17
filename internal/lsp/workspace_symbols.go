@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
@@ -29,8 +30,12 @@ func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolPa
 		return protocol.SymbolInformationSlice{}, nil
 	}
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, protocol.ErrRequestCancelled
 	}
+	// The scan can take seconds. Release the read loop so cancellation
+	// notifications and edits can be processed while it runs.
+	jsonrpc2.Async(ctx)
+
 	query := analysis.CanonicalName(params.Query)
 	deadline := time.Now().Add(workspaceSymbolTimeout)
 
@@ -40,7 +45,7 @@ func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolPa
 	truncated := scanLimited
 	for _, root := range roots {
 		if err := ctx.Err(); err != nil {
-			return nil, err
+			return nil, protocol.ErrRequestCancelled
 		}
 		if len(results) >= maxWorkspaceSymbolResults {
 			truncated = true
@@ -92,7 +97,7 @@ func (s *Server) Symbols(ctx context.Context, params *protocol.WorkspaceSymbolPa
 		}
 	}
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, protocol.ErrRequestCancelled
 	}
 	if truncated {
 		s.log.Warn("workspace symbol results truncated",
