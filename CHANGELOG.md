@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-17
+
 ### Added
 
 - Type system II: generic classes and functions with defaults, overload
@@ -80,5 +82,6 @@ All notable changes to this project are documented here. The format follows
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.1.0
 [1.0.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.0.0

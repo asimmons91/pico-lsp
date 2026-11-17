@@ -16,7 +16,7 @@ The following backlog items have been promoted and split into milestone specs:
 - [M9 — Type System I](M9-type-system-1.md)
 - [M10 — Type System II](M10-type-system-2.md)
 
-M7–M10 ship together in v1.1.0. The items below are not part of that release.
+M7–M10 shipped in v1.1.0. The items below are post-1.1 work.
 
 ## Prioritization
 
