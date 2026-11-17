@@ -342,7 +342,7 @@ Implementation can special-case these names in the inference engine rather than 
 |---|---|
 | `off` | Parse annotations for docs/completion; no type diagnostics; no inference-based inlay hints. Explicit annotation types may still power hover/completion. |
 | `basic` (default) | Infer and check explicit annotations; report assign/param/return mismatches and annotation errors. No strict nil checks; undefined fields only on exact classes. |
-| `strict` | Adds `need-check-nil`, exact field checks, missing fields, and stricter unions. Still warnings, not errors. |
+| `strict` | Adds `need-check-nil` and missing-field checks for open records. Explicit `(exact)` classes already warn in `basic` (M9). |
 
 ### Type diagnostics
 
@@ -353,7 +353,7 @@ Implementation can special-case these names in the inference engine rather than 
 | `return-type-mismatch` | Warning | Warning | Return vs annotated return. |
 | `undefined-field` | Off (open records) / warning (exact) | Warning | Exact classes or strict. |
 | `need-check-nil` | Off | Warning | Using `T?` where `T` is required. |
-| `missing-fields` | Off | Warning | Table literal assigned to an exact class. |
+| `missing-fields` | Warning (explicit exact classes) | Warning | Table literal missing required fields. M9 extends this to explicit `(exact)` classes in `basic`. |
 | `deprecated` | Hint | Hint | Use of `---@deprecated`. |
 | `annotation-*` | Warning | Warning | See annotation table. |
 | `type-unknown` | Hint/off | Hint/off | Type could not be inferred; avoid noise. |
@@ -440,8 +440,10 @@ internal/lsp/inlay_hints.go            inferred local-type hints
 - Built-in functions receive type signatures from the 0.2.7 stub docs, with a
   small fallback return-type table for common PICO-8 functions. Calls to
   built-ins are not type-checked to keep unannotated carts quiet.
-- Type checking defaults to `basic`; `strict` adds nil, undefined-field, and
-  missing-field warnings. All type diagnostics are warnings or hints.
+- Type checking defaults to `basic`; `strict` adds nil checks and
+  missing-field warnings for open records. Explicit `(exact)` classes already
+  warn about unknown and missing fields in `basic` (M9). All type diagnostics
+  are warnings or hints.
 - Performance on the 64 KB test cart is measured in
   `TestM4InferencePerformance` (basic and strict) and the existing M3
   completion/hover/semantic-token targets.

@@ -1,6 +1,6 @@
 # M9 — Type System I: Inheritance, Exact Classes, Metatables, Narrowing
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** M8  
 **Release target:** v1.1.0 (batched with M7, M8, M10)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -116,16 +116,49 @@ If a new code is unavoidable, it must be documented and default to hint/warning.
 
 ## Exit criteria
 
-- [ ] Inheritance lookup and compatibility work across multiple levels.
-- [ ] Exact classes produce the intended missing/extra-field diagnostics.
-- [ ] Common metatable factories infer the annotated class.
-- [ ] The listed narrowing patterns work without leaking across scopes.
-- [ ] Hover, completion, signature help, and inlay hints use inherited/narrowed
+- [x] Inheritance lookup and compatibility work across multiple levels.
+- [x] Exact classes produce the intended missing/extra-field diagnostics.
+- [x] Common metatable factories infer the annotated class.
+- [x] The listed narrowing patterns work without leaking across scopes.
+- [x] Hover, completion, signature help, and inlay hints use inherited/narrowed
       types.
-- [ ] New diagnostics are documented, configurable where appropriate, and
+- [x] New diagnostics are documented, configurable where appropriate, and
       corpus-validated.
-- [ ] Existing v1 defaults and performance budgets do not regress.
-- [ ] Tests and docs are updated.
+- [x] Existing v1 defaults and performance budgets do not regress.
+- [x] Tests and docs are updated.
+
+## Implementation notes
+
+- `(exact)` classes warn about missing required fields in `basic` mode. The
+  class's own definition table (`---@class Point` followed by `local Point = {}`)
+  is typed as the class but is not treated as an instance; only literals
+  assigned through `@type`, parameter, and return checks are shape-checked.
+- Parent lookup uses the folded identifier namespace. String table keys remain
+  case-sensitive: `t["Health"]` does not match a field named `health`, while dot
+  access does.
+- Methods declared as `function Class:method` or `function Class.method` are
+  merged into the class record, so inherited members appear in completion,
+  hover, signature help, and nested class lookup. Inherited calls resolve back
+  to the declaring symbol for parameter annotations and call-site inference,
+  so `param-type-mismatch` works through the hierarchy.
+- Cycle diagnostics are emitted once per cycle at the lexicographically first
+  class, with the inheritance path in the message. Self-inheritance is reported
+  separately and the edge is dropped.
+- Metatable inference recognizes `setmetatable(obj, Class)`,
+  `setmetatable(obj, { __index = Class })`, and an `__index` function whose first
+  return is an annotated class. It falls back to the first argument's type when
+  the metatable is ambiguous, and never guesses between different classes.
+- Narrowing covers `assert`, `x = x or default`, early returns, `and`/`or`
+  chains, `if`/`elseif` branch merges, `while` bodies, `type(x)` checks in both
+  polarities, and composition with `---@cast`. Function bodies start from their
+  parameter types instead of inheriting the caller's flow environment, which
+  keeps narrowing from leaking across closures.
+- The final inference pass records per-occurrence narrowed types for hover and
+  member completion. Inlay hints continue to use the inferred local type.
+- Performance: `TestM9AnnotatedInferencePerformance` builds a 64 KB annotated
+  cart with inheritance, methods, metatable factories, and narrowing. Basic
+  analysis measured under the 10 ms target and strict under 20 ms on the project
+  development machine.
 
 ## Risks and mitigations
 

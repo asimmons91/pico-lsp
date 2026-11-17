@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Type system I: class inheritance with multi-level field and method lookup,
+  inherited-member completion/hover/signature help, `(exact)` class field
+  checks, `setmetatable` factory inference, and stronger flow narrowing for
+  `assert`, `or`, early returns, `and`/`or` chains, and `type()` guards.
+  Narrowed types drive hover, member completion, and inlay hints.
 - AST-guided `textDocument/formatting` for `.p8` and `.lua` documents, with
   shorthand/comment preservation, `.p8` section and tab safety, configurable
   blank-line capping, and formatter fuzz/corpus tests.
@@ -17,6 +22,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- `missing-fields` now warns in `basic` for explicitly `(exact)` classes; open
+  records still only require fields in `strict`.
+- String table keys are case-sensitive in type lookup, while dot fields keep
+  PICO-8's identifier case folding.
 - Document the project's AI-assisted, AI vibe-coded development process in the
   README.
 - Plan the post-v1 roadmap: M7 formatter, M8 read-only `.p8.png` carts, M9 type

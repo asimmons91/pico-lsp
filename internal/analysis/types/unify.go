@@ -196,7 +196,7 @@ func assignableRecord(src Type, dst *Record, strict bool, depth int) bool {
 				}
 			}
 		}
-		return recordFieldsAssignable(srcRecord, dst, strict, depth)
+		return recordFieldsAssignable(srcRecord, dst, strict, strict || dst.Exact, depth)
 	}
 	if srcRecord, ok := src.(Record); ok {
 		return assignableRecord(&srcRecord, dst, strict, depth)
@@ -226,14 +226,18 @@ func recordInheritsDepth(src, dst *Record, depth int) bool {
 	return false
 }
 
-func recordFieldsAssignable(src, dst *Record, strict bool, depth int) bool {
+func recordFieldsAssignable(src, dst *Record, strict, requireFields bool, depth int) bool {
 	if depth > maxTypeDepth {
 		return true
 	}
 	for key, dstField := range dst.Fields {
+		if dstField.Inherited {
+			// Class-table members are inherited, not stored in instance literals.
+			continue
+		}
 		srcField := recordField(src, key)
 		if srcField == nil {
-			if dstField.Optional || !strict {
+			if dstField.Optional || !requireFields {
 				continue
 			}
 			return false
@@ -247,7 +251,7 @@ func recordFieldsAssignable(src, dst *Record, strict bool, depth int) bool {
 		}
 	}
 	for _, parent := range dst.Parents {
-		if !recordFieldsAssignable(src, parent, strict, depth+1) {
+		if !recordFieldsAssignable(src, parent, strict, requireFields || parent.Exact, depth+1) {
 			return false
 		}
 	}
@@ -325,6 +329,11 @@ type FieldInfo struct {
 	Optional  bool
 	Ambiguous bool
 	Decl      source.Span
+	// Owner is the record that declared the field. It is nil for merged union
+	// fields whose declaring records disagree.
+	Owner *Record
+	// Inherited marks a member declared on the class table.
+	Inherited bool
 }
 
 // Fields returns the member names available on t. Unions expose the union of
@@ -365,17 +374,19 @@ func recordFields(record *Record) []FieldInfo {
 			return
 		}
 		for key, field := range current.Fields {
-			if field == nil {
+			if field == nil || field.StringKey {
 				continue
 			}
 			if _, ok := seen[key]; ok {
 				continue
 			}
 			seen[key] = FieldInfo{
-				Name:     field.Name,
-				Type:     field.Type,
-				Optional: field.Optional,
-				Decl:     field.Decl,
+				Name:      field.Name,
+				Type:      field.Type,
+				Optional:  field.Optional,
+				Decl:      field.Decl,
+				Owner:     current,
+				Inherited: field.Inherited,
 			}
 		}
 		for _, parent := range current.Parents {
@@ -411,6 +422,10 @@ func unionFields(union Union, depth int) []FieldInfo {
 			existing.Type = UnionOf(existing.Type, field.Type)
 			existing.Optional = existing.Optional || field.Optional
 			existing.Ambiguous = existing.Ambiguous || field.Ambiguous
+			existing.Inherited = existing.Inherited && field.Inherited
+			if existing.Owner != field.Owner {
+				existing.Owner = nil
+			}
 			byName[key] = existing
 		}
 	}
@@ -445,6 +460,87 @@ func unionFields(union Union, depth int) []FieldInfo {
 // when Optional is true.
 func LookupField(t Type, name string) (Type, bool, bool) {
 	return field(t, CanonicalName(name), 0)
+}
+
+// LookupFieldExact returns the member whose declared spelling matches name
+// case-sensitively. It is used for table string keys, which PICO-8 does not
+// case-fold.
+func LookupFieldExact(t Type, name string) (Type, bool, bool) {
+	return fieldExact(t, name, 0)
+}
+
+func fieldExact(t Type, name string, depth int) (Type, bool, bool) {
+	if depth > maxTypeDepth || name == "" {
+		return AnyType, false, false
+	}
+	t = Resolve(t)
+	switch v := t.(type) {
+	case *Record:
+		if field := recordFieldExact(v, name, depth); field != nil {
+			return field.Type, true, field.Optional
+		}
+	case Record:
+		if field := recordFieldExact(&v, name, depth); field != nil {
+			return field.Type, true, field.Optional
+		}
+	case Union:
+		var out []Type
+		optional := false
+		for _, member := range v.Members {
+			if IsNil(member) {
+				continue
+			}
+			memberType, ok, opt := fieldExact(member, name, depth+1)
+			if !ok {
+				return AnyType, false, false
+			}
+			out = append(out, memberType)
+			optional = optional || opt
+		}
+		if len(out) == 0 {
+			return AnyType, false, false
+		}
+		return UnionOf(out...), true, optional
+	}
+	return AnyType, false, false
+}
+
+func recordFieldExact(record *Record, name string, depth int) *Field {
+	if record == nil || depth > maxTypeDepth {
+		return nil
+	}
+	for _, field := range record.Fields {
+		if field == nil {
+			continue
+		}
+		if field.StringKey {
+			if field.Name == name {
+				return field
+			}
+			continue
+		}
+		if CanonicalName(field.Name) == name {
+			return field
+		}
+	}
+	for _, parent := range record.Parents {
+		if field := recordFieldExact(parent, name, depth+1); field != nil {
+			return field
+		}
+	}
+	return nil
+}
+
+// LookupFieldInfo returns the public field metadata for name, including the
+// record that declared it.
+func LookupFieldInfo(t Type, name string) (FieldInfo, bool) {
+	canonical := CanonicalName(name)
+	for _, field := range Fields(t) {
+		if CanonicalName(field.Name) == canonical {
+			return field, true
+		}
+	}
+	return FieldInfo{}, false
 }
 
 func field(t Type, canonical string, depth int) (Type, bool, bool) {

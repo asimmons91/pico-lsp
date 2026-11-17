@@ -5,6 +5,7 @@ import (
 
 	"go.lsp.dev/protocol"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis"
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
@@ -39,7 +40,7 @@ func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*prot
 				// identifier starts immediately after one of these operators,
 				// the identifier's docs take precedence at its first byte.
 				if occ := nav.occurrenceAt(offset); occ != nil && occ.Symbol != nil {
-					return hoverResult(nav, occ.Span, symbolMarkdown(nav, occ.Symbol)), nil
+					return hoverResult(nav, occ.Span, occurrenceMarkdown(nav, occ)), nil
 				}
 				if token.Text == "?" {
 					return hoverResult(nav, token.Span, shorthandMarkdown()), nil
@@ -53,7 +54,17 @@ func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*prot
 	if occ == nil || occ.Symbol == nil {
 		return nil, nil
 	}
-	return hoverResult(nav, occ.Span, symbolMarkdown(nav, occ.Symbol)), nil
+	return hoverResult(nav, occ.Span, occurrenceMarkdown(nav, occ)), nil
+}
+
+func occurrenceMarkdown(nav *navContext, occ *analysis.Occurrence) string {
+	if occ == nil || occ.Symbol == nil {
+		return ""
+	}
+	if typ, ok := nav.semantics.FlowType(occ.Span); ok && typ != nil {
+		return symbolMarkdownWithType(nav, occ.Symbol, typ)
+	}
+	return symbolMarkdown(nav, occ.Symbol)
 }
 
 func hoverResult(nav *navContext, span source.Span, markdown string) *protocol.Hover {

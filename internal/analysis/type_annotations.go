@@ -3,6 +3,7 @@ package analysis
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/asimmons91/pico-lsp/internal/analysis/types"
@@ -101,15 +102,21 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 		for _, parent := range class.Parents {
 			parentType, ok := resolver(parent)
 			if !ok {
-				result.addTypeDiagnostic(mode, CodeAnnotationUnknownType, fmt.Sprintf("unknown parent class %q", parent), class.DeclSpan, SeverityWarning)
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("unknown parent class %q", parent), class.DeclSpan, SeverityWarning)
 				continue
 			}
 			parentRecord, _ := types.Resolve(parentType).(*types.Record)
 			if parentRecord == nil {
-				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("%q is not a class", parent), class.DeclSpan, SeverityWarning)
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("%q is not a parent class", parent), class.DeclSpan, SeverityWarning)
 				continue
 			}
-			record.Parents = append(record.Parents, parentRecord)
+			if parentRecord == record {
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, fmt.Sprintf("class %q cannot inherit itself", class.Name), class.DeclSpan, SeverityWarning)
+				continue
+			}
+			if !containsRecord(record.Parents, parentRecord) {
+				record.Parents = append(record.Parents, parentRecord)
+			}
 		}
 		for i := range class.Fields {
 			field := &class.Fields[i]
@@ -132,6 +139,13 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 				Decl:     field.Span,
 			})
 		}
+	}
+
+	reportClassCycles(result, mode)
+	if mode == TypeCheckingOff {
+		// Inference normally merges class-table methods and fields. With type
+		// checking off it does not run, so keep names available for completion.
+		result.syncClassFields()
 	}
 
 	attachSymbolTypes(result, resolver, mode)
@@ -374,8 +388,8 @@ func setParamSymbolTypes(result *Result, function *Symbol, fn *types.Function) {
 	for _, param := range fn.Params {
 		byName[CanonicalName(param.Name)] = param
 	}
-	for _, sym := range result.Table.Symbols {
-		if sym == nil || sym.Kind != SymbolParam || sym.Function != function {
+	for canonical, sym := range result.paramSymbolsFor(function) {
+		if sym == nil {
 			continue
 		}
 		if sym.Name == "..." {
@@ -385,7 +399,7 @@ func setParamSymbolTypes(result *Result, function *Symbol, fn *types.Function) {
 			sym.TypeExplicit = function.TypeExplicit
 			continue
 		}
-		if param, ok := byName[CanonicalName(sym.Name)]; ok {
+		if param, ok := byName[canonical]; ok {
 			if param.Optional {
 				sym.Type = types.Optional(param.Type)
 			} else {
@@ -540,8 +554,13 @@ func validateAnnotations(snap *cart.Snapshot, result *Result, mode TypeCheckingM
 		tag := strings.ToLower(strings.TrimSuffix(fields[0], ":"))
 		switch tag {
 		case "@class":
-			if len(fields) < 2 {
+			name, _, _, valid := parseClassHeader(text[len("@class"):])
+			if name == "" {
 				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "class annotation is missing a name", comment.Span, SeverityWarning)
+				continue
+			}
+			if !valid {
+				result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "invalid (exact) placement; write it before the class name or parent list", comment.Span, SeverityWarning)
 			}
 		case "@field":
 			if !fieldAnnotationHasName(text) {
@@ -644,4 +663,170 @@ func (r *Result) addTypeDiagnostic(mode TypeCheckingMode, code, message string, 
 		}
 	}
 	r.Diagnostics = append(r.Diagnostics, diag)
+}
+
+func containsRecord(records []*types.Record, candidate *types.Record) bool {
+	for _, record := range records {
+		if record == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func reportClassCycles(result *Result, mode TypeCheckingMode) {
+	if result == nil || len(result.Classes) == 0 {
+		return
+	}
+	names := make([]string, 0, len(result.Classes))
+	for name := range result.Classes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		class := result.Classes[name]
+		if class == nil || class.Record == nil {
+			continue
+		}
+		path := classCyclePath(class.Record)
+		if len(path) == 0 || !cycleOwner(class.Record, path) {
+			continue
+		}
+		display := make([]string, 0, len(path)+1)
+		for _, record := range path {
+			display = append(display, classDisplayName(record))
+		}
+		display = append(display, classDisplayName(class.Record))
+		result.addTypeDiagnostic(mode, CodeAnnotationInvalid,
+			"class inheritance cycle: "+strings.Join(display, " -> "),
+			class.DeclSpan, SeverityWarning)
+	}
+}
+
+func classDisplayName(record *types.Record) string {
+	if record == nil || record.Name == "" {
+		return "?"
+	}
+	return record.Name
+}
+
+// classCyclePath returns the inheritance path from start back to itself, or
+// nil when start is not part of a cycle.
+func classCyclePath(start *types.Record) []*types.Record {
+	if start == nil {
+		return nil
+	}
+	path := make([]*types.Record, 0, 4)
+	visited := map[*types.Record]bool{start: true}
+	var walk func(*types.Record, int) bool
+	walk = func(current *types.Record, depth int) bool {
+		if current == nil || depth > 64 {
+			return false
+		}
+		path = append(path, current)
+		for _, parent := range current.Parents {
+			if parent == start {
+				return true
+			}
+			if parent == nil || visited[parent] {
+				continue
+			}
+			visited[parent] = true
+			if walk(parent, depth+1) {
+				return true
+			}
+		}
+		path = path[:len(path)-1]
+		return false
+	}
+	if !walk(start, 0) {
+		return nil
+	}
+	return path
+}
+
+// cycleOwner reports whether start sorts first in the cycle. Reporting only
+// once per cycle keeps the diagnostic noise down and deterministic.
+func cycleOwner(start *types.Record, path []*types.Record) bool {
+	owner := CanonicalName(classDisplayName(start))
+	for _, record := range path {
+		if name := CanonicalName(classDisplayName(record)); name < owner {
+			owner = name
+		}
+	}
+	return CanonicalName(classDisplayName(start)) == owner
+}
+
+// syncClassFields merges methods and fields declared on a class table into the
+// class record so inherited lookup, completion, hover, and signature help see
+// them at every level of the hierarchy.
+func (r *Result) syncClassFields() {
+	if r == nil || r.Table == nil || len(r.Classes) == 0 {
+		return
+	}
+	for _, sym := range r.Table.Symbols {
+		if sym == nil || sym.Doc == nil || sym.Doc.Class == "" || sym.Doc.Type != "" || sym.Owner != nil {
+			continue
+		}
+		class := r.Classes[CanonicalName(sym.Doc.Class)]
+		if class == nil || class.Record == nil {
+			continue
+		}
+		for key, fieldSym := range sym.Fields {
+			if fieldSym == nil || fieldSym.Name == "" {
+				continue
+			}
+			if link := r.classFieldLinks[fieldSym]; link != nil {
+				if fieldSym.Type != nil {
+					link.Type = fieldSym.Type
+				}
+				continue
+			}
+			if class.Record.Fields[key] != nil {
+				// The annotation already declared this field.
+				continue
+			}
+			fieldType := fieldSym.Type
+			if fieldType == nil {
+				fieldType = types.AnyType
+			}
+			field := &types.Field{
+				Name:      fieldSym.Name,
+				Type:      fieldType,
+				Optional:  fieldSym.Doc != nil && fieldSym.Doc.Optional,
+				Decl:      fieldSym.DeclSpan,
+				Inherited: true,
+			}
+			class.Record.AddField(field)
+			if r.classFieldLinks == nil {
+				r.classFieldLinks = make(map[*Symbol]*types.Field)
+			}
+			r.classFieldLinks[fieldSym] = field
+			if r.classFieldSymbols == nil {
+				r.classFieldSymbols = make(map[*types.Field]*Symbol)
+			}
+			r.classFieldSymbols[field] = fieldSym
+		}
+	}
+}
+
+// originFieldSymbol returns the class-table symbol that declared an inherited
+// field or method, if one exists. It is used to carry parameter annotations and
+// call-site inference across inheritance.
+func (r *Result) originFieldSymbol(t types.Type, name string) *Symbol {
+	if r == nil || len(r.classFieldSymbols) == 0 {
+		return nil
+	}
+	info, ok := types.LookupFieldInfo(t, name)
+	if !ok || info.Owner == nil {
+		return nil
+	}
+	canonical := CanonicalName(name)
+	for _, field := range info.Owner.Fields {
+		if field == nil || CanonicalName(field.Name) != canonical {
+			continue
+		}
+		return r.classFieldSymbols[field]
+	}
+	return nil
 }

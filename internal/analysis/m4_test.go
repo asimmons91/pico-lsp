@@ -304,8 +304,13 @@ local r = p.nope
 	if !hasDiagnostic(basic, CodeUndefinedField) {
 		t.Fatalf("basic exact-class undefined field missing: %+v", basic.Diagnostics)
 	}
-	if hasDiagnostic(basic, CodeNeedCheckNil) || hasDiagnostic(basic, CodeMissingFields) {
-		t.Fatalf("basic emitted strict diagnostics: %+v", basic.Diagnostics)
+	// M9 makes missing required fields a warning for explicitly exact classes
+	// even in basic mode; nil checks remain strict-only.
+	if !hasDiagnostic(basic, CodeMissingFields) {
+		t.Fatalf("basic exact-class missing fields missing: %+v", basic.Diagnostics)
+	}
+	if hasDiagnostic(basic, CodeNeedCheckNil) {
+		t.Fatalf("basic emitted strict nil diagnostics: %+v", basic.Diagnostics)
 	}
 	strict := analyzeTextMode(t, text, TypeCheckingStrict)
 	if !hasDiagnostic(strict, CodeNeedCheckNil) || !hasDiagnostic(strict, CodeMissingFields) || !hasDiagnostic(strict, CodeUndefinedField) {

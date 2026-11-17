@@ -119,8 +119,9 @@ func parseDocTag(doc *DocComment, text string) {
 			doc.Type = typeText
 		}
 	case "@class":
-		if len(fields) > 1 {
-			doc.Class = strings.TrimSuffix(fields[1], ":")
+		name, _, _, _ := parseClassHeader(text[len("@class"):])
+		if name != "" {
+			doc.Class = name
 		}
 	case "@enum":
 		if len(fields) > 1 {
@@ -172,6 +173,9 @@ func attachDocs(snap *cart.Snapshot, result *Result) {
 			// not own a doc block above that line. Only a field that starts its
 			// own line can carry general docs; an explicit @type annotation is
 			// still associated with an assignment target.
+			if sym.InTableConstructor && !fieldAtLineStart(file, sym.DeclSpan) {
+				continue
+			}
 			if len(sym.Decls) == 0 || (!fieldAtLineStart(file, sym.DeclSpan) && (doc == nil || doc.Type == "")) {
 				continue
 			}
@@ -210,7 +214,7 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 				current = nil
 				continue
 			}
-			name, exact, parents := parseClassHeader(text[len("@class"):])
+			name, exact, parents, _ := parseClassHeader(text[len("@class"):])
 			if name == "" {
 				current = nil
 				continue
@@ -248,21 +252,36 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 	return classes
 }
 
-func parseClassHeader(rest string) (name string, exact bool, parents []string) {
+func parseClassHeader(rest string) (name string, exact bool, parents []string, exactValid bool) {
 	rest = strings.TrimSpace(rest)
-	exact = strings.Contains(rest, "(exact)")
-	rest = strings.ReplaceAll(rest, "(exact)", " ")
-	rest = strings.TrimSpace(rest)
+	exactValid = true
 	namePart := rest
+	parentPart := ""
 	if idx := strings.Index(rest, ":"); idx >= 0 {
 		namePart = rest[:idx]
-		parents = splitTypeNames(rest[idx+1:])
+		parentPart = rest[idx+1:]
+	}
+	if strings.Contains(namePart, "(exact)") {
+		exact = true
+		if strings.Count(namePart, "(exact)") > 1 {
+			exactValid = false
+		}
+		namePart = strings.ReplaceAll(namePart, "(exact)", " ")
+	}
+	if strings.Contains(parentPart, "(exact)") {
+		// (exact) belongs with the class name, before any parent list.
+		exact = false
+		exactValid = false
+		parentPart = strings.ReplaceAll(parentPart, "(exact)", " ")
+	}
+	if parentPart != "" {
+		parents = splitTypeNames(parentPart)
 	}
 	fields := strings.Fields(namePart)
 	if len(fields) == 0 {
-		return "", false, nil
+		return "", false, parents, exactValid
 	}
-	return strings.TrimSuffix(fields[0], ":"), exact, parents
+	return strings.TrimSuffix(fields[0], ":"), exact, parents, exactValid
 }
 
 func splitTypeNames(text string) []string {
@@ -272,8 +291,17 @@ func splitTypeNames(text string) []string {
 	out := make([]string, 0, len(parts))
 	for _, part := range parts {
 		name := strings.Fields(strings.TrimSpace(part))
-		if len(name) > 0 {
-			out = append(out, name[0])
+		if len(name) == 0 {
+			continue
+		}
+		// Generic arguments are parsed and ignored in M9.
+		candidate := name[0]
+		if idx := strings.Index(candidate, "<"); idx >= 0 {
+			candidate = candidate[:idx]
+		}
+		candidate = strings.TrimSpace(candidate)
+		if candidate != "" {
+			out = append(out, candidate)
 		}
 	}
 	return out
@@ -463,14 +491,16 @@ func docCommentsFor(file *cart.File, comments []syntax.Comment, offset int) []sy
 	if file == nil || offset < 0 || offset > len(file.Text) {
 		return nil
 	}
-	var docs []syntax.Comment
-	for _, comment := range comments {
-		if comment.Span.FileID != file.ID || comment.Kind != syntax.CommentDoc || comment.Span.End > offset {
+	lastIndex := -1
+	for i := len(comments) - 1; i >= 0; i-- {
+		comment := comments[i]
+		if comment.Span.FileID != file.ID || comment.Span.End > offset || comment.Kind != syntax.CommentDoc {
 			continue
 		}
-		docs = append(docs, comment)
+		lastIndex = i
+		break
 	}
-	if len(docs) == 0 {
+	if lastIndex < 0 {
 		return nil
 	}
 	pos, err := file.Index.Position(offset)
@@ -481,17 +511,22 @@ func docCommentsFor(file *cart.File, comments []syntax.Comment, offset int) []sy
 	if err != nil || lineStart < 0 || lineStart > offset {
 		return nil
 	}
-	last := docs[len(docs)-1]
+	last := comments[lastIndex]
 	if !docCommentAdjacent(file.Text, last.Span.End, lineStart) {
 		return nil
 	}
 	block := []syntax.Comment{last}
-	for i := len(docs) - 2; i >= 0; i-- {
-		comment := docs[i]
+	for i := lastIndex - 1; i >= 0; i-- {
+		comment := comments[i]
+		if comment.Span.FileID != file.ID || comment.Kind != syntax.CommentDoc {
+			break
+		}
 		if !docCommentAdjacent(file.Text, comment.Span.End, block[0].Span.Start) {
 			break
 		}
-		block = append([]syntax.Comment{comment}, block...)
+		block = append(block, syntax.Comment{})
+		copy(block[1:], block[:len(block)-1])
+		block[0] = comment
 	}
 	return block
 }
