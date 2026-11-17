@@ -178,7 +178,7 @@ func (m *CartManager) diagnosticReports(snap *cart.Snapshot, semantics *analysis
 		if !m.ownsFile(snap.Cart.RootURI, file.URI) {
 			continue
 		}
-		reports[file.URI] = m.fileDiagnostics(file, m.diags.Truncate(items[file.URI]), settings)
+		reports[file.URI] = m.fileDiagnostics(file, m.diags.truncateFor(file.URI, items[file.URI]), settings)
 	}
 	return reports
 }

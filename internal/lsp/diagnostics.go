@@ -94,6 +94,10 @@ func (d *Diagnostics) Truncate(items []protocol.Diagnostic) []protocol.Diagnosti
 	return d.truncate(items, "")
 }
 
+func (d *Diagnostics) truncateFor(u uri.URI, items []protocol.Diagnostic) []protocol.Diagnostic {
+	return d.truncate(items, u.String())
+}
+
 func (d *Diagnostics) truncate(items []protocol.Diagnostic, u string) []protocol.Diagnostic {
 	if items == nil {
 		items = []protocol.Diagnostic{}
