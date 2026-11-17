@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** In progress  
+**Status:** v1.0.0 released  
 **Last updated:** 2026-11-17  
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
@@ -63,7 +63,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M3 | Language Intelligence & Built-in API | Completion, hover, signature help, semantic tokens, API docs | M2 | Done |
 | M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Done |
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Done |
-| M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | In progress |
+| M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Done |
 | M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
 
 Each milestone has a detailed spec:
