@@ -14,20 +14,8 @@ func annotatedTypeCartText() string {
 	b.WriteString("---@class Base\n---@field x number\n---@field hp number\nlocal Base = {}\n")
 	b.WriteString("---@param dx number\nfunction Base:move(dx)\n  self.x += dx\nend\n")
 	b.WriteString("---@class Child: Base\n---@field y number\nlocal Child = {}\n")
-	b.WriteString("---@class Box<T>\n---@field value T\n---@generic T\n---@param value T\n---@return Box<T>\nlocal function box(value)\n  return {value = value}\nend\n")
-	b.WriteString("---@overload fun(x: number): number\n---@overload fun(x: string): string\nlocal function choose(x)\n  return x\nend\n")
-	b.WriteString("---@class Vec\n---@field x number\n---@operator add(Vec): Vec\nlocal Vec = {}\n")
-	b.WriteString("---@class Shape\n---@field kind \"circle\" | \"square\"\n---@class Circle: Shape\n---@field kind \"circle\"\n---@field radius number\n---@class Square: Shape\n---@field kind \"square\"\n---@field side number\n")
-	b.WriteString("---@param shape Circle | Square\nlocal function shape_info(shape)\n  if shape.kind == \"circle\" then\n    local r = shape.radius\n  end\nend\n")
 	for i := 0; i < 600; i++ {
 		fmt.Fprintf(&b, "local value_%03d = %d + #tostr(%d)\n", i, i, i)
-	}
-	for i := 0; i < 2; i++ {
-		fmt.Fprintf(&b, "local boxed_%03d = box(%d)\n", i, i)
-		fmt.Fprintf(&b, "local chosen_%03d = choose(%d)\n", i, i)
-		fmt.Fprintf(&b, "local vec_a_%03d = setmetatable({x = %d}, {__index = Vec})\n", i, i)
-		fmt.Fprintf(&b, "local vec_b_%03d = setmetatable({x = %d}, {__index = Vec})\n", i, i)
-		fmt.Fprintf(&b, "local vec_sum_%03d = vec_a_%03d + vec_b_%03d\n", i, i, i)
 	}
 	for i := 0; i < 50; i++ {
 		fmt.Fprintf(&b, "---@class Holder_%03d\n---@field value number\n\n", i)

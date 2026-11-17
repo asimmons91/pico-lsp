@@ -167,8 +167,8 @@ local function identity(x) end
   receiver. Unrelated or non-literal tags are not narrowed.
 - User-defined type guards are deferred: no established LuaCATS/PICO-8 syntax
   can be adopted without introducing a project-specific dialect.
-- `TestM9AnnotatedInferencePerformance` now includes generic, overload, operator,
-  and tagged-union constructs in the 64 KB annotated timing cart.
+- `TestM10AnnotatedInferencePerformance` covers generic, overload, operator, and
+  tagged-union constructs in a separate 64 KB annotated timing cart.
 
 ## Migration notes
 
