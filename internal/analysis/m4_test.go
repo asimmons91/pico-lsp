@@ -612,3 +612,78 @@ end
 		t.Fatalf("strict missed nil arithmetic: %+v", strict.Diagnostics)
 	}
 }
+
+func TestM4ReturnTupleFromCall(t *testing.T) {
+	text := `---@return number, number
+function pair() return 1, 2 end
+---@return number, string
+function f() return pair() end
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if !hasDiagnostic(result, CodeReturnTypeMismatch) {
+		t.Fatalf("missing tuple return mismatch: %+v", result.Diagnostics)
+	}
+}
+
+func TestM4DiagnosticDirectiveWithoutSpace(t *testing.T) {
+	text := "---@type number\n---@diagnostic disable-next-line:assign-type-mismatch\nlocal x = \"bad\"\n"
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if hasDiagnostic(result, CodeAssignTypeMismatch) {
+		t.Fatalf("compact @diagnostic did not suppress: %+v", result.Diagnostics)
+	}
+}
+
+func TestM4VarargCallSiteInference(t *testing.T) {
+	text := `local function first(a, ...)
+  return ...
+end
+first(1, "x", 2)
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	fn, ok := types.AsFunction(symbolByName(result, "first").Type)
+	if !ok || fn.Vararg == nil {
+		t.Fatalf("first type = %s", types.Display(symbolByName(result, "first").Type))
+	}
+	if got := types.Display(fn.Vararg); got != "number | string" {
+		t.Fatalf("vararg type = %q", got)
+	}
+}
+
+func TestM4CyclicAliasesDoNotPanic(t *testing.T) {
+	text := `---@alias A B
+---@alias B A
+---@type A
+local x = 1
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if result == nil {
+		t.Fatal("nil result")
+	}
+}
+
+func TestM4CyclicTableTypeDisplay(t *testing.T) {
+	text := `local t = {}
+t.self = t
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	got := types.Display(symbolByName(result, "t").Type)
+	if got == "" || len(got) > 500 {
+		t.Fatalf("cyclic table display = %q", got)
+	}
+}
+
+func TestM4StrictNilNarrowing(t *testing.T) {
+	text := `---@param p {x: number}?
+function f(p)
+  if p then
+    local a = p.x
+  end
+  if p == nil then return end
+  local b = p.x
+end
+`
+	result := analyzeTextMode(t, text, TypeCheckingStrict)
+	if hasDiagnostic(result, CodeNeedCheckNil) {
+		t.Fatalf("narrowed field access warned: %+v", result.Diagnostics)
+	}
+}

@@ -382,6 +382,7 @@ func setParamSymbolTypes(result *Result, function *Symbol, fn *types.Function) {
 			if fn.Vararg != nil {
 				sym.Type = fn.Vararg
 			}
+			sym.TypeExplicit = function.TypeExplicit
 			continue
 		}
 		if param, ok := byName[CanonicalName(sym.Name)]; ok {
@@ -461,14 +462,14 @@ func collectCastDirective(result *Result, text string, comment syntax.Comment, r
 func collectDiagnosticDirective(result *Result, text string, comment syntax.Comment, mode TypeCheckingMode) {
 	rest := strings.TrimSpace(text[len("@diagnostic"):])
 	state, codesText := rest, ""
-	if idx := strings.IndexAny(rest, " \t"); idx >= 0 {
+	if idx := strings.Index(rest, ":"); idx >= 0 {
+		state = strings.TrimSpace(rest[:idx])
+		codesText = strings.TrimSpace(rest[idx+1:])
+	} else if idx := strings.IndexAny(rest, " \t"); idx >= 0 {
 		state = rest[:idx]
 		codesText = strings.TrimSpace(rest[idx:])
 	}
-	if strings.HasPrefix(codesText, ":") {
-		codesText = strings.TrimSpace(codesText[1:])
-	}
-	state = strings.ToLower(strings.TrimSuffix(state, ":"))
+	state = strings.ToLower(state)
 	switch state {
 	case "disable", "enable", "disable-line", "disable-next-line":
 	default:

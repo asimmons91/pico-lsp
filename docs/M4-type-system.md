@@ -435,6 +435,8 @@ internal/lsp/inlay_hints.go            inferred local-type hints
   expression statements are not annotated in v1.
 - `@cast` is applied from its source line onward in the file. It does not yet
   reset at nested block boundaries.
+- `--[[@as]]` is associated with the nearest same-line expression ending before
+  the comment; nested subexpression selection is best-effort.
 - Built-in functions receive type signatures from the 0.2.7 stub docs, with a
   small fallback return-type table for common PICO-8 functions. Calls to
   built-ins are not type-checked to keep unannotated carts quiet.

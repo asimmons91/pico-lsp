@@ -17,7 +17,7 @@ var annotationKeywords = []string{
 
 var annotationTypes = []string{
 	"any", "boolean", "function", "integer", "nil", "number", "string",
-	"table", "thread",
+	"table", "thread", "userdata",
 }
 
 func annotationCompletions(nav *navContext, offset int, linePrefix string) []protocol.CompletionItem {

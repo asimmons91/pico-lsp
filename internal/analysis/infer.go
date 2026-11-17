@@ -101,7 +101,16 @@ func (inf *inferer) applyCallSites() bool {
 			if paramSymbol == nil || paramSymbol.TypeExplicit {
 				continue
 			}
-			observed := argsByIndex[index]
+			var observed []types.Type
+			if strings.EqualFold(paramSymbol.Name, "...") {
+				for argIndex, argTypes := range argsByIndex {
+					if argIndex >= index {
+						observed = append(observed, argTypes...)
+					}
+				}
+			} else {
+				observed = argsByIndex[index]
+			}
 			if len(observed) == 0 {
 				continue
 			}
@@ -414,9 +423,15 @@ func (inf *inferer) inferReturn(st *syntax.ReturnStmt, env map[*Symbol]types.Typ
 				break
 			}
 			if !types.Assignable(valueType, state.fn.Returns.Elems[i], inf.mode == TypeCheckingStrict) {
+				span := source.Span{}
+				if i < len(st.Values) {
+					span = st.Values[i].Span()
+				} else if len(st.Values) > 0 {
+					span = st.Values[len(st.Values)-1].Span()
+				}
 				inf.report(CodeReturnTypeMismatch,
 					fmt.Sprintf("cannot return %s, want %s", types.Display(valueType), types.Display(state.fn.Returns.Elems[i])),
-					spanOfExpr(st.Values[i]))
+					span)
 			}
 		}
 	}
@@ -1204,6 +1219,9 @@ func (inf *inferer) symbolAt(name *syntax.NameExpr) *Symbol {
 }
 
 func (inf *inferer) report(code, message string, span source.Span) {
+	if span.IsEmpty() {
+		return
+	}
 	inf.result.addTypeDiagnostic(inf.mode, code, message, span, SeverityWarning)
 }
 

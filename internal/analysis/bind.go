@@ -618,6 +618,16 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 		fnScope.Declare(sym)
 		b.addDecl(param, sym, fnScope)
 	}
+	if fn.Vararg {
+		span := fn.End
+		if span.IsEmpty() {
+			span = fn.Span()
+		}
+		// The vararg symbol is not a normal lexical declaration, but inference
+		// needs it to constrain the tail type from call sites.
+		sym := b.table.NewSymbol(SymbolParam, "...", span, fnScope)
+		sym.Function = functionSym
+	}
 
 	labels := &labelScope{labels: fnScope.Labels, function: fnScope}
 	b.labels = append(b.labels, labels)

@@ -165,3 +165,12 @@ func TestCyclicRecordsTerminate(t *testing.T) {
 		}
 	}
 }
+
+func TestDisplayHandlesCyclicTables(t *testing.T) {
+	record := NewRecord("")
+	record.AddField(&Field{Name: "self", Type: record})
+	got := Display(record)
+	if got == "" || len(got) > 200 {
+		t.Fatalf("cyclic display = %q", got)
+	}
+}

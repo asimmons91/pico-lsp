@@ -412,11 +412,27 @@ func TupleOf(elems ...Type) Tuple {
 	return Tuple{Elems: elems}
 }
 
+const maxDisplayDepth = 24
+
 // Display renders t in LuaCATS syntax.
 func Display(t Type) string {
+	return displayType(t, &displayState{seen: make(map[*Record]bool)})
+}
+
+type displayState struct {
+	seen  map[*Record]bool
+	depth int
+}
+
+func displayType(t Type, state *displayState) string {
 	if t == nil {
 		return "any"
 	}
+	if state.depth >= maxDisplayDepth {
+		return "..."
+	}
+	state.depth++
+	defer func() { state.depth-- }()
 	switch v := t.(type) {
 	case Primitive:
 		switch v.Kind {
@@ -458,11 +474,11 @@ func Display(t Type) string {
 			return fmt.Sprint(value)
 		}
 	case Union:
-		return displayUnion(v.Members)
+		return displayUnion(v.Members, state)
 	case Array:
-		return parenForPostfix(v.Elem) + "[]"
+		return parenForPostfix(v.Elem, state) + "[]"
 	case Map:
-		return "table<" + Display(v.Key) + ", " + Display(v.Elem) + ">"
+		return "table<" + displayType(v.Key, state) + ", " + displayType(v.Elem, state) + ">"
 	case *Record:
 		if v == nil {
 			return "table"
@@ -470,23 +486,26 @@ func Display(t Type) string {
 		if v.Name != "" {
 			return v.Name
 		}
-		return displayRecord(v)
+		if state.seen[v] {
+			return "{...}"
+		}
+		return displayRecord(v, state)
 	case Record:
-		return displayRecord(&v)
+		return displayRecord(&v, state)
 	case *Function:
 		if v == nil {
 			return "function"
 		}
-		return displayFunction(v)
+		return displayFunction(v, state)
 	case Function:
-		return displayFunction(&v)
+		return displayFunction(&v, state)
 	case Tuple:
 		parts := make([]string, 0, len(v.Elems)+1)
 		for _, elem := range v.Elems {
-			parts = append(parts, Display(elem))
+			parts = append(parts, displayType(elem, state))
 		}
 		if v.Vararg != nil {
-			parts = append(parts, "..."+Display(v.Vararg))
+			parts = append(parts, "..."+displayType(v.Vararg, state))
 		}
 		return "[" + strings.Join(parts, ", ") + "]"
 	case *Alias:
@@ -496,21 +515,18 @@ func Display(t Type) string {
 		if v.Name != "" {
 			return v.Name
 		}
-		return Display(v.Underlying)
+		return displayType(v.Underlying, state)
 	case *TypeVar:
-		if v == nil {
+		if v == nil || v.Bound == nil {
 			return "any"
 		}
-		if v.Bound != nil {
-			return Display(v.Bound)
-		}
-		return "any"
+		return displayType(v.Bound, state)
 	default:
 		return "any"
 	}
 }
 
-func displayUnion(members []Type) string {
+func displayUnion(members []Type, state *displayState) string {
 	var nonNil []Type
 	hasNil := false
 	for _, member := range members {
@@ -521,11 +537,11 @@ func displayUnion(members []Type) string {
 		nonNil = append(nonNil, member)
 	}
 	if hasNil && len(nonNil) == 1 {
-		return parenForUnion(nonNil[0]) + "?"
+		return parenForUnion(nonNil[0], state) + "?"
 	}
 	parts := make([]string, 0, len(members))
 	for _, member := range members {
-		parts = append(parts, Display(member))
+		parts = append(parts, displayType(member, state))
 	}
 	if len(parts) == 0 {
 		return "any"
@@ -536,7 +552,15 @@ func displayUnion(members []Type) string {
 	return strings.Join(parts, " | ")
 }
 
-func displayRecord(record *Record) string {
+func displayRecord(record *Record, state *displayState) string {
+	if record == nil {
+		return "table"
+	}
+	if state.seen[record] {
+		return "{...}"
+	}
+	state.seen[record] = true
+	defer delete(state.seen, record)
 	keys := make([]string, 0, len(record.Fields))
 	for key := range record.Fields {
 		keys = append(keys, key)
@@ -549,12 +573,12 @@ func displayRecord(record *Record) string {
 		if field.Optional {
 			label += "?"
 		}
-		parts = append(parts, label+": "+Display(field.Type))
+		parts = append(parts, label+": "+displayType(field.Type, state))
 	}
 	return "{" + strings.Join(parts, ", ") + "}"
 }
 
-func displayFunction(fn *Function) string {
+func displayFunction(fn *Function, state *displayState) string {
 	parts := make([]string, 0, len(fn.Params)+1)
 	for _, param := range fn.Params {
 		label := param.Name
@@ -564,36 +588,36 @@ func displayFunction(fn *Function) string {
 		if param.Optional {
 			label += "?"
 		}
-		label += ": " + Display(param.Type)
+		label += ": " + displayType(param.Type, state)
 		parts = append(parts, label)
 	}
 	if fn.Vararg != nil {
-		parts = append(parts, "...: "+Display(fn.Vararg))
+		parts = append(parts, "...: "+displayType(fn.Vararg, state))
 	}
 	out := "fun(" + strings.Join(parts, ", ") + ")"
 	if len(fn.Returns.Elems) == 1 && fn.Returns.Vararg == nil {
-		out += ": " + Display(fn.Returns.Elems[0])
+		out += ": " + displayType(fn.Returns.Elems[0], state)
 	} else if len(fn.Returns.Elems) > 1 {
-		out += ": " + Display(fn.Returns)
+		out += ": " + displayType(fn.Returns, state)
 	}
 	return out
 }
 
-func parenForPostfix(t Type) string {
+func parenForPostfix(t Type, state *displayState) string {
 	switch t.(type) {
 	case Union:
-		return "(" + Display(t) + ")"
+		return "(" + displayType(t, state) + ")"
 	case *Function, Function:
-		return "(" + Display(t) + ")"
+		return "(" + displayType(t, state) + ")"
 	default:
-		return Display(t)
+		return displayType(t, state)
 	}
 }
 
-func parenForUnion(t Type) string {
+func parenForUnion(t Type, state *displayState) string {
 	switch t.(type) {
 	case Union:
-		return "(" + Display(t) + ")"
+		return "(" + displayType(t, state) + ")"
 	}
-	return Display(t)
+	return displayType(t, state)
 }

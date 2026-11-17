@@ -233,6 +233,10 @@ func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, m
 		return nil, false
 	}
 	typeFields := types.Fields(receiver.Type)
+	exactRecord := false
+	if record, ok := types.Resolve(receiver.Type).(*types.Record); ok && record != nil && record.Exact {
+		exactRecord = true
+	}
 	if len(typeFields) == 0 && len(receiver.Fields) == 0 {
 		return nil, false
 	}
@@ -275,6 +279,12 @@ func (s *Server) memberCompletions(nav *navContext, receiver *analysis.Symbol, m
 		item := s.makeTextItem(nav, field.Name, kind, detail, field.Name, false, prefixStart, offset)
 		item.SortText = protocol.NewOptional(key)
 		items = append(items, item)
+	}
+	if exactRecord {
+		// Exact classes reject unknown fields; the type-derived list above is
+		// authoritative.
+		sort.SliceStable(items, func(i, j int) bool { return items[i].Label < items[j].Label })
+		return items, len(items) >= maxCompletionItems
 	}
 	for _, field := range receiver.Fields {
 		if field == nil {
