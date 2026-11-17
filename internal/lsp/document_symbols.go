@@ -56,8 +56,12 @@ func (s *Server) documentSymbols(ctx context.Context, u uri.URI) protocol.Docume
 		if include.DirectiveSpan.FileID != fileID {
 			continue
 		}
+		name := include.Path
+		if name == "" {
+			name = "(include)"
+		}
 		modules = append(modules, &outlineNode{
-			name: include.Path,
+			name: name,
 			kind: protocol.SymbolKindModule,
 			span: include.DirectiveSpan,
 			sel:  include.DirectiveSpan,

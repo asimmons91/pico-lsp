@@ -162,6 +162,12 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 	if root == u {
 		if _, err := os.Stat(u.FsPath()); err != nil {
 			m.mu.Lock()
+			var removed []uri.URI
+			if entry := m.byRoot[u]; entry != nil {
+				for file := range entry.files {
+					removed = append(removed, file)
+				}
+			}
 			delete(m.byRoot, u)
 			for file, owner := range m.byFile {
 				if owner == u {
@@ -169,6 +175,9 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 				}
 			}
 			m.mu.Unlock()
+			for _, file := range removed {
+				m.diags.Clear(ctx, file)
+			}
 			m.diags.Clear(ctx, u)
 			return
 		}
