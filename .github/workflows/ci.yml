@@ -171,3 +171,19 @@ jobs:
         with:
           version: v2.20.2
           args: release --snapshot --clean
+
+      - name: Verify snapshot archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          for archive in dist/pico-lsp_*_linux_*.tar.gz dist/pico-lsp_*_darwin_*.tar.gz; do
+            for entry in pico-lsp README.md LICENSE CHANGELOG.md; do
+              tar -tzf "$archive" | grep -qx "$entry"
+            done
+          done
+          for archive in dist/pico-lsp_*_windows_*.zip; do
+            for entry in pico-lsp.exe README.md LICENSE CHANGELOG.md; do
+              unzip -Z1 "$archive" | grep -qx "$entry"
+            done
+          done
+          (cd dist && sha256sum -c checksums.txt)
