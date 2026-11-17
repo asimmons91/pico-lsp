@@ -4,6 +4,7 @@
 package config
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -170,7 +171,7 @@ func (m *Manager) Pull(ctx context.Context, client protocol.Client) error {
 	}
 
 	next := m.initializationSettings()
-	if len(values) > 0 && len(values[0]) > 0 && string(values[0]) != "null" {
+	if len(values) > 0 && !isJSONNull(values[0]) {
 		next, err = decode(values[0], next)
 		if err != nil {
 			return fmt.Errorf("config: decode %q section: %w", Section, err)
@@ -222,7 +223,7 @@ func (m *Manager) logSettings(message string, settings Settings) {
 
 // pico8Value extracts the pico8 member from an LSP JSON value.
 func pico8Value(raw protocol.LSPAny) (value jsontext.Value, ok bool, err error) {
-	if len(raw) == 0 || string(raw) == "null" {
+	if isJSONNull(raw) {
 		return nil, false, nil
 	}
 
@@ -232,17 +233,67 @@ func pico8Value(raw protocol.LSPAny) (value jsontext.Value, ok bool, err error) 
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, false, err
 	}
-	if len(envelope.Pico8) == 0 || string(envelope.Pico8) == "null" {
+	if isJSONNull(envelope.Pico8) {
 		return nil, false, nil
 	}
 	return envelope.Pico8, true, nil
 }
 
-func decode(raw jsontext.Value, base Settings) (Settings, error) {
-	if err := json.Unmarshal(raw, &base); err != nil {
-		return Default(), err
+// partialSettings records only the fields a client actually supplied. A JSON
+// null leaves the pointer nil, so it means "no override" rather than zeroing
+// the corresponding setting.
+type partialSettings struct {
+	APIVersion   *string                    `json:"apiVersion"`
+	TypeChecking *string                    `json:"typeChecking"`
+	InlayHints   *bool                      `json:"inlayHints"`
+	MaxProblems  *int                       `json:"maxProblems"`
+	Diagnostics  *partialDiagnosticSettings `json:"diagnostics"`
+}
+
+type partialDiagnosticSettings struct {
+	UndefinedGlobal *string `json:"undefinedGlobal"`
+	UnusedLocal     *string `json:"unusedLocal"`
+}
+
+func (p partialSettings) apply(base Settings) Settings {
+	if p.APIVersion != nil {
+		base.APIVersion = *p.APIVersion
 	}
-	return base, nil
+	if p.TypeChecking != nil {
+		base.TypeChecking = *p.TypeChecking
+	}
+	if p.InlayHints != nil {
+		base.InlayHints = *p.InlayHints
+	}
+	if p.MaxProblems != nil {
+		base.MaxProblems = *p.MaxProblems
+	}
+	if p.Diagnostics != nil {
+		if p.Diagnostics.UndefinedGlobal != nil {
+			base.Diagnostics.UndefinedGlobal = *p.Diagnostics.UndefinedGlobal
+		}
+		if p.Diagnostics.UnusedLocal != nil {
+			base.Diagnostics.UnusedLocal = *p.Diagnostics.UnusedLocal
+		}
+	}
+	return base
+}
+
+func decode(raw jsontext.Value, base Settings) (Settings, error) {
+	if isJSONNull(raw) {
+		return base, nil
+	}
+
+	var partial partialSettings
+	if err := json.Unmarshal(raw, &partial); err != nil {
+		return base, err
+	}
+	return partial.apply(base), nil
+}
+
+func isJSONNull(raw []byte) bool {
+	trimmed := bytes.TrimSpace(raw)
+	return len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null"))
 }
 
 // normalize validates enum-like fields. Invalid values fall back to defaults

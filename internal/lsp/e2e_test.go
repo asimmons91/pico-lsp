@@ -306,6 +306,23 @@ func TestEndToEndInitializeNotificationIsIgnored(t *testing.T) {
 	h.exit(t, true)
 }
 
+func TestEndToEndShutdownNotificationIsIgnored(t *testing.T) {
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := h.clientConn.Notify(ctx, protocol.MethodShutdown, nil); err != nil {
+		t.Fatalf("shutdown notification: %v", err)
+	}
+	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
+		t.Fatalf("hover after shutdown notification: %v", err)
+	}
+
+	h.exit(t, true)
+}
+
 func TestEndToEndBadParamsDoNotKillConnection(t *testing.T) {
 	h := newHarness(t, newTestClient())
 

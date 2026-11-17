@@ -296,6 +296,12 @@ func (s *Server) checkLifecycle(method string, isCall bool) (allow bool, err err
 
 	case protocol.MethodExit, protocol.MethodSetTrace:
 		return true, nil
+
+	case protocol.MethodShutdown:
+		if !isCall {
+			s.log.Debug("dropping shutdown notification")
+			return false, nil
+		}
 	}
 
 	s.mu.Lock()

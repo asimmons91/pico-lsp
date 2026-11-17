@@ -98,6 +98,90 @@ func TestInvalidValuesFallBackToDefaults(t *testing.T) {
 	}
 }
 
+func TestPullNullFieldsPreserveInitializationOptions(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{name: "maxProblems", value: `{"maxProblems":null}`},
+		{name: "typeChecking", value: `{"typeChecking":null}`},
+		{name: "diagnostics", value: `{"diagnostics":null}`},
+		{name: "nested diagnostic", value: `{"diagnostics":{"unusedLocal":null}}`},
+		{name: "section null", value: ` null `},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := New(testLogger())
+			m.ApplyInitializationOptions(lspValue(`{
+				"pico8": {
+					"typeChecking": "strict",
+					"maxProblems": 25,
+					"diagnostics": {
+						"undefinedGlobal": "error",
+						"unusedLocal": "hint"
+					}
+				}
+			}`))
+			m.SetPullSupported(true)
+
+			if err := m.Pull(context.Background(), &fakeClient{values: []protocol.LSPAny{lspValue(tt.value)}}); err != nil {
+				t.Fatalf("Pull: %v", err)
+			}
+
+			got := m.Settings()
+			if got.TypeChecking != TypeCheckingStrict || got.MaxProblems != 25 {
+				t.Fatalf("settings = %+v, want initialization typeChecking/maxProblems", got)
+			}
+			if got.Diagnostics.UndefinedGlobal != SeverityError || got.Diagnostics.UnusedLocal != SeverityHint {
+				t.Fatalf("diagnostics = %+v, want initialization diagnostics", got.Diagnostics)
+			}
+		})
+	}
+}
+
+func TestApplyDidChangePreservesInitializationOptions(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{
+		"pico8": {
+			"typeChecking": "strict",
+			"maxProblems": 25,
+			"diagnostics": {
+				"undefinedGlobal": "error",
+				"unusedLocal": "hint"
+			}
+		}
+	}`))
+
+	m.ApplyDidChange(lspValue(`{
+		"pico8": {
+			"diagnostics": {"unusedLocal": "warning"}
+		}
+	}`))
+
+	got := m.Settings()
+	if got.TypeChecking != TypeCheckingStrict || got.MaxProblems != 25 {
+		t.Fatalf("settings = %+v, want initialization values preserved", got)
+	}
+	if got.Diagnostics.UnusedLocal != SeverityWarning {
+		t.Fatalf("unusedLocal = %q, want warning from didChange", got.Diagnostics.UnusedLocal)
+	}
+	if got.Diagnostics.UndefinedGlobal != SeverityError {
+		t.Fatalf("undefinedGlobal = %q, want error from initializationOptions", got.Diagnostics.UndefinedGlobal)
+	}
+}
+
+func TestApplyDidChangeNullFieldPreservesInitializationOptions(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict","maxProblems":25}}`))
+	m.ApplyDidChange(lspValue(`{"pico8":{"maxProblems":null,"typeChecking":null}}`))
+
+	got := m.Settings()
+	if got.TypeChecking != TypeCheckingStrict || got.MaxProblems != 25 {
+		t.Fatalf("settings = %+v, want initialization values preserved", got)
+	}
+}
+
 func TestZeroMaxProblemsDisablesTruncation(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyInitializationOptions(lspValue(`{"pico8":{"maxProblems":0}}`))

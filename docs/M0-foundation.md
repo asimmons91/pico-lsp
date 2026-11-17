@@ -171,7 +171,7 @@ Behavior:
 - If the client supports `workspace/configuration`, request section `pico8` after `initialized` and on `workspace/didChangeConfiguration`.
 - Otherwise use `initializationOptions.pico8` if present.
 - Otherwise use defaults.
-- Pulled values override initialization options per field. Fields absent from a pulled section fall back to initialization options, then defaults. A null or missing section value leaves the initialization-options settings in place.
+- Pulled values override initialization options per field. Fields absent or null in a pulled section fall back to initialization options, then defaults. A null or missing section value leaves the initialization-options settings in place.
 - Unknown keys are ignored; invalid enum values fall back to defaults and log a warning.
 - Do not block `initialize` on configuration requests.
 
@@ -277,6 +277,7 @@ Requests take a consistent snapshot from the document store and never mutate it.
 ## Error handling
 
 - Invalid params: return `InvalidParams`, log at debug.
+- Notifications never terminate the connection. Errors and invalid lifecycle transitions for notifications are logged and dropped.
 - Unknown document: for notifications, log and ignore; for requests, return an empty/nil result where the protocol allows, otherwise `InvalidParams`.
 - Out-of-range positions: clamp for diagnostics/hover lookups; never panic.
 - I/O errors on stdio: log and exit non-zero.

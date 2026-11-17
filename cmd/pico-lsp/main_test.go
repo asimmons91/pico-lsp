@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -113,6 +114,105 @@ func runWithTimeout(t *testing.T, ctx context.Context, args []string, stdin io.R
 	}
 }
 
+type canceledContextNoDone struct{}
+
+func (canceledContextNoDone) Deadline() (time.Time, bool) { return time.Time{}, false }
+func (canceledContextNoDone) Done() <-chan struct{}       { return nil }
+func (canceledContextNoDone) Err() error                  { return context.Canceled }
+func (canceledContextNoDone) Value(any) any               { return nil }
+
+func TestChooseExit(t *testing.T) {
+	closed := func() <-chan struct{} {
+		ch := make(chan struct{})
+		close(ch)
+		return ch
+	}
+	never := make(chan struct{})
+
+	canceledCtx, cancelCanceled := context.WithCancel(context.Background())
+	cancelCanceled()
+	defer cancelCanceled()
+
+	no := func() bool { return false }
+	yes := func() bool { return true }
+
+	tests := []struct {
+		name         string
+		ctx          context.Context
+		exitSignal   <-chan struct{}
+		connDone     <-chan struct{}
+		exitCode     func() int
+		exited       func() bool
+		shuttingDown func() bool
+		wantCode     int
+		wantCause    exitCause
+	}{
+		{
+			name:       "exit notification",
+			ctx:        context.Background(),
+			exitSignal: closed(),
+			connDone:   never,
+			exitCode:   func() int { return 0 },
+			exited:     yes, shuttingDown: yes,
+			wantCode: 0, wantCause: exitFromClient,
+		},
+		{
+			name:       "exit without shutdown",
+			ctx:        context.Background(),
+			exitSignal: closed(),
+			connDone:   never,
+			exitCode:   func() int { return 1 },
+			exited:     yes, shuttingDown: yes,
+			wantCode: 1, wantCause: exitFromClient,
+		},
+		{
+			name:       "context canceled",
+			ctx:        canceledCtx,
+			exitSignal: never,
+			connDone:   never,
+			exitCode:   func() int { return 1 },
+			exited:     no, shuttingDown: no,
+			wantCode: 0, wantCause: exitFromSignal,
+		},
+		{
+			name:       "connection closed with canceled parent",
+			ctx:        canceledContextNoDone{},
+			exitSignal: never,
+			connDone:   closed(),
+			exitCode:   func() int { return 1 },
+			exited:     no, shuttingDown: no,
+			wantCode: 0, wantCause: exitFromSignal,
+		},
+		{
+			name:       "connection closed after shutdown",
+			ctx:        context.Background(),
+			exitSignal: never,
+			connDone:   closed(),
+			exitCode:   func() int { return 1 },
+			exited:     no, shuttingDown: yes,
+			wantCode: 0, wantCause: exitFromClient,
+		},
+		{
+			name:       "connection closed unexpectedly",
+			ctx:        context.Background(),
+			exitSignal: never,
+			connDone:   closed(),
+			exitCode:   func() int { return 0 },
+			exited:     no, shuttingDown: no,
+			wantCode: 1, wantCause: exitFromConnection,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, cause := chooseExit(tt.ctx, tt.exitSignal, tt.connDone, tt.exitCode, tt.exited, tt.shuttingDown)
+			if code != tt.wantCode || cause != tt.wantCause {
+				t.Fatalf("chooseExit = (%d,%v), want (%d,%v)", code, cause, tt.wantCode, tt.wantCause)
+			}
+		})
+	}
+}
+
 func TestRunSpeaksOnlyLSPOnStdout(t *testing.T) {
 	inR, inW := net.Pipe()
 	outR, outW := net.Pipe()
@@ -215,6 +315,9 @@ func TestRunCancellationDuringSessionExitsZero(t *testing.T) {
 		decodeResponse(t, readFrame(t, reader))
 
 		cancel()
+		// Make conn.Done ready as well: a signal closes the context, but a
+		// blocked pipe read does not observe cancellation on its own.
+		_ = inW.Close()
 
 		select {
 		case code := <-done:
@@ -225,7 +328,6 @@ func TestRunCancellationDuringSessionExitsZero(t *testing.T) {
 			t.Fatalf("iteration %d: timed out waiting for cancellation exit", i)
 		}
 
-		_ = inW.Close()
 		_ = outW.Close()
 	}
 }
@@ -279,14 +381,26 @@ func TestRunCanceledContextExitsPromptly(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
+	inR, inW := net.Pipe()
+	outR, outW := net.Pipe()
+
 	start := time.Now()
-	code := runWithTimeout(t, ctx, nil, strings.NewReader(""), io.Discard, io.Discard)
+	code := runWithTimeout(t, ctx, nil, inR, outW, io.Discard)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}
 	if elapsed := time.Since(start); elapsed > time.Second {
 		t.Fatalf("run took %v after cancellation, want prompt exit", elapsed)
 	}
+
+	_ = inW.SetWriteDeadline(time.Now().Add(time.Second))
+	if _, err := inW.Write([]byte("x")); !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("server-side stdin was not closed: %v", err)
+	}
+
+	_ = inW.Close()
+	_ = outW.Close()
+	_ = outR.Close()
 }
 
 func TestRunLogFile(t *testing.T) {

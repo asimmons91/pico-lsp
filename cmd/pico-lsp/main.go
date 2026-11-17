@@ -77,46 +77,74 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	connCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	conn := srv.Serve(connCtx, jsonrpc2.NewStream(&stdioTransport{in: stdin, out: stdout}))
+	stream := jsonrpc2.NewStream(&stdioTransport{in: stdin, out: stdout})
+	conn := srv.Serve(connCtx, stream)
 	logger.Info("pico-lsp started", "version", version.Current())
 
-	code := 0
-	signaled := false
-	select {
-	case <-srv.ExitSignal():
-		code = srv.ExitCode()
-	case <-ctx.Done():
-		signaled = true
+	code, cause := chooseExit(ctx, srv.ExitSignal(), conn.Done(), srv.ExitCode, srv.Exited, srv.ShuttingDown)
+	signaled := cause == exitFromSignal
+	switch cause {
+	case exitFromSignal:
 		logger.Info("exiting on signal")
-	case <-conn.Done():
-		if ctx.Err() != nil {
-			// A signal cancels both contexts; which channel the select observes
-			// is nondeterministic. Treat a canceled parent as the signal path.
-			signaled = true
-			logger.Info("exiting on signal")
-			break
-		}
-		switch {
-		case srv.Exited():
-			code = srv.ExitCode()
-		case srv.ShuttingDown():
-			code = 0
-		default:
-			if err := conn.Err(); err != nil {
-				logger.Error("connection closed", "error", err)
-			} else {
-				logger.Info("connection closed by client")
-			}
-			code = 1
+	case exitFromConnection:
+		if err := conn.Err(); err != nil {
+			logger.Error("connection closed", "error", err)
+		} else {
+			logger.Info("connection closed by client")
 		}
 	}
 
 	cancel()
-	if !signaled {
+	if signaled {
+		// Close the transport without waiting for the read loop, which may be
+		// blocked on a pipe read that close cannot interrupt. Process exit will
+		// terminate the remaining goroutine.
+		_ = stream.Close()
+		go func() { _ = conn.Close() }()
+	} else {
 		closeConn(conn, time.Second)
 	}
 	logger.Info("pico-lsp stopped", "code", code)
 	return code
+}
+
+// exitCause records which channel ended the server loop.
+type exitCause int
+
+const (
+	exitFromClient exitCause = iota
+	exitFromSignal
+	exitFromConnection
+)
+
+// chooseExit decides the process exit code. It is separated from run so the
+// signal/connection race can be tested deterministically.
+func chooseExit(
+	ctx context.Context,
+	exitSignal, connDone <-chan struct{},
+	exitCode func() int,
+	exited, shuttingDown func() bool,
+) (code int, cause exitCause) {
+	select {
+	case <-exitSignal:
+		return exitCode(), exitFromClient
+	case <-ctx.Done():
+		return 0, exitFromSignal
+	case <-connDone:
+		if ctx.Err() != nil {
+			// A signal cancels both contexts; which channel the select observes
+			// is nondeterministic. Treat a canceled parent as the signal path.
+			return 0, exitFromSignal
+		}
+		switch {
+		case exited():
+			return exitCode(), exitFromClient
+		case shuttingDown():
+			return 0, exitFromClient
+		default:
+			return 1, exitFromConnection
+		}
+	}
 }
 
 func parseLogLevel(value string) (slog.Level, error) {
