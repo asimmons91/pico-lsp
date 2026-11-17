@@ -4,7 +4,7 @@
 
 - M0 (Foundation & Walking Skeleton) through M6 (Packaging, Editor Integration & v1) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis` (including `internal/analysis/types`), `internal/builtin`, `internal/config`, and `internal/version`.
 - The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global/type diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including type-aware member/annotation/include completion and resolve), hover, signature help, full semantic tokens, inlay hints, cart-budget code lens, `pico8/cartInfo`, PICO-8 lint diagnostics, and code actions. LuaCATS annotations, gradual inference, flow narrowing, and `off`/`basic`/`strict` type checking are implemented. Release packaging, editor configs, and the v1 GitHub-only distribution path are in place.
-- M0 through M6 are Done; v1.0.0 is published as a GitHub release. M7 and later are not implemented. The formatter and `.p8.png` support remain post-v1. Homebrew and Mason packaging are deferred to post-v1; v1 ships GitHub release archives.
+- M0 through M6 are Done; v1.0.0 is published as a GitHub release. M7–M10 are planned for a batched v1.1.0 release: formatter, read-only `.p8.png` carts, type system I, and type system II. Homebrew and Mason packaging remain in the post-v1 backlog.
 - CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests on Linux/macOS/Windows, golangci-lint, govulncheck, a six-target static build matrix, a short fuzz pass, and a goreleaser snapshot. `.github/workflows/release.yml` publishes tagged GitHub releases; `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
 - README, LICENSE, CHANGELOG, `.golangci.yml`, `.goreleaser.yaml`, install/troubleshooting/release docs, and Neovim/Helix integration files exist. The 51-cart corpus, token fixtures, and LSP golden fixtures live under `testdata/` (`testdata/lsp/`).
@@ -26,7 +26,7 @@
 
 ## Locked v1 scope
 
-- v1 = core LSP + type features. Formatter and `.p8.png` support are post-v1 (M7).
+- v1 = core LSP + type features. Formatter and `.p8.png` support are post-v1 (M7/M8).
 - Editors: Neovim + Helix. VS Code and Zed clients are post-v1.
 - Types: LuaCATS comments only; default mode `basic`; no Luau-style inline syntax.
 - Includes: faithful PICO-8 (non-recursive). A `.lua` file is owned by the nearest ancestor `.p8` cart that includes it.
@@ -38,7 +38,7 @@
 
 ## Implementation order
 
-- Follow M0 → M1 → M2 → M3 → M4 → M5 → M6. M7 is a post-v1 backlog, not v1 work.
+- Follow M0 → M1 → M2 → M3 → M4 → M5 → M6. M7–M10 are committed post-v1 milestones and ship together as v1.1.0; remaining ideas stay in the post-v1 backlog.
 - Follow the file paths in each spec (`cmd/pico-lsp`, `internal/...`). Do not start a milestone before its dependency exits.
 - Use the hand-written PICO-8 lexer/parser (M1); do not substitute tree-sitter, `gopher-lua`, or `golua`.
 - Carts are capped at roughly 64 KB and 8192 tokens. Full reparse and full analysis are intentional; do not build incremental parsing or a query system.

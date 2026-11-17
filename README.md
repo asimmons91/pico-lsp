@@ -132,9 +132,13 @@ the code lens. Both are documented in [docs/api.md](docs/api.md).
 
 ## Known limitations
 
-- No formatter. Formatter support is post-v1.
-- `.p8.png` carts are not supported. Save or export as text `.p8`.
-- VS Code and Zed clients are post-v1. The server remains editor-agnostic.
+- No formatter yet. An AST-aware formatter is planned as
+  [M7](docs/M7-formatter.md) for v1.1.0.
+- `.p8.png` carts are not supported yet. Read-only PNG carts are planned as
+  [M8](docs/M8-p8png.md) for v1.1.0; until then, export a text `.p8`.
+- VS Code and Zed clients remain in the
+  [post-v1 backlog](docs/post-v1-backlog.md). The server remains
+  editor-agnostic.
 - Included `.lua` auto-attachment is a Neovim helper; Helix users open the
   owning `.p8` cart or configure their own attachment strategy.
 - macOS and Windows binaries are unsigned. See
