@@ -263,6 +263,25 @@ move(1, 2)
 		t.Fatalf("missing suppression action in %+v", actions)
 	}
 
+	syntaxDiag := protocol.Diagnostic{
+		Range:    protocol.Range{Start: protocol.Position{Line: 1}, End: protocol.Position{Line: 1}},
+		Severity: protocol.DiagnosticSeverityError,
+		Code:     protocol.String("syntax"),
+	}
+	actions, err = h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Range:        syntaxDiag.Range,
+		Context:      protocol.CodeActionContext{Diagnostics: []protocol.Diagnostic{syntaxDiag}},
+	})
+	if err != nil {
+		t.Fatalf("syntax code action: %v", err)
+	}
+	for _, action := range actions {
+		if candidate, ok := action.(*protocol.CodeAction); ok && strings.Contains(candidate.Title, "Suppress") {
+			t.Fatalf("syntax diagnostic got a suppression action: %+v", candidate)
+		}
+	}
+
 	quickfix := []protocol.CodeActionKind{protocol.CodeActionKindQuickFix}
 	actions, err = h.server.CodeAction(ctx, &protocol.CodeActionParams{
 		TextDocument: protocol.TextDocumentIdentifier{URI: root},
@@ -301,6 +320,9 @@ func TestM5CreateMissingIncludeAction(t *testing.T) {
 	}
 	if missing == nil {
 		t.Fatalf("diagnostics = %+v", params.Diagnostics)
+	}
+	if missing.Range.Start.Character != 10 || missing.Range.End.Character != 21 {
+		t.Fatalf("missing include range = %+v, want path range 10..21", missing.Range)
 	}
 	actions, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
 		TextDocument: protocol.TextDocumentIdentifier{URI: root},
@@ -666,5 +688,27 @@ func TestM5WatchedMissingP8IncludeAppears(t *testing.T) {
 	}
 	if snap.Cart.Tokens == 0 || len(snap.Cart.Files) < 2 {
 		t.Fatalf("cart was not reanalyzed: tokens=%d files=%d", snap.Cart.Tokens, len(snap.Cart.Files))
+	}
+}
+
+func TestM5CartLimitDiagnosticsPublished(t *testing.T) {
+	var b strings.Builder
+	b.WriteString("pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n")
+	for i := 0; i < 11000; i++ {
+		b.WriteString("x = 1\n")
+	}
+	text := b.String()
+	root := writeTemp(t, t.TempDir(), "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+	params := waitDiagnostic(t, h.client, root)
+	codes := diagnosticCodes(params)
+	for _, code := range []string{"token-limit", "char-limit"} {
+		if !containsString(codes, code) {
+			t.Fatalf("diagnostics = %v, missing %s", codes, code)
+		}
 	}
 }
