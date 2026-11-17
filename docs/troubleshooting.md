@@ -95,9 +95,10 @@ v1 reads text `.p8` carts and standalone `.lua` files. Export the cart as text
 
 ## Formatter and code actions
 
-v1 has no formatter. If another formatter is configured, do not send
-`textDocument/formatting` to `pico-lsp`; it does not advertise formatting
-support.
+`textDocument/formatting` is supported for `.p8` and `.lua` documents. It
+refuses documents with syntax errors, missing/unreadable includes, and
+read-only `.p8.png` carts. The formatter preserves PICO-8 shorthand and all
+non-code cart sections; it does not wrap long lines or reorder statements.
 
 Code actions cover generated type annotations, diagnostic suppression, and
 creating missing `.lua` includes. A “Create missing include file” action is only

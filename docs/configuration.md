@@ -19,6 +19,9 @@ For installation and editor setup, see [install.md](install.md),
       "codeLens": true,
       "diagnostics": true
     },
+    "format": {
+      "maxBlankLines": 2
+    },
     "diagnostics": {
       "undefinedGlobal": "warning",
       "unusedLocal": "off",
@@ -51,6 +54,7 @@ For installation and editor setup, see [install.md](install.md),
 | `maxProblems` | integer | `100` | Per-document diagnostic cap; `0` disables truncation. |
 | `limits.codeLens` | boolean | `true` | Show the cart budget code lens. |
 | `limits.diagnostics` | boolean | `true` | Publish token/char limit diagnostics. |
+| `format.maxBlankLines` | integer | `2` | Maximum consecutive blank lines; `0` removes blank lines. |
 | `lint.apiRanges` | boolean | `false` | Optional literal API range checks. |
 
 Diagnostic severity values are `off`, `hint`, `info`, `warning`, and `error`.

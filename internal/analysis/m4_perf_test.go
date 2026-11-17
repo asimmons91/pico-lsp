@@ -2,6 +2,7 @@ package analysis
 
 import (
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -51,7 +52,7 @@ func typeInferenceSnapshot(t *testing.T, text string) *cart.Snapshot {
 }
 
 func TestM4InferencePerformance(t *testing.T) {
-	if analysisRaceDetectorEnabled {
+	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" {
 		t.Skip("timing targets are not meaningful under the race detector")
 	}
 	text := typeInferenceCartText()

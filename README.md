@@ -31,6 +31,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
   symbols and the PICO-8 0.2.7 API.
 - LuaCATS classes, aliases, enums, params, returns, and gradual flow-aware type
   inference with `off`, `basic`, and `strict` checking.
+- AST-guided `textDocument/formatting` that preserves shorthand, comments,
+  annotations, includes, and non-code cart sections.
 - Cart token/character budget code lens, `pico8/cartInfo`, and limit warnings.
 - Include diagnostics and quick fixes, generated annotations, and diagnostic
   suppression.
@@ -132,8 +134,6 @@ the code lens. Both are documented in [docs/api.md](docs/api.md).
 
 ## Known limitations
 
-- No formatter yet. An AST-aware formatter is planned as
-  [M7](docs/M7-formatter.md) for v1.1.0.
 - `.p8.png` carts are not supported yet. Read-only PNG carts are planned as
   [M8](docs/M8-p8png.md) for v1.1.0; until then, export a text `.p8`.
 - VS Code and Zed clients remain in the

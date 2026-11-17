@@ -43,3 +43,6 @@ jobs:
 
       - name: Fuzz analysis
         run: go test -fuzz=FuzzAnalyze -fuzztime=60s ./internal/analysis
+
+      - name: Fuzz formatter
+        run: go test -run=^$ -fuzz=FuzzFormatLua -fuzztime=60s ./internal/format

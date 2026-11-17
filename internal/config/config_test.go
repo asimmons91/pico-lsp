@@ -395,3 +395,15 @@ func TestM5Settings(t *testing.T) {
 		t.Fatalf("diagnostics = %+v", got.Diagnostics)
 	}
 }
+
+func TestFormatSettings(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"format":{"maxBlankLines":0}}}`))
+	if got := m.Settings().Format.MaxBlankLines; got != 0 {
+		t.Fatalf("maxBlankLines = %d, want 0", got)
+	}
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"format":{"maxBlankLines":-1}}}`))
+	if got := m.Settings().Format.MaxBlankLines; got != 2 {
+		t.Fatalf("negative maxBlankLines = %d, want default 2", got)
+	}
+}

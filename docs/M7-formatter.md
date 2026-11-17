@@ -1,6 +1,6 @@
 # M7 — AST-Aware Formatter
 
-**Status:** Planned  
+**Status:** Done — implemented for the v1.1.0 batch.  
 **Depends on:** M6  
 **Release target:** v1.1.0 (batched with M8–M10)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -89,8 +89,8 @@ indented code with comments and annotations preserved. A shorthand
   model.
 - If the AST does not retain a construct losslessly, leave that line unchanged
   and log a debug message rather than guessing.
-- Formatting must not mutate the cached cart snapshot; run on a copy and
-  reparse the result before returning edits.
+- Formatting must not mutate the cached cart snapshot. Verify that the token and
+  comment streams are unchanged; refuse the edit if verification fails.
 - If a `FormattingOptions` field is absent, use stable defaults (`tabSize=2`,
   `insertSpaces=true`, trim trailing whitespace, insert final newline).
 
@@ -111,21 +111,21 @@ indented code with comments and annotations preserved. A shorthand
 - LSP e2e: formatting request, error on syntax errors, options round-trip, and
   no edits for read-only documents.
 - Performance: formatting a 64 KB cart under 25 ms on a typical developer
-  machine, with no more than one full reparse for verification.
+  machine, plus a lexical verification pass.
 
 ## Exit criteria
 
-- [ ] `textDocument/formatting` is advertised and implemented for `.p8` and
+- [x] `textDocument/formatting` is advertised and implemented for `.p8` and
       `.lua` documents.
-- [ ] Shorthand constructs never change line boundaries.
-- [ ] Comments, annotations, includes, tab markers, and non-code sections are
+- [x] Shorthand constructs never change line boundaries.
+- [x] Comments, annotations, includes, tab markers, and non-code sections are
       preserved.
-- [ ] Formatting is idempotent across the corpus.
-- [ ] Formatting refuses unsafe documents with a clear error.
-- [ ] Tests cover LF/CRLF/CR and missing final newlines.
-- [ ] Performance and fuzz targets pass.
-- [ ] Configuration and README documentation are updated.
-- [ ] No v1 behavior or performance budget regressions.
+- [x] Formatting is idempotent across the corpus.
+- [x] Formatting refuses unsafe documents with a clear error.
+- [x] Tests cover LF/CRLF/CR and missing final newlines.
+- [x] Performance and fuzz targets pass.
+- [x] Configuration and README documentation are updated.
+- [x] No v1 behavior or performance budget regressions.
 
 ## Risks and mitigations
 
