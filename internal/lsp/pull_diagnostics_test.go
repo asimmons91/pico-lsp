@@ -314,7 +314,8 @@ func TestPullDiagnosticsMaxProblemsPerDocument(t *testing.T) {
 func TestPullDiagnosticsVirtualCart(t *testing.T) {
 	h := initializePullHarness(t, true, "")
 	dir := t.TempDir()
-	virtual := uri.URI("pico8-cart:" + filepath.Join(dir, "virtual.p8"))
+	source := uri.File(filepath.Join(dir, "virtual.p8.png"))
+	virtual := virtualCartURI(source)
 	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nvirtual_missing()\n"
 	h.srv.carts.SetVirtualText(virtual, text)
 
