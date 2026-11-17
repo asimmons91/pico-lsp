@@ -163,6 +163,23 @@ func TestScopeMethodSelf(t *testing.T) {
 	}
 }
 
+func TestMethodSelfSharesReceiverFields(t *testing.T) {
+	text := "t = {}\nfunction t:m()\n  self.x = 1\nend\nprint(t.x)\n"
+	result, _ := analyzeText(t, text)
+	tSym := result.Table.Globals["t"]
+	if tSym == nil || tSym.Fields["x"] == nil {
+		t.Fatalf("t fields = %v, want x created through self", fieldNames(tSym))
+	}
+	field := tSym.Fields["x"]
+	occ := result.OccurrenceAt(0, strings.Index(text, "t.x")+len("t."))
+	if occ == nil || occ.Symbol != field {
+		t.Fatalf("t.x occurrence = %+v, want shared field %+v", occ, field)
+	}
+	if len(field.Decls) != 1 || len(field.Uses) != 1 {
+		t.Fatalf("field = %+v, want one decl and one use", field)
+	}
+}
+
 func TestGlobalsForwardReferenceAndMultipleDecls(t *testing.T) {
 	text := "function f() return g() end\nfunction g() end\nx = 1\nx = 2\nprint(x)\n"
 	result, _ := analyzeText(t, text)

@@ -45,10 +45,11 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	}
 
 	b := &binder{
-		result: result,
-		table:  table,
-		opts:   opts,
-		labels: []*labelScope{{labels: chunkScope.Labels}},
+		result:      result,
+		table:       table,
+		opts:        opts,
+		labels:      []*labelScope{{labels: chunkScope.Labels}},
+		selfAliases: make(map[*Symbol]*Symbol),
 	}
 	b.collectLabels(snap.Chunk.Block, chunkScope)
 	b.bindBlock(snap.Chunk.Block, chunkScope)
@@ -285,10 +286,23 @@ type labelScope struct {
 }
 
 type binder struct {
-	result *Result
-	table  *SymbolTable
-	opts   Options
-	labels []*labelScope
+	result      *Result
+	table       *SymbolTable
+	opts        Options
+	labels      []*labelScope
+	selfAliases map[*Symbol]*Symbol
+}
+
+// valueSymbol resolves an implicit method self to the receiver for field
+// lookup. The self symbol itself is still used for navigation and highlights.
+func (b *binder) valueSymbol(sym *Symbol) *Symbol {
+	if sym == nil {
+		return nil
+	}
+	if receiver := b.selfAliases[sym]; receiver != nil {
+		return receiver
+	}
+	return sym
 }
 
 func (b *binder) bindBlock(block *syntax.Block, scope *Scope) {
@@ -308,7 +322,7 @@ func (b *binder) bindStmt(stmt syntax.Stmt, scope *Scope) {
 		sym := b.table.NewSymbol(SymbolFunction, st.Name.Text, st.Name.Span(), scope)
 		scope.Declare(sym)
 		b.addDecl(st.Name, sym, scope)
-		b.bindFunction(st.Func, scope, false, source.Span{})
+		b.bindFunction(st.Func, scope, false, nil, source.Span{})
 	case *syntax.AssignStmt:
 		b.bindAssign(st, scope)
 	case *syntax.CallStmt:
@@ -410,12 +424,12 @@ func (b *binder) bindAssign(st *syntax.AssignStmt, scope *Scope) {
 			continue
 		}
 		if table, ok := value.(*syntax.TableExpr); ok && i < len(targets) && targets[i] != nil {
-			b.bindTable(table, targets[i], scope)
+			b.bindTable(table, b.valueSymbol(targets[i]), scope)
 			continue
 		}
 		if fn, ok := value.(*syntax.FunctionExpr); ok && i < len(targets) && targets[i] != nil && targets[i].Kind == SymbolGlobal {
 			targets[i].Kind = SymbolFunction
-			b.bindFunction(fn, scope, false, source.Span{})
+			b.bindFunction(fn, scope, false, nil, source.Span{})
 			continue
 		}
 		b.bindExpr(value, scope)
@@ -431,17 +445,18 @@ func valueAt(values []syntax.Expr, i int) syntax.Expr {
 
 func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 	if len(st.Names) == 0 {
-		b.bindFunction(st.Func, scope, st.Method, source.Span{})
+		b.bindFunction(st.Func, scope, st.Method, nil, source.Span{})
 		return
 	}
 	if len(st.Names) == 1 {
 		sym := b.declareGlobal(st.Names[0], scope)
 		sym.Kind = SymbolFunction
-		b.bindFunction(st.Func, scope, st.Method, st.Names[0].Span())
+		b.bindFunction(st.Func, scope, st.Method, nil, st.Names[0].Span())
 		return
 	}
 
 	receiver := b.resolveName(st.Names[0], scope)
+	selfReceiver := receiver
 	for i := 1; i < len(st.Names); i++ {
 		name := st.Names[i]
 		last := i == len(st.Names)-1
@@ -459,15 +474,18 @@ func (b *binder) bindFunctionDecl(st *syntax.FunctionDeclStmt, scope *Scope) {
 		if existing := fieldOf(receiver, name); existing != nil {
 			b.addUse(name, existing, scope, false)
 			receiver = existing
-			continue
+		} else {
+			receiver = b.declareField(receiver, name, scope, SymbolField)
 		}
-		receiver = b.declareField(receiver, name, scope, SymbolField)
+		if st.Method {
+			selfReceiver = receiver
+		}
 	}
 	selfSpan := st.Names[len(st.Names)-1].Span()
-	b.bindFunction(st.Func, scope, st.Method, selfSpan)
+	b.bindFunction(st.Func, scope, st.Method, selfReceiver, selfSpan)
 }
 
-func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool, selfSpan source.Span) {
+func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool, receiver *Symbol, selfSpan source.Span) {
 	if fn == nil {
 		return
 	}
@@ -480,6 +498,9 @@ func (b *binder) bindFunction(fn *syntax.FunctionExpr, outer *Scope, method bool
 		self.SelectionSpan = selfSpan
 		self.Decls = nil // implicit; no occurrence at the method name
 		fnScope.Declare(self)
+		if receiver != nil {
+			b.selfAliases[self] = receiver
+		}
 	}
 	for _, param := range fn.Params {
 		sym := b.table.NewSymbol(SymbolParam, param.Text, param.Span(), fnScope)
@@ -572,7 +593,7 @@ func (b *binder) bindTarget(target syntax.Expr, scope *Scope) *Symbol {
 		}
 		return b.declareGlobal(t, scope)
 	case *syntax.FieldExpr:
-		receiver := b.bindExpr(t.Base, scope)
+		receiver := b.valueSymbol(b.bindExpr(t.Base, scope))
 		if receiver == nil || t.Name == nil {
 			return nil
 		}
@@ -582,7 +603,7 @@ func (b *binder) bindTarget(target syntax.Expr, scope *Scope) *Symbol {
 		}
 		return b.declareField(receiver, t.Name, scope, SymbolField)
 	case *syntax.IndexExpr:
-		receiver := b.bindExpr(t.Base, scope)
+		receiver := b.valueSymbol(b.bindExpr(t.Base, scope))
 		if _, ok := t.Index.(*syntax.StringExpr); ok {
 			// A string-keyed access is not a dot field: do not navigate into
 			// the string literal, and make field rename on this receiver safe
@@ -610,7 +631,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 	case *syntax.NameExpr:
 		return b.resolveName(e, scope)
 	case *syntax.FieldExpr:
-		receiver := b.bindExpr(e.Base, scope)
+		receiver := b.valueSymbol(b.bindExpr(e.Base, scope))
 		if receiver == nil || e.Name == nil {
 			return nil
 		}
@@ -620,7 +641,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		}
 		return field
 	case *syntax.IndexExpr:
-		receiver := b.bindExpr(e.Base, scope)
+		receiver := b.valueSymbol(b.bindExpr(e.Base, scope))
 		if _, ok := e.Index.(*syntax.StringExpr); ok {
 			if receiver != nil && !receiver.Builtin {
 				receiver.DynamicFields = true
@@ -639,7 +660,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		}
 		return nil
 	case *syntax.MethodCallExpr:
-		receiver := b.bindExpr(e.Receiver, scope)
+		receiver := b.valueSymbol(b.bindExpr(e.Receiver, scope))
 		if receiver != nil && e.Method != nil {
 			if field := fieldOf(receiver, e.Method); field != nil {
 				b.addUse(e.Method, field, scope, false)
@@ -657,7 +678,7 @@ func (b *binder) bindExpr(expr syntax.Expr, scope *Scope) *Symbol {
 		b.bindExpr(e.Right, scope)
 		return nil
 	case *syntax.FunctionExpr:
-		b.bindFunction(e, scope, false, source.Span{})
+		b.bindFunction(e, scope, false, nil, source.Span{})
 		return nil
 	case *syntax.TableExpr:
 		b.bindTable(e, nil, scope)

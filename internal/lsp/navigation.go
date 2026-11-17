@@ -21,7 +21,7 @@ type navContext struct {
 
 func (s *Server) navigationFor(ctx context.Context, u uri.URI) (*navContext, bool) {
 	snap, semantics, fileID, ok := s.carts.SemanticsFor(ctx, u)
-	if !ok {
+	if !ok || semantics == nil {
 		return nil, false
 	}
 	file := snap.Cart.File(fileID)
