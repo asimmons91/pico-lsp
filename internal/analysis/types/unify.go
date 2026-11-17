@@ -89,7 +89,7 @@ func assignable(src, dst Type, strict bool, depth int) bool {
 		case Map:
 			return assignable(s.Key, d.Key, strict, depth+1) && assignable(s.Elem, d.Elem, strict, depth+1)
 		case *Record:
-			if s == nil {
+			if s == nil || !assignable(StringType, d.Key, strict, depth+1) {
 				return false
 			}
 			for _, field := range s.Fields {

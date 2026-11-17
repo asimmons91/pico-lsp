@@ -98,6 +98,11 @@ func TestAssignable(t *testing.T) {
 	if !Assignable(optionalValue, withOptional, true) {
 		t.Fatal("optional field rejected nil in strict mode")
 	}
+	record := NewRecord("")
+	record.AddField(&Field{Name: "a", Type: NumberType})
+	if Assignable(record, Map{Key: NumberType, Elem: NumberType}, false) {
+		t.Fatal("string-keyed record accepted as table<number, number>")
+	}
 
 	exact := NewRecord("Exact")
 	exact.Exact = true
