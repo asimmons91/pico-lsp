@@ -64,7 +64,14 @@ These decisions were made before milestone specs were written. Changing one requ
 | M4 | Type System & Annotations | LuaCATS, gradual inference, type-aware features, type diagnostics | M3 | Done |
 | M5 | PICO-8-Specific Polish | Token/char budget, include diagnostics, lint rules, code actions | M4 | Done |
 | M6 | Packaging, Editor Integration & v1 | Installable and tested v1 for Neovim and Helix | M5 | Done |
-| M7 | Post-v1 | Formatter, `.p8.png`, VS Code, Zed, advanced types | M6 | Planned |
+| M7 | AST-Aware Formatter | Shorthand-safe formatting with comments and annotations preserved | M6 | Planned |
+| M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Planned |
+| M9 | Type System I | Inheritance, exact classes, metatable inference, stronger narrowing | M8 | Planned |
+| M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Planned |
+
+M7–M10 are planned to ship together as **v1.1.0**, in that order. Each
+milestone is independently mergeable, but the release is cut only after all four
+meet their exit criteria.
 
 Each milestone has a detailed spec:
 
@@ -75,7 +82,12 @@ Each milestone has a detailed spec:
 - [M4 — Type System & Annotations](M4-type-system.md)
 - [M5 — PICO-8-Specific Polish](M5-pico8-polish.md)
 - [M6 — Packaging, Editor Integration & v1](M6-packaging-and-release.md)
-- [M7 — Post-v1](M7-post-v1.md)
+- [M7 — AST-Aware Formatter](M7-formatter.md)
+- [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
+- [M9 — Type System I](M9-type-system-1.md)
+- [M10 — Type System II](M10-type-system-2.md)
+
+Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
 API and configuration references:
 
@@ -241,10 +253,11 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produce `v0.x` prereleases; M6 cuts `v1.0.0`.
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
+- **Post-v1 batching:** M7–M10 ship together as v1.1.0; later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
 - Milestone specs are the source of truth for scope, interfaces, and acceptance criteria.
 - Mark a milestone **In progress** when implementation starts and **Done** only when its exit criteria pass.
 - Any change to a locked decision updates this roadmap and every affected spec in the same change.
-- New ideas go to M7 or a new post-v1 spec; they do not expand v1 scope without an explicit decision.
+- New ideas go to the [post-v1 backlog](post-v1-backlog.md) or a promoted milestone spec; they do not expand v1 scope without an explicit decision.

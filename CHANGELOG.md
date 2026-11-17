@@ -10,6 +10,8 @@ All notable changes to this project are documented here. The format follows
 
 - Document the project's AI-assisted, AI vibe-coded development process in the
   README.
+- Plan the post-v1 roadmap: M7 formatter, M8 read-only `.p8.png` carts, M9 type
+  system I, and M10 type system II, batched for v1.1.0.
 
 ## [1.0.0] - 2026-11-17
 
