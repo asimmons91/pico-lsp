@@ -50,3 +50,31 @@ jobs:
 
       - name: Static build
         run: CGO_ENABLED=0 go build -trimpath ./cmd/pico-lsp
+
+  fuzz:
+    name: short fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GOFLAGS: -mod=readonly
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Fuzz lexer
+        run: go test -fuzz=FuzzLexer -fuzztime=5s ./internal/syntax
+
+      - name: Fuzz parser
+        run: go test -fuzz=FuzzParser -fuzztime=5s ./internal/syntax
+
+      - name: Fuzz include flattening
+        run: go test -fuzz=FuzzIncludeFlatten -fuzztime=5s ./internal/cart
