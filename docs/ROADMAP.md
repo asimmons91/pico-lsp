@@ -68,9 +68,14 @@ These decisions were made before milestone specs were written. Changing one requ
 | M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Done |
 | M9 | Type System I | Inheritance, exact classes, metatable inference, stronger narrowing | M8 | Done |
 | M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Done |
+| M11 | Pull Diagnostics | LSP 3.17 pull diagnostics with related files and push fallback | M10 | Planned |
+| M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Planned |
+| M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Planned |
+| M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Planned |
 
-M7–M10 ship together as **v1.1.0**, in that order. M7, M8, M9, and M10 are
-implemented; the release is cut after all four milestone exit criteria pass.
+M7–M10 shipped together as **v1.1.0**. M11–M14 are scheduled for **v1.2.0** in
+the order shown. Each milestone is independently mergeable, but the release is
+cut only after all four meet their exit criteria.
 
 Each milestone has a detailed spec:
 
@@ -85,6 +90,10 @@ Each milestone has a detailed spec:
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
 - [M9 — Type System I](M9-type-system-1.md)
 - [M10 — Type System II](M10-type-system-2.md)
+- [M11 — Pull Diagnostics](M11-pull-diagnostics.md)
+- [M12 — PICO-8 Tree-sitter Grammar](M12-tree-sitter-grammar.md)
+- [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
+- [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -162,6 +171,7 @@ All diagnostics use `source: "pico-lsp"` and a stable `code`.
 | `global-in-function` | Off | M5 |
 | `token-limit` | Error when exceeded; warning at 90% | M5 |
 | `char-limit` | Error when exceeded; warning at 90% | M5 |
+| `compressed-size-limit` | Warning at 90%; error when exceeded | M13 |
 | `pico8-callback-precedence` | Hint | M5 |
 | `pico8-callback-params` | Warning | M5 |
 | `pico8-no-stdlib` | Hint | M5 |
@@ -252,10 +262,10 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produce `v0.x` prereleases; M6 cuts `v1.0.0`.
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 batches use minor releases (`v1.1.0`, `v1.2.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 ship together as v1.1.0; later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 are batched as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

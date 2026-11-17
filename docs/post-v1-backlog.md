@@ -4,7 +4,7 @@
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 This file is the prioritized backlog for work that is not part of the committed
-M7–M10 sequence. It is not a commitment to ship every item. Selected items move
+M7–M14 sequence. It is not a commitment to ship every item. Selected items move
 into their own milestone specs.
 
 ## Committed post-v1 work
@@ -15,20 +15,21 @@ The following backlog items have been promoted and split into milestone specs:
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
 - [M9 — Type System I](M9-type-system-1.md)
 - [M10 — Type System II](M10-type-system-2.md)
+- [M11 — Pull Diagnostics](M11-pull-diagnostics.md)
+- [M12 — PICO-8 Tree-sitter Grammar](M12-tree-sitter-grammar.md)
+- [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
+- [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 
-M7–M10 shipped in v1.1.0. The items below are post-1.1 work.
+M7–M10 shipped in v1.1.0. M11–M14 are scheduled for v1.2.0. The items below are
+not part of that release.
 
 ## Prioritization
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
-| P1 | Pull diagnostics | Better LSP 3.17+ integration and cart-wide updates | Low |
 | P2 | VS Code client | Reach mainstream editor users | Low |
 | P2 | Zed extension | Modern editor support | Medium |
-| P2 | PICO-8 tree-sitter grammar | Full syntax highlighting outside Lua code and better Helix support | Medium |
-| P2 | Compressed-size budget | Complete `.p8.png` limits | Medium |
-| P3 | Refactors and code actions | Productivity | Medium |
 | P3 | API version selection | Support future PICO-8 API versions | Medium |
 
 ## 1. Homebrew and Mason packaging
@@ -45,22 +46,7 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 2. Pull diagnostics
-
-Use LSP 3.17 pull diagnostics where supported.
-
-Requirements:
-
-- `textDocument/diagnostic` returns full reports for the requested document.
-- `relatedDocuments` covers other files whose diagnostics changed because of
-  cart analysis.
-- `workspace/diagnostic` is optional, cancellable, and bounded to open carts or
-  active workspace folders.
-- Configuration selects push, pull, or automatic per client capability.
-- Avoid duplicate push/pull publication.
-- Preserve `pico8.maxProblems` truncation semantics.
-
-## 3. VS Code client
+## 2. VS Code client
 
 Make installation easy for VS Code users.
 
@@ -75,7 +61,7 @@ Requirements:
 - Test activation, server start, configuration, and core features on all target
   platforms.
 
-## 4. Zed extension
+## 3. Zed extension
 
 Provide PICO-8 support in Zed.
 
@@ -87,51 +73,7 @@ Requirements:
 - Binary architecture detection and clear installation errors.
 - Document manual binary configuration.
 
-## 5. PICO-8 tree-sitter grammar
-
-Provide a grammar for syntax highlighting and editor text objects in Helix,
-Neovim, Zed, and other tree-sitter consumers.
-
-Requirements:
-
-- Grammar for `.p8` sections, `__lua__` code, tab markers, comments, strings,
-  numbers, dialect keywords, and operators.
-- Keep non-code sections visible and highlighted without attempting to parse
-  their payloads as Lua.
-- Publish queries for highlights, indents, and text objects.
-- Do not replace the hand-written server lexer/parser; the grammar is for
-  editors, not analysis.
-- Test against the full corpus and nested/shorthand edge cases.
-
-## 6. Compressed-size budget
-
-Report `.p8.png` compressed code size and warn near the documented limit.
-
-Requirements:
-
-- Implement or integrate a PICO-8-compatible compressor.
-- Add compressed size to `pico8/cartInfo` and the budget code lens.
-- Warn/error at the documented compressed-size limit.
-- Validate against PICO-8’s own output for fixtures.
-- Keep the value informational until exact parity is proven.
-
-## 7. Refactors and code actions
-
-All refactors must be conservative, previewable through `WorkspaceEdit`, and
-never silently reorder order-sensitive includes.
-
-Candidates:
-
-- Extract selection to a local function.
-- Convert a global to a local when safe.
-- Generate `---@class` from a table literal.
-- Add missing fields to an exact class annotation.
-- Convert standard `if ... then ... end` to shorthand and vice versa with
-  safety checks.
-- Remove unused locals/functions with confirmation.
-- Do not automatically reorder `#include` directives.
-
-## 8. API version selection
+## 4. API version selection
 
 Support additional PICO-8 API versions.
 
@@ -145,7 +87,7 @@ Requirements:
 
 ## Cross-cutting requirements
 
-- No regressions in v1 or v1.1 behavior or performance budgets.
+- No regressions in v1, v1.1, or v1.2 behavior or performance budgets.
 - Every feature is additive or explicitly opt-in.
 - Update the roadmap, README, configuration docs, diagnostic reference, and
   changelog.
@@ -158,8 +100,6 @@ Requirements:
 | Risk | Mitigation |
 |---|---|
 | Packaging credentials or registry lag | Ship GitHub binaries first; make publishers independently retryable. |
-| Pull diagnostics double-publish | Capability-based selection, single source of truth, e2e tests. |
 | Client/packaging drift | Shared release assets, thin clients, platform smoke tests. |
-| Grammar divergence from server parser | Treat grammar as highlighting-only; corpus and edge-case fixtures. |
-| Compressed-size mismatch | Validate against PICO-8 output; keep informational until parity. |
+| API-version stub drift | Versioned stub fixtures and explicit fallback diagnostics. |
 | Scope creep | Backlog is prioritized; only promoted items become milestones. |

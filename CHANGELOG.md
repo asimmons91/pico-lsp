@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Plan M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed
+  size budgets, and conservative refactors — for a batched v1.2.0 release.
+
 ## [1.1.0] - 2026-11-17
 
 ### Added
