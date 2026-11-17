@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -45,6 +46,19 @@ func isPNGURI(u uri.URI) bool {
 
 func isVirtualCartURI(u uri.URI) bool {
 	return u.Scheme() == "pico8-cart"
+}
+
+// canonicalVirtualURI normalizes percent-encoded path components such as the
+// colon in a Windows drive letter, which JSON/URI encoders may escape.
+func canonicalVirtualURI(u uri.URI) uri.URI {
+	if !isVirtualCartURI(u) {
+		return u
+	}
+	path := u.Path()
+	if decoded, err := url.PathUnescape(path); err == nil {
+		path = decoded
+	}
+	return uri.URI(virtualCartScheme + path)
 }
 
 func virtualCartURI(source uri.URI) uri.URI {
@@ -107,6 +121,7 @@ func (s *Server) decodePNG(source uri.URI) (pngEntry, error) {
 }
 
 func (s *Server) snapshotForCart(ctx context.Context, u uri.URI) (*cart.Snapshot, error) {
+	u = canonicalVirtualURI(u)
 	if isPNGURI(u) {
 		entry, err := s.decodePNG(u)
 		if err != nil {
@@ -116,7 +131,7 @@ func (s *Server) snapshotForCart(ctx context.Context, u uri.URI) (*cart.Snapshot
 		return snapshot, err
 	}
 	if isVirtualCartURI(u) {
-		snapshot, _, ok := s.carts.SnapshotFor(ctx, u)
+		snapshot, _, ok := s.carts.SnapshotFor(ctx, canonicalVirtualURI(u))
 		if !ok {
 			return nil, fmt.Errorf("decoded cart is not available: %s", u)
 		}

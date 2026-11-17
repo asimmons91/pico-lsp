@@ -80,7 +80,7 @@ func TestEndToEndDecodeP8PNG(t *testing.T) {
 	}, &wire); err != nil {
 		t.Fatalf("decodeCart over the wire: %v", err)
 	}
-	if wire.VirtualURI != decoded.VirtualURI || wire.Text != decoded.Text {
+	if canonicalVirtualURI(wire.VirtualURI) != decoded.VirtualURI || wire.Text != decoded.Text {
 		t.Fatalf("wire virtual=%q direct virtual=%q textEqual=%v", wire.VirtualURI, decoded.VirtualURI, wire.Text == decoded.Text)
 	}
 

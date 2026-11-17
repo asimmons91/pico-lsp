@@ -20,6 +20,7 @@ type navContext struct {
 }
 
 func (s *Server) navigationFor(ctx context.Context, u uri.URI) (*navContext, bool) {
+	u = canonicalVirtualURI(u)
 	if u == "" || (!u.IsFile() && !isVirtualCartURI(u)) || u.Path() == "" || u.Path() == "/" {
 		return nil, false
 	}
