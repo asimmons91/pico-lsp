@@ -250,16 +250,34 @@ func TestDocumentStoreSetEncodingRebuildsIndexes(t *testing.T) {
 	}
 }
 
-func TestDocumentStoreVersionRegressionStillApplies(t *testing.T) {
+func TestDocumentStoreRejectsStaleVersions(t *testing.T) {
 	store := NewDocumentStore(protocol.PositionEncodingKindUTF16, quietLogger())
 	u := uri.File("/tmp/version.p8")
-	store.Open(u, "pico8", 5, "abc")
+	store.Open(u, "pico8", 1, "abc")
 
-	if err := store.Change(u, 4, []protocol.TextDocumentContentChangeEvent{wholeChange("xyz")}); err != nil {
-		t.Fatalf("Change: %v", err)
+	if err := store.Change(u, 2, []protocol.TextDocumentContentChangeEvent{
+		partialChange(0, 0, 0, 0, "X"),
+	}); err != nil {
+		t.Fatalf("first change: %v", err)
 	}
+
+	// The same incremental notification retransmitted must not apply twice.
+	if err := store.Change(u, 2, []protocol.TextDocumentContentChangeEvent{
+		partialChange(0, 0, 0, 0, "X"),
+	}); err == nil {
+		t.Fatal("stale change succeeded, want error")
+	}
+
 	doc, _ := store.Get(u)
-	if doc.Text != "xyz" || doc.Version != 4 {
-		t.Fatalf("document = %+v, want text xyz version 4", doc)
+	if doc.Text != "Xabc" || doc.Version != 2 {
+		t.Fatalf("document = %+v, want text Xabc version 2", doc)
+	}
+
+	if err := store.Change(u, 0, []protocol.TextDocumentContentChangeEvent{wholeChange("reset")}); err == nil {
+		t.Fatal("version regression succeeded, want error")
+	}
+	doc, _ = store.Get(u)
+	if doc.Text != "Xabc" || doc.Version != 2 {
+		t.Fatalf("document changed after version regression: %+v", doc)
 	}
 }

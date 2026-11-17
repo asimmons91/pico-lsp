@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -95,10 +96,31 @@ func decodeResponse(t *testing.T, body []byte) rpcResponse {
 	return resp
 }
 
+func runWithTimeout(t *testing.T, ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	t.Helper()
+
+	done := make(chan int, 1)
+	go func() {
+		done <- run(ctx, args, stdin, stdout, stderr)
+	}()
+
+	select {
+	case code := <-done:
+		return code
+	case <-time.After(5 * time.Second):
+		t.Fatal("run did not return within 5s")
+		return -1
+	}
+}
+
 func TestRunSpeaksOnlyLSPOnStdout(t *testing.T) {
-	inR, inW := io.Pipe()
-	outR, outW := io.Pipe()
+	inR, inW := net.Pipe()
+	outR, outW := net.Pipe()
 	var stderr bytes.Buffer
+
+	deadline := time.Now().Add(10 * time.Second)
+	_ = inW.SetWriteDeadline(deadline)
+	_ = outR.SetReadDeadline(deadline)
 
 	done := make(chan int, 1)
 	go func() {
@@ -162,6 +184,7 @@ func TestRunSpeaksOnlyLSPOnStdout(t *testing.T) {
 
 	_ = inW.Close()
 	_ = outW.Close()
+	_ = outR.SetReadDeadline(time.Now().Add(time.Second))
 
 	extra, err := io.ReadAll(reader)
 	if err != nil {
@@ -172,10 +195,45 @@ func TestRunSpeaksOnlyLSPOnStdout(t *testing.T) {
 	}
 }
 
+func TestRunCancellationDuringSessionExitsZero(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		inR, inW := net.Pipe()
+		outR, outW := net.Pipe()
+
+		deadline := time.Now().Add(5 * time.Second)
+		_ = inW.SetWriteDeadline(deadline)
+		_ = outR.SetReadDeadline(deadline)
+
+		done := make(chan int, 1)
+		go func() {
+			done <- run(ctx, nil, inR, outW, io.Discard)
+		}()
+
+		reader := bufio.NewReader(outR)
+		writeFrame(t, inW, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}`)
+		decodeResponse(t, readFrame(t, reader))
+
+		cancel()
+
+		select {
+		case code := <-done:
+			if code != 0 {
+				t.Fatalf("iteration %d: exit code = %d, want 0", i, code)
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatalf("iteration %d: timed out waiting for cancellation exit", i)
+		}
+
+		_ = inW.Close()
+		_ = outW.Close()
+	}
+}
+
 func TestRunVersion(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
-	code := run(context.Background(), []string{"--version"}, strings.NewReader(""), &stdout, &stderr)
+	code := runWithTimeout(t, context.Background(), []string{"--version"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}
@@ -190,7 +248,7 @@ func TestRunVersion(t *testing.T) {
 func TestRunHelp(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
-	code := run(context.Background(), []string{"--help"}, strings.NewReader(""), &stdout, &stderr)
+	code := runWithTimeout(t, context.Background(), []string{"--help"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}
@@ -205,7 +263,7 @@ func TestRunHelp(t *testing.T) {
 func TestRunInvalidLogLevel(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
-	code := run(context.Background(), []string{"--log-level", "loud"}, strings.NewReader(""), &stdout, &stderr)
+	code := runWithTimeout(t, context.Background(), []string{"--log-level", "loud"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2", code)
 	}
@@ -217,11 +275,25 @@ func TestRunInvalidLogLevel(t *testing.T) {
 	}
 }
 
+func TestRunCanceledContextExitsPromptly(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	start := time.Now()
+	code := runWithTimeout(t, ctx, nil, strings.NewReader(""), io.Discard, io.Discard)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("run took %v after cancellation, want prompt exit", elapsed)
+	}
+}
+
 func TestRunLogFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "pico-lsp.log")
 	var stdout, stderr bytes.Buffer
 
-	code := run(context.Background(), []string{"--log-file", path}, strings.NewReader(""), &stdout, &stderr)
+	code := runWithTimeout(t, context.Background(), []string{"--log-file", path}, strings.NewReader(""), &stdout, &stderr)
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1 for EOF without exit", code)
 	}

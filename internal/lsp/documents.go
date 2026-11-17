@@ -92,6 +92,11 @@ func (s *DocumentStore) Change(u uri.URI, version int32, changes []protocol.Text
 	if !ok {
 		return fmt.Errorf("document is not open")
 	}
+	if version <= doc.Version {
+		s.log.Warn("ignoring stale document change",
+			"uri", u.String(), "current", doc.Version, "received", version)
+		return fmt.Errorf("stale document version %d (current %d)", version, doc.Version)
+	}
 
 	text := doc.Text
 	index := doc.Index
@@ -102,11 +107,6 @@ func (s *DocumentStore) Change(u uri.URI, version int32, changes []protocol.Text
 		}
 		text = next
 		index = source.New([]byte(text), s.encoding)
-	}
-
-	if version <= doc.Version {
-		s.log.Warn("document version did not increase",
-			"uri", u.String(), "previous", doc.Version, "received", version)
 	}
 
 	doc.Version = version

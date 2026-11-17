@@ -98,6 +98,15 @@ func TestInvalidValuesFallBackToDefaults(t *testing.T) {
 	}
 }
 
+func TestZeroMaxProblemsDisablesTruncation(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"maxProblems":0}}`))
+
+	if got := m.Settings().MaxProblems; got != 0 {
+		t.Fatalf("maxProblems = %d, want 0 (unlimited)", got)
+	}
+}
+
 func TestMalformedInitializationOptionsAreIgnored(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyInitializationOptions(lspValue(`"not an object"`))
@@ -135,9 +144,9 @@ func TestPullOverridesInitializationOptions(t *testing.T) {
 	}
 }
 
-func TestPullEmptyValueResetsToDefaults(t *testing.T) {
+func TestPullEmptyValueFallsBackToInitializationOptions(t *testing.T) {
 	m := New(testLogger())
-	m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict"}}`))
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict","maxProblems":25}}`))
 	m.SetPullSupported(true)
 
 	for name, values := range map[string][]protocol.LSPAny{
@@ -146,14 +155,42 @@ func TestPullEmptyValueResetsToDefaults(t *testing.T) {
 		"blank": {lspValue(`{}`)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict"}}`))
+			m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict","maxProblems":25}}`))
+			m.store(Default())
 			if err := m.Pull(context.Background(), &fakeClient{values: values}); err != nil {
 				t.Fatalf("Pull: %v", err)
 			}
-			if got := m.Settings().TypeChecking; got != DefaultTypeChecking {
-				t.Fatalf("typeChecking = %q, want default", got)
+			got := m.Settings()
+			if got.TypeChecking != TypeCheckingStrict {
+				t.Fatalf("typeChecking = %q, want strict from initializationOptions", got.TypeChecking)
+			}
+			if got.MaxProblems != 25 {
+				t.Fatalf("maxProblems = %d, want 25 from initializationOptions", got.MaxProblems)
 			}
 		})
+	}
+}
+
+func TestPullPreservesInitializationOptionsForMissingFields(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"maxProblems":25,"diagnostics":{"unusedLocal":"hint"}}}`))
+	m.SetPullSupported(true)
+
+	if err := m.Pull(context.Background(), &fakeClient{
+		values: []protocol.LSPAny{lspValue(`{"typeChecking":"strict"}`)},
+	}); err != nil {
+		t.Fatalf("Pull: %v", err)
+	}
+
+	got := m.Settings()
+	if got.TypeChecking != TypeCheckingStrict {
+		t.Fatalf("typeChecking = %q, want strict from pull", got.TypeChecking)
+	}
+	if got.MaxProblems != 25 {
+		t.Fatalf("maxProblems = %d, want 25 from initializationOptions", got.MaxProblems)
+	}
+	if got.Diagnostics.UnusedLocal != SeverityHint {
+		t.Fatalf("unusedLocal = %q, want hint from initializationOptions", got.Diagnostics.UnusedLocal)
 	}
 }
 

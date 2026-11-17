@@ -1,9 +1,13 @@
 package lsp
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,12 +56,21 @@ type harness struct {
 
 func newHarness(t *testing.T, client *testClient) *harness {
 	t.Helper()
+	return newHarnessWithHandler(t, client, nil)
+}
+
+func newHarnessWithHandler(t *testing.T, client *testClient, wrap func(jsonrpc2.Handler) jsonrpc2.Handler) *harness {
+	t.Helper()
 
 	serverPipe, clientPipe := net.Pipe()
 	srv := New(quietLogger(), config.New(quietLogger()))
 
 	serverCtx, cancelServer := context.WithCancel(context.Background())
-	serverConn := srv.Serve(serverCtx, jsonrpc2.NewStream(serverPipe))
+	next := protocol.ServerHandler(srv, jsonrpc2.MethodNotFoundHandler)
+	if wrap != nil {
+		next = wrap(next)
+	}
+	serverConn := srv.serve(serverCtx, jsonrpc2.NewStream(serverPipe), next)
 
 	clientCtx, cancelClient := context.WithCancel(context.Background())
 	_, clientConn, server := protocol.NewClient(clientCtx, client, jsonrpc2.NewStream(clientPipe))
@@ -263,6 +276,36 @@ func TestEndToEndServerNotInitialized(t *testing.T) {
 	h.exit(t, true)
 }
 
+func TestEndToEndInitializeNotificationIsIgnored(t *testing.T) {
+	h := newHarness(t, newTestClient())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	initNotification := map[string]any{"capabilities": map[string]any{}}
+	if err := h.clientConn.Notify(ctx, protocol.MethodInitialize, initNotification); err != nil {
+		t.Fatalf("initialize notification: %v", err)
+	}
+
+	// The notification must not initialize the server, so this request succeeds.
+	h.initialize(t, &protocol.InitializeParams{})
+
+	if err := h.clientConn.Notify(ctx, protocol.MethodInitialize, initNotification); err != nil {
+		t.Fatalf("duplicate initialize notification: %v", err)
+	}
+	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
+		t.Fatalf("hover after duplicate initialize notification: %v", err)
+	}
+
+	_, err := h.server.Initialize(ctx, &protocol.InitializeParams{})
+	var rpcErr *jsonrpc2.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != jsonrpc2.InvalidRequest {
+		t.Fatalf("second initialize error = %v, want InvalidRequest", err)
+	}
+
+	h.exit(t, true)
+}
+
 func TestEndToEndBadParamsDoNotKillConnection(t *testing.T) {
 	h := newHarness(t, newTestClient())
 
@@ -272,6 +315,11 @@ func TestEndToEndBadParamsDoNotKillConnection(t *testing.T) {
 	var raw any
 	if _, err := h.clientConn.Call(ctx, protocol.MethodInitialize, "not a params object", &raw); err == nil {
 		t.Fatal("invalid initialize params succeeded, want error")
+	} else {
+		var rpcErr *jsonrpc2.Error
+		if !errors.As(err, &rpcErr) || rpcErr.Code != jsonrpc2.InvalidParams {
+			t.Fatalf("invalid initialize error = %v, want InvalidParams", err)
+		}
 	}
 
 	if _, err := h.server.Initialize(ctx, &protocol.InitializeParams{}); err != nil {
@@ -281,6 +329,17 @@ func TestEndToEndBadParamsDoNotKillConnection(t *testing.T) {
 		t.Fatalf("initialized: %v", err)
 	}
 
+	if _, err := h.clientConn.Call(ctx, protocol.MethodTextDocumentHover, map[string]any{
+		"textDocument": "not an object",
+	}, &raw); err == nil {
+		t.Fatal("invalid hover params succeeded, want error")
+	} else {
+		var rpcErr *jsonrpc2.Error
+		if !errors.As(err, &rpcErr) || rpcErr.Code != jsonrpc2.InvalidParams {
+			t.Fatalf("invalid hover error = %v, want InvalidParams", err)
+		}
+	}
+
 	if err := h.clientConn.Notify(ctx, protocol.MethodTextDocumentDidChange, map[string]any{
 		"textDocument": "not an object",
 	}); err != nil {
@@ -288,6 +347,41 @@ func TestEndToEndBadParamsDoNotKillConnection(t *testing.T) {
 	}
 	if _, err := h.server.Hover(ctx, &protocol.HoverParams{}); err != nil {
 		t.Fatalf("hover after malformed notification: %v", err)
+	}
+
+	h.exit(t, true)
+}
+
+func TestEndToEndPanicRecovery(t *testing.T) {
+	var panicked atomic.Bool
+	h := newHarnessWithHandler(t, newTestClient(), func(next jsonrpc2.Handler) jsonrpc2.Handler {
+		return func(ctx context.Context, req *jsonrpc2.Request) (any, error) {
+			if req.Method() == protocol.MethodTextDocumentReferences && panicked.CompareAndSwap(false, true) {
+				panic("boom")
+			}
+			return next(ctx, req)
+		}
+	})
+
+	var logs bytes.Buffer
+	h.srv.log = slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	h.initialize(t, &protocol.InitializeParams{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := h.server.References(ctx, &protocol.ReferenceParams{})
+	var rpcErr *jsonrpc2.Error
+	if !errors.As(err, &rpcErr) || rpcErr.Code != jsonrpc2.InternalError {
+		t.Fatalf("panicking request error = %v, want InternalError", err)
+	}
+
+	if !strings.Contains(logs.String(), "recovered panic") {
+		t.Fatalf("panic was not logged; log:\n%s", logs.String())
+	}
+
+	if _, err := h.server.References(ctx, &protocol.ReferenceParams{}); err != nil {
+		t.Fatalf("references after recovered panic: %v", err)
 	}
 
 	h.exit(t, true)

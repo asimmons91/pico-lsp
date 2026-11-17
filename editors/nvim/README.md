@@ -40,7 +40,8 @@ vim.lsp.enable("pico_lsp")
 The same settings can be passed as `init_options = { pico8 = { ... } }`
 instead of `settings`. If the client supports `workspace/configuration`, the
 server pulls the `pico8` section after the `initialized` notification and
-prefers that over initialization options.
+prefers pulled values per field; fields the client does not return fall back to
+`init_options`.
 
 To run a locally built binary without installing it, use an absolute path:
 

@@ -73,7 +73,8 @@ func (l *LineIndex) Offset(pos protocol.Position) (int, error) {
 //
 // Negative offsets are an error. Offsets past the end of the document are
 // clamped. Offsets inside a line terminator are reported at the end of that
-// line's content.
+// line's content, and offsets inside a multi-byte character are clamped down to
+// the character's first byte.
 func (l *LineIndex) Position(offset int) (protocol.Position, error) {
 	if offset < 0 {
 		return protocol.Position{}, fmt.Errorf("source: negative offset %d", offset)

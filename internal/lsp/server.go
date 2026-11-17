@@ -132,10 +132,14 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 // panic recovery, and unknown-method handling, which protocol.NewServer does
 // not expose.
 func (s *Server) Serve(ctx context.Context, stream jsonrpc2.Stream) jsonrpc2.Conn {
+	next := protocol.ServerHandler(s, jsonrpc2.MethodNotFoundHandler)
+	return s.serve(ctx, stream, next)
+}
+
+func (s *Server) serve(ctx context.Context, stream jsonrpc2.Stream, next jsonrpc2.Handler) jsonrpc2.Conn {
 	conn := jsonrpc2.NewConn(stream, jsonrpc2.WithCodec(lspCodec{}))
 	s.client.Store(protocol.ClientDispatcher(conn))
 
-	next := protocol.ServerHandler(s, jsonrpc2.MethodNotFoundHandler)
 	conn.Go(ctx, s.dispatch(next))
 	return conn
 }
@@ -209,6 +213,12 @@ func (s *Server) dispatch(next jsonrpc2.Handler) jsonrpc2.Handler {
 		defer s.recoverPanic(method, isCall, &result, &err)
 
 		if allow, lifeErr := s.checkLifecycle(method, isCall); !allow {
+			if !isCall {
+				if lifeErr != nil {
+					s.log.Warn("ignoring notification rejected by lifecycle", "method", method, "error", lifeErr)
+				}
+				return nil, nil
+			}
 			return nil, lifeErr
 		}
 
@@ -234,6 +244,13 @@ func (s *Server) dispatch(next jsonrpc2.Handler) jsonrpc2.Handler {
 			// are logged and ignored.
 			s.log.Warn("ignoring failed notification", "method", method, "error", err)
 			return nil, nil
+		}
+		if isCall && errors.Is(err, jsonrpc2.ErrParse) {
+			// The protocol decoder reports parameter shape errors as ParseError.
+			// Envelope-level parse failures never reach a handler, so this is an
+			// invalid-params error from the LSP perspective.
+			s.log.Debug("invalid request params", "method", method)
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
 		}
 		return result, err
 	}
@@ -265,6 +282,10 @@ func (s *Server) recoverPanic(method string, isCall bool, result *any, err *erro
 func (s *Server) checkLifecycle(method string, isCall bool) (allow bool, err error) {
 	switch method {
 	case protocol.MethodInitialize:
+		if !isCall {
+			s.log.Debug("dropping initialize notification")
+			return false, nil
+		}
 		s.mu.Lock()
 		state := s.state
 		s.mu.Unlock()

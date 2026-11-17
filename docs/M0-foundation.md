@@ -93,7 +93,7 @@ InitializeResult{
 - `shutdown` returns success and marks the server as shutting down.
 - `exit` exits with code `0` if shutdown was received, otherwise `1`.
 - Unknown requests return `MethodNotFound`; unknown notifications are ignored.
-- `$/cancelRequest` is accepted and ignored in M0. Handlers are short-lived and run in order, so there is nothing to cancel yet; revisit when long-running or concurrent handlers exist.
+- `$/cancelRequest` is accepted and ignored in M0. Most handlers are short-lived and run in order, but `initialized` releases the read loop with `jsonrpc2.Async` while pulling configuration, so later notifications can overlap with that pull. Revisit cancellation when long-running or concurrent handlers exist.
 
 ### 3. Document store
 
@@ -105,7 +105,7 @@ InitializeResult{
 - `didSave` is a no-op unless `text` is included; if included, update the overlay.
 - `didClose` removes the open overlay. If the file still exists on disk, later analysis may fall back to disk content; if it does not, mark it missing.
 - Guard all document state with a mutex or a single-writer event loop. Requests must see a consistent snapshot.
-- Maintain a monotonically increasing document version; diagnostics should carry the version when the protocol allows it.
+- Maintain a monotonically increasing document version. Reject `didChange` notifications whose version is not greater than the current version, log a warning, and keep the prior snapshot; diagnostics carry the version when the protocol allows it.
 
 ### 4. Position mapping
 
@@ -164,11 +164,14 @@ Defaults:
 - `undefinedGlobal: "warning"`
 - `unusedLocal: "off"`
 
+`maxProblems: 0` disables truncation; negative values fall back to the default.
+
 Behavior:
 
 - If the client supports `workspace/configuration`, request section `pico8` after `initialized` and on `workspace/didChangeConfiguration`.
 - Otherwise use `initializationOptions.pico8` if present.
 - Otherwise use defaults.
+- Pulled values override initialization options per field. Fields absent from a pulled section fall back to initialization options, then defaults. A null or missing section value leaves the initialization-options settings in place.
 - Unknown keys are ignored; invalid enum values fall back to defaults and log a warning.
 - Do not block `initialize` on configuration requests.
 

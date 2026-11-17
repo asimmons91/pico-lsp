@@ -38,11 +38,12 @@ const (
 
 // Settings is the pico8 configuration section.
 type Settings struct {
-	APIVersion   string             `json:"apiVersion"`
-	TypeChecking string             `json:"typeChecking"`
-	InlayHints   bool               `json:"inlayHints"`
-	MaxProblems  int                `json:"maxProblems"`
-	Diagnostics  DiagnosticSettings `json:"diagnostics"`
+	APIVersion   string `json:"apiVersion"`
+	TypeChecking string `json:"typeChecking"`
+	InlayHints   bool   `json:"inlayHints"`
+	// MaxProblems is the diagnostic cap. Zero disables truncation.
+	MaxProblems int                `json:"maxProblems"`
+	Diagnostics DiagnosticSettings `json:"diagnostics"`
 }
 
 // DiagnosticSettings overrides diagnostic severities.
@@ -71,6 +72,7 @@ type Manager struct {
 	log  *slog.Logger
 	mu   sync.RWMutex
 	cfg  Settings
+	init Settings
 	pull bool
 }
 
@@ -79,9 +81,11 @@ func New(log *slog.Logger) *Manager {
 	if log == nil {
 		log = slog.Default()
 	}
+	settings := Default()
 	return &Manager{
-		log: log,
-		cfg: Default(),
+		log:  log,
+		cfg:  settings,
+		init: settings,
 	}
 }
 
@@ -124,7 +128,7 @@ func (m *Manager) ApplyInitializationOptions(options protocol.LSPAny) {
 		m.log.Warn("ignoring invalid initializationOptions.pico8", "error", err)
 		return
 	}
-	m.store(next)
+	m.storeInitialization(next)
 }
 
 // ApplyDidChange applies settings pushed by workspace/didChangeConfiguration
@@ -139,7 +143,7 @@ func (m *Manager) ApplyDidChange(settings protocol.LSPAny) {
 		return
 	}
 
-	next, err := decode(raw, Default())
+	next, err := decode(raw, m.initializationSettings())
 	if err != nil {
 		m.log.Warn("ignoring invalid didChangeConfiguration.pico8", "error", err)
 		return
@@ -165,7 +169,7 @@ func (m *Manager) Pull(ctx context.Context, client protocol.Client) error {
 		return fmt.Errorf("config: workspace/configuration: %w", err)
 	}
 
-	next := Default()
+	next := m.initializationSettings()
 	if len(values) > 0 && len(values[0]) > 0 && string(values[0]) != "null" {
 		next, err = decode(values[0], next)
 		if err != nil {
@@ -180,6 +184,23 @@ func (m *Manager) Pull(ctx context.Context, client protocol.Client) error {
 	return nil
 }
 
+func (m *Manager) initializationSettings() Settings {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.init
+}
+
+func (m *Manager) storeInitialization(next Settings) {
+	next = normalize(next, m.log)
+
+	m.mu.Lock()
+	m.init = next
+	m.cfg = next
+	m.mu.Unlock()
+
+	m.logSettings("configuration updated from initializationOptions", next)
+}
+
 func (m *Manager) store(next Settings) {
 	next = normalize(next, m.log)
 
@@ -187,11 +208,15 @@ func (m *Manager) store(next Settings) {
 	m.cfg = next
 	m.mu.Unlock()
 
-	m.log.Debug("configuration updated",
-		"apiVersion", next.APIVersion,
-		"typeChecking", next.TypeChecking,
-		"inlayHints", next.InlayHints,
-		"maxProblems", next.MaxProblems,
+	m.logSettings("configuration updated", next)
+}
+
+func (m *Manager) logSettings(message string, settings Settings) {
+	m.log.Debug(message,
+		"apiVersion", settings.APIVersion,
+		"typeChecking", settings.TypeChecking,
+		"inlayHints", settings.InlayHints,
+		"maxProblems", settings.MaxProblems,
 	)
 }
 
@@ -242,7 +267,7 @@ func normalize(s Settings, log *slog.Logger) Settings {
 		s.TypeChecking = d.TypeChecking
 	}
 
-	if s.MaxProblems <= 0 {
+	if s.MaxProblems < 0 {
 		s.MaxProblems = d.MaxProblems
 	}
 

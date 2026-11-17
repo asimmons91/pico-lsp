@@ -81,12 +81,21 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	logger.Info("pico-lsp started", "version", version.Current())
 
 	code := 0
+	signaled := false
 	select {
 	case <-srv.ExitSignal():
 		code = srv.ExitCode()
 	case <-ctx.Done():
+		signaled = true
 		logger.Info("exiting on signal")
 	case <-conn.Done():
+		if ctx.Err() != nil {
+			// A signal cancels both contexts; which channel the select observes
+			// is nondeterministic. Treat a canceled parent as the signal path.
+			signaled = true
+			logger.Info("exiting on signal")
+			break
+		}
 		switch {
 		case srv.Exited():
 			code = srv.ExitCode()
@@ -103,7 +112,9 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	}
 
 	cancel()
-	closeConn(conn, time.Second)
+	if !signaled {
+		closeConn(conn, time.Second)
+	}
 	logger.Info("pico-lsp stopped", "code", code)
 	return code
 }
