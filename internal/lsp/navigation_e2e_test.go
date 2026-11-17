@@ -279,7 +279,7 @@ func TestEndToEndRenameAcrossFiles(t *testing.T) {
 
 func TestEndToEndMethodFieldDefinitionAndRename(t *testing.T) {
 	dir := t.TempDir()
-	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nobj = {}\nfunction obj:update()\n  self.x = 1\nend\nfunction _update()\n  obj:update()\nend\n"
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nobj = {}\nfunction obj:update()\n  self.x = 1\nend\nfunction _update()\n  obj:update()\n  print(obj.x)\nend\n"
 	root := writeTemp(t, dir, "method.p8", text)
 
 	h := newHarness(t, newTestClient())
@@ -333,6 +333,21 @@ func TestEndToEndMethodFieldDefinitionAndRename(t *testing.T) {
 	edits := rename.Changes[root]
 	if len(edits) != 2 || edits[0].NewText != "tick" || edits[1].NewText != "tick" {
 		t.Fatalf("method rename edits = %+v, want declaration and call", edits)
+	}
+
+	fieldRename, err := h.server.Rename(ctx, &protocol.RenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     positionAt(t, text, "self.x", len("self.")),
+		},
+		NewName: "y",
+	})
+	if err != nil {
+		t.Fatalf("field rename: %v", err)
+	}
+	fieldEdits := fieldRename.Changes[root]
+	if len(fieldEdits) != 2 || fieldEdits[0].NewText != "y" || fieldEdits[1].NewText != "y" {
+		t.Fatalf("field rename edits = %+v, want self.x and obj.x", fieldEdits)
 	}
 
 	h.exit(t, true)

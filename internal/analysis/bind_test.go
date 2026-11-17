@@ -163,6 +163,23 @@ func TestScopeMethodSelf(t *testing.T) {
 	}
 }
 
+func TestMethodSelfSharesNestedReceiverFields(t *testing.T) {
+	text := "a = {b = {}}\nfunction a.b:c()\n  self.x = 1\nend\nprint(a.b.x)\n"
+	result, _ := analyzeText(t, text)
+	aSym := result.Table.Globals["a"]
+	if aSym == nil || aSym.Fields["b"] == nil {
+		t.Fatalf("a fields = %v, want b", fieldNames(aSym))
+	}
+	bSym := aSym.Fields["b"]
+	if bSym.Fields["c"] == nil || bSym.Fields["x"] == nil {
+		t.Fatalf("b fields = %v, want c and x", fieldNames(bSym))
+	}
+	occ := result.OccurrenceAt(0, strings.Index(text, "a.b.x")+len("a.b."))
+	if occ == nil || occ.Symbol != bSym.Fields["x"] {
+		t.Fatalf("a.b.x occurrence = %+v, want shared field x", occ)
+	}
+}
+
 func TestMethodSelfSharesReceiverFields(t *testing.T) {
 	text := "t = {}\nfunction t:m()\n  self.x = 1\nend\nprint(t.x)\n"
 	result, _ := analyzeText(t, text)
