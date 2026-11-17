@@ -238,6 +238,8 @@ Create/maintain:
 
 ## CI
 
+A minimal test workflow (format, vet, unit/race tests, static build) may land before M6 to gate pull requests. The workflows below are the complete CI surface M6 owns.
+
 GitHub Actions workflows:
 
 ### Test workflow
