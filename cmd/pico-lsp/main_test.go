@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -330,6 +331,60 @@ func TestRunCancellationDuringSessionExitsZero(t *testing.T) {
 
 		_ = outW.Close()
 	}
+}
+
+type recordingCloser struct {
+	r      io.Reader
+	w      io.Writer
+	closed atomic.Bool
+}
+
+func (c *recordingCloser) Read(p []byte) (int, error)  { return c.r.Read(p) }
+func (c *recordingCloser) Write(p []byte) (int, error) { return c.w.Write(p) }
+func (c *recordingCloser) Close() error {
+	c.closed.Store(true)
+	return nil
+}
+
+func TestRunSignalClosesTransport(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	inR, inW := net.Pipe()
+	outR, outW := net.Pipe()
+
+	in := &recordingCloser{r: inR}
+	out := &recordingCloser{w: outW}
+
+	done := make(chan int, 1)
+	go func() {
+		done <- run(ctx, nil, in, out, io.Discard)
+	}()
+
+	reader := bufio.NewReader(outR)
+	_ = inW.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_ = outR.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+	writeFrame(t, inW, `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}`)
+	decodeResponse(t, readFrame(t, reader))
+
+	cancel()
+
+	select {
+	case code := <-done:
+		if code != 0 {
+			t.Fatalf("exit code = %d, want 0", code)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for cancellation exit")
+	}
+
+	if !in.closed.Load() || !out.closed.Load() {
+		t.Fatalf("transport closers called: in=%v out=%v", in.closed.Load(), out.closed.Load())
+	}
+
+	_ = inW.Close()
+	_ = inR.Close()
+	_ = outR.Close()
+	_ = outW.Close()
 }
 
 func TestRunVersion(t *testing.T) {

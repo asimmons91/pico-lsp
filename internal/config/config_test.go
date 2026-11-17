@@ -307,6 +307,39 @@ func TestPullWithoutSupportIsNoOp(t *testing.T) {
 	}
 }
 
+func TestPullExplicitFalseOverridesInitializationOptions(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"inlayHints":true}}`))
+	m.SetPullSupported(true)
+
+	if err := m.Pull(context.Background(), &fakeClient{
+		values: []protocol.LSPAny{lspValue(`{"inlayHints":false}`)},
+	}); err != nil {
+		t.Fatalf("Pull: %v", err)
+	}
+	if m.Settings().InlayHints {
+		t.Fatal("inlayHints = true, want explicit false from pull")
+	}
+}
+
+func TestPullInvalidFieldKeepsPreviousSettings(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"typeChecking":"strict","maxProblems":25}}`))
+	m.SetPullSupported(true)
+
+	err := m.Pull(context.Background(), &fakeClient{
+		values: []protocol.LSPAny{lspValue(`{"maxProblems":"many"}`)},
+	})
+	if err == nil {
+		t.Fatal("Pull succeeded with invalid maxProblems, want error")
+	}
+
+	got := m.Settings()
+	if got.TypeChecking != TypeCheckingStrict || got.MaxProblems != 25 {
+		t.Fatalf("settings = %+v, want previous settings preserved", got)
+	}
+}
+
 func TestApplyDidChange(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyDidChange(lspValue(`{"pico8":{"diagnostics":{"unusedLocal":"warning"}}}`))
