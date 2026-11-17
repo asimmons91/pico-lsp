@@ -76,7 +76,7 @@ func (m *CartManager) readFile(u uri.URI) ([]byte, error) {
 	if text, ok := m.docs.Text(u); ok {
 		return []byte(text), nil
 	}
-	return os.ReadFile(u.FsPath())
+	return cart.DiskProvider{}.Read(u)
 }
 
 func (m *CartManager) listDir(u uri.URI) ([]uri.URI, error) {

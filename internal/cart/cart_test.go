@@ -633,3 +633,9 @@ func TestP8IncludeTokenSourceMap(t *testing.T) {
 		}
 	}
 }
+
+func TestDiskProviderRejectsNonRegularFiles(t *testing.T) {
+	if _, err := (DiskProvider{}).Read(uri.File(t.TempDir())); err == nil {
+		t.Fatal("reading a directory should fail")
+	}
+}

@@ -16,8 +16,7 @@ import (
 // Load reads and analyzes the cart rooted at rootURI.
 func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 	if IsP8PNG(rootURI) {
-		text, _ := l.Provider.Read(rootURI)
-		return l.emptySnapshot(rootURI, string(text), "PICO-8 PNG carts are not supported yet; save as .p8."), nil
+		return l.emptySnapshot(rootURI, "", "PICO-8 PNG carts are not supported yet; save as .p8."), nil
 	}
 
 	data, err := l.Provider.Read(rootURI)
