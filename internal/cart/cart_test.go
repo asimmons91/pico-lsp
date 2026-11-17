@@ -639,3 +639,21 @@ func TestDiskProviderRejectsNonRegularFiles(t *testing.T) {
 		t.Fatal("reading a directory should fail")
 	}
 }
+
+func TestP8IncludeWithBOMKeepsCodeOffsets(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	other := uri.File("/tmp/p8/other.p8")
+	p := newMapProvider()
+	otherText := "\ufeffpico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n__gfx__\n"
+	p.files[other] = otherText
+	snap := loadText(t, p, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include other.p8\n")
+	if len(snap.Errors) != 0 {
+		t.Fatalf("errors = %+v", snap.Errors)
+	}
+	want := strings.Index(otherText, "a=1")
+	for _, tok := range snap.Tokens {
+		if tok.Text == "a" && (tok.Span.FileID != 1 || tok.Span.Start != want) {
+			t.Fatalf("a span = %+v, want file 1 offset %d", tok.Span, want)
+		}
+	}
+}

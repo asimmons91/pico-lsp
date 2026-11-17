@@ -553,6 +553,13 @@ func (p *parser) parseShorthandWhile(whileTok Token, cond Expr) Stmt {
 }
 
 func (p *parser) parseLineBody(line int) *Block {
+	if p.blockDepth >= maxParseDepth {
+		p.errorAt(p.current(), "statement nesting too deep")
+		return &Block{NodeSpan: NodeSpan{p.current().Span}}
+	}
+	p.blockDepth++
+	defer func() { p.blockDepth-- }()
+
 	start := p.current().Span
 	block := &Block{NodeSpan: NodeSpan{start}}
 	for !p.eof() && p.current().Line == line && !lineBodyStop(p.current()) {

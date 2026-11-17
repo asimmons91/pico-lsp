@@ -589,3 +589,18 @@ func TestParseTableRecoveryDoesNotConsumeBlockEnd(t *testing.T) {
 		t.Fatal("outer if lost its end token")
 	}
 }
+
+func TestParseDeepShorthandNestingIsBounded(t *testing.T) {
+	text := strings.Repeat("if (x) ", 2000) + "y=1"
+	lexed := Lex([]byte(text), nil)
+	chunk, errs := Parse(lexed.Tokens)
+	if chunk == nil {
+		t.Fatal("nil chunk")
+	}
+	if len(errs) == 0 {
+		t.Fatal("expected a shorthand nesting-limit error")
+	}
+	if len(errs) > maxParseErrors {
+		t.Fatalf("errors = %d, want <= %d", len(errs), maxParseErrors)
+	}
+}

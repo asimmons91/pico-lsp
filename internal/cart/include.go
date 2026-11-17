@@ -278,7 +278,7 @@ func (f *flattener) appendLines(text string, lines []lineRef, fileID source.File
 }
 
 func (f *flattener) appendIncluded(text string, lines []lineRef, fileID source.FileID, dir string, trimFinalTerminator bool) {
-	if len(lines) > 0 && strings.HasPrefix(text, "\ufeff") {
+	if len(lines) > 0 && lines[0].start == 0 && strings.HasPrefix(text, "\ufeff") {
 		lines[0].start += len("\ufeff")
 	}
 	for i, line := range lines {
