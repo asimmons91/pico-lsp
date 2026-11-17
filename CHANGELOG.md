@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- AST-guided `textDocument/formatting` for `.p8` and `.lua` documents, with
+  shorthand/comment preservation, `.p8` section and tab safety, configurable
+  blank-line capping, and formatter fuzz/corpus tests.
+
 ### Changed
 
 - Document the project's AI-assisted, AI vibe-coded development process in the

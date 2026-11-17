@@ -56,6 +56,7 @@ type Settings struct {
 	// MaxProblems is the diagnostic cap. Zero disables truncation.
 	MaxProblems int                `json:"maxProblems"`
 	Limits      LimitsSettings     `json:"limits"`
+	Format      FormatSettings     `json:"format"`
 	Diagnostics DiagnosticSettings `json:"diagnostics"`
 	Lint        LintSettings       `json:"lint"`
 }
@@ -64,6 +65,11 @@ type Settings struct {
 type LimitsSettings struct {
 	CodeLens    bool `json:"codeLens"`
 	Diagnostics bool `json:"diagnostics"`
+}
+
+// FormatSettings controls formatter behavior.
+type FormatSettings struct {
+	MaxBlankLines int `json:"maxBlankLines"`
 }
 
 // LintSettings controls optional PICO-8 lint checks.
@@ -98,6 +104,9 @@ func Default() Settings {
 		Limits: LimitsSettings{
 			CodeLens:    true,
 			Diagnostics: true,
+		},
+		Format: FormatSettings{
+			MaxBlankLines: 2,
 		},
 		Diagnostics: DiagnosticSettings{
 			UndefinedGlobal:         DefaultUndefinedGlobal,
@@ -299,6 +308,7 @@ type partialSettings struct {
 	InlayHints   *bool                      `json:"inlayHints"`
 	MaxProblems  *int                       `json:"maxProblems"`
 	Limits       *partialLimitsSettings     `json:"limits"`
+	Format       *partialFormatSettings     `json:"format"`
 	Diagnostics  *partialDiagnosticSettings `json:"diagnostics"`
 	Lint         *partialLintSettings       `json:"lint"`
 }
@@ -306,6 +316,10 @@ type partialSettings struct {
 type partialLimitsSettings struct {
 	CodeLens    *bool `json:"codeLens"`
 	Diagnostics *bool `json:"diagnostics"`
+}
+
+type partialFormatSettings struct {
+	MaxBlankLines *int `json:"maxBlankLines"`
 }
 
 type partialLintSettings struct {
@@ -348,6 +362,9 @@ func (p partialSettings) apply(base Settings) Settings {
 		if p.Limits.Diagnostics != nil {
 			base.Limits.Diagnostics = *p.Limits.Diagnostics
 		}
+	}
+	if p.Format != nil && p.Format.MaxBlankLines != nil {
+		base.Format.MaxBlankLines = *p.Format.MaxBlankLines
 	}
 	if p.Lint != nil && p.Lint.APIRanges != nil {
 		base.Lint.APIRanges = *p.Lint.APIRanges
@@ -442,6 +459,9 @@ func normalize(s Settings, log *slog.Logger) Settings {
 
 	if s.MaxProblems < 0 {
 		s.MaxProblems = d.MaxProblems
+	}
+	if s.Format.MaxBlankLines < 0 {
+		s.Format.MaxBlankLines = d.Format.MaxBlankLines
 	}
 
 	s.Diagnostics.UndefinedGlobal = normalizeSeverity(s.Diagnostics.UndefinedGlobal, d.Diagnostics.UndefinedGlobal, "undefinedGlobal", log)

@@ -284,6 +284,9 @@ func TestInitializeCapabilities(t *testing.T) {
 	if res.Capabilities.CodeLensProvider == nil {
 		t.Fatal("codeLensProvider not advertised")
 	}
+	if _, ok := res.Capabilities.DocumentFormattingProvider.(protocol.Boolean); !ok {
+		t.Fatalf("documentFormattingProvider = %T, want Boolean", res.Capabilities.DocumentFormattingProvider)
+	}
 	if !containsString(res.Capabilities.ExecuteCommandProvider.Commands, CommandShowCartInfo) {
 		t.Fatalf("executeCommandProvider = %+v", res.Capabilities.ExecuteCommandProvider)
 	}

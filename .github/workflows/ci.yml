@@ -84,6 +84,12 @@ jobs:
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
+      - name: Formatter performance
+        if: runner.os == 'Linux'
+        env:
+          PICO_LSP_PERF: "1"
+        run: go test -count=1 -run TestFormatPerformance -p 1 ./internal/format
+
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest
@@ -143,6 +149,9 @@ jobs:
 
       - name: Fuzz analysis
         run: go test -fuzz=FuzzAnalyze -fuzztime=10s ./internal/analysis
+
+      - name: Fuzz formatter
+        run: go test -run=^$ -fuzz=FuzzFormatLua -fuzztime=10s ./internal/format
 
   release-snapshot:
     name: release snapshot
