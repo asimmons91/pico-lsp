@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -577,5 +578,83 @@ local value = boxed.value
 	}
 	if got := types.Display(symbolByName(result, "value").Type); got != "number" {
 		t.Fatalf("class @generic field = %q", got)
+	}
+}
+
+func TestM10AllOperatorKinds(t *testing.T) {
+	text := `---@class AllOps
+---@operator add(AllOps): AllOps
+---@operator sub(AllOps): AllOps
+---@operator mul(AllOps): AllOps
+---@operator div(AllOps): AllOps
+---@operator idiv(AllOps): AllOps
+---@operator mod(AllOps): AllOps
+---@operator pow(AllOps): AllOps
+---@operator unm(): AllOps
+---@operator band(AllOps): AllOps
+---@operator bor(AllOps): AllOps
+---@operator bxor(AllOps): AllOps
+---@operator bnot(): AllOps
+---@operator shl(AllOps): AllOps
+---@operator shr(AllOps): AllOps
+---@operator rotl(AllOps): AllOps
+---@operator rotr(AllOps): AllOps
+---@operator concat(AllOps): string
+---@operator len(): number
+---@operator lt(AllOps): boolean
+---@operator le(AllOps): boolean
+---@operator eq(AllOps): boolean
+---@operator call(): string
+local AllOps = {}
+
+local a = setmetatable({}, {__index = AllOps})
+local b = setmetatable({}, {__index = AllOps})
+local r01 = a + b
+local r02 = a - b
+local r03 = a * b
+local r04 = a / b
+local r05 = a \ b
+local r06 = a % b
+local r07 = a ^ b
+local r08 = -a
+local r09 = a & b
+local r10 = a | b
+local r11 = a ^^ b
+local r12 = ~a
+local r13 = a << b
+local r14 = a >> b
+local r15 = a <<> b
+local r16 = a >>< b
+local r17 = a .. b
+local r18 = #a
+local r19 = a < b
+local r20 = a <= b
+local r21 = a == b
+local r22 = a > b
+local r23 = a >= b
+local r24 = a()
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	for i := 1; i <= 24; i++ {
+		name := fmt.Sprintf("r%02d", i)
+		sym := symbolByName(result, name)
+		if sym == nil {
+			t.Fatalf("missing symbol %s", name)
+		}
+		want := "AllOps"
+		switch i {
+		case 17, 24:
+			want = "string"
+		case 18:
+			want = "number"
+		case 19, 20, 21, 22, 23:
+			want = "boolean"
+		}
+		if got := types.Display(sym.Type); got != want {
+			t.Errorf("%s type = %q, want %q", name, got, want)
+		}
+	}
+	if hasDiagnostic(result, CodeOperatorMismatch) {
+		t.Fatalf("complete operator set produced a mismatch: %+v", result.Diagnostics)
 	}
 }
