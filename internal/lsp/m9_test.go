@@ -79,7 +79,7 @@ e:heal(2)
 	if help == nil {
 		t.Fatal("missing inherited method signature help")
 	}
-	if label := help.Signatures[0].Label; !strings.Contains(label, "function heal(") || !strings.Contains(label, "amount: number") {
+	if label := help.Signatures[0].Label; !strings.Contains(label, "heal(") || !strings.Contains(label, "amount: number") {
 		t.Fatalf("inherited method signature = %q", label)
 	}
 

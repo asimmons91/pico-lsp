@@ -905,7 +905,23 @@ func (inf *inferer) attachFieldCalleeType(expr syntax.Expr, callee *Symbol, env 
 	if callee.Type == nil || types.IsAny(callee.Type) {
 		callee.Type = fn
 	}
+	inf.adoptInheritedMember(callee, origin)
 	return origin
+}
+
+// adoptInheritedMember copies documentation and the display signature from a
+// declaring class-table symbol onto the provisional member used at a call or
+// access site.
+func (inf *inferer) adoptInheritedMember(member, origin *Symbol) {
+	if member == nil || origin == nil || member == origin {
+		return
+	}
+	if member.Doc == nil {
+		member.Doc = origin.Doc
+	}
+	if member.Signature == "" {
+		member.Signature = origin.Signature
+	}
 }
 
 func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]types.Type) types.Type {
@@ -950,6 +966,7 @@ func (inf *inferer) inferMethodCall(e *syntax.MethodCallExpr, env map[*Symbol]ty
 				}
 			}
 		}
+		inf.adoptInheritedMember(method, origin)
 		if origin != nil && origin != method {
 			inf.recordCall(origin, argTypes)
 		}
