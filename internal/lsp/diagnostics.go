@@ -104,6 +104,14 @@ func (d *Diagnostics) Publish(ctx context.Context, u uri.URI, version *int32, it
 	}
 }
 
+// Has reports whether a non-clearing diagnostics set was last published for u.
+func (d *Diagnostics) Has(u uri.URI) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	_, ok := d.last[u]
+	return ok
+}
+
 // Clear removes any diagnostics for uri.
 func (d *Diagnostics) Clear(ctx context.Context, u uri.URI) {
 	d.Publish(ctx, u, nil, []protocol.Diagnostic{})

@@ -85,6 +85,7 @@ type Server struct {
 	docs  *DocumentStore
 	cfg   *config.Manager
 	diags *Diagnostics
+	carts *CartManager
 
 	client atomic.Value // protocol.Client
 
@@ -122,6 +123,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		func() int { return s.cfg.Settings().MaxProblems },
 		log,
 	)
+	s.carts = NewCartManager(s.docs, s.diags, log)
 	return s
 }
 
@@ -337,6 +339,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	pull := supportsConfiguration(params)
 
 	s.docs.SetEncoding(encoding)
+	s.carts.SetEncoding(encoding)
 	s.cfg.SetPullSupported(pull)
 	s.cfg.ApplyInitializationOptions(params.InitializationOptions)
 
@@ -370,8 +373,10 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
-			PositionEncoding: encoding,
-			TextDocumentSync: syncOptions,
+			PositionEncoding:       encoding,
+			TextDocumentSync:       syncOptions,
+			DocumentSymbolProvider: protocol.Boolean(true),
+			FoldingRangeProvider:   protocol.Boolean(true),
 			Workspace: &protocol.WorkspaceOptions{
 				WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
 					Supported: boolPtr(true),

@@ -1,0 +1,252 @@
+[
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/cart.p8",
+    "tokens": 36,
+    "chars": 217
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/apitest1.p8",
+    "tokens": 156,
+    "chars": 754
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/btntest.p8",
+    "tokens": 74,
+    "chars": 266
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/coroutine.p8",
+    "tokens": 65,
+    "chars": 297
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/exfont.p8",
+    "tokens": 76,
+    "chars": 684
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/expal.p8",
+    "tokens": 38,
+    "chars": 199
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/font.p8",
+    "tokens": 32,
+    "chars": 594
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/fstest.p8",
+    "tokens": 40,
+    "chars": 199
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/geomtest.p8",
+    "tokens": 378,
+    "chars": 1583
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/mousetest.p8",
+    "tokens": 118,
+    "chars": 560
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/oldfont.p8",
+    "tokens": 32,
+    "chars": 594
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/paltest.p8",
+    "tokens": 59,
+    "chars": 244
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sfxmusictest.p8",
+    "tokens": 130,
+    "chars": 592
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sfxtest.p8",
+    "tokens": 90,
+    "chars": 473
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/soundlooptest.p8",
+    "tokens": 141,
+    "chars": 638
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sspr.p8",
+    "tokens": 147,
+    "chars": 647
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/stattest.p8",
+    "tokens": 55,
+    "chars": 236
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/time.p8",
+    "tokens": 15,
+    "chars": 90
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/touchtest.p8",
+    "tokens": 75,
+    "chars": 320
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/zoomtest.p8",
+    "tokens": 133,
+    "chars": 522
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/anim1.p8",
+    "tokens": 103,
+    "chars": 517
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/closures1.p8",
+    "tokens": 64,
+    "chars": 391
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/colourful_circles1.p8",
+    "tokens": 78,
+    "chars": 307
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/draw1.p8",
+    "tokens": 128,
+    "chars": 601
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/factorial1.p8",
+    "tokens": 37,
+    "chars": 370
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/fn_as_arg.p8",
+    "tokens": 62,
+    "chars": 246
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/func1.p8",
+    "tokens": 27,
+    "chars": 214
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/greenfield1.p8",
+    "tokens": 78,
+    "chars": 267
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/helloworld1.p8",
+    "tokens": 9,
+    "chars": 104
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/oop-topdown1.p8",
+    "tokens": 867,
+    "chars": 5873
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/oop1.p8",
+    "tokens": 489,
+    "chars": 4399
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/operators1.p8",
+    "tokens": 51,
+    "chars": 296
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tables1.p8",
+    "tokens": 170,
+    "chars": 747
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tables2.p8",
+    "tokens": 124,
+    "chars": 665
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tictactoe1.p8",
+    "tokens": 646,
+    "chars": 4418
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/topdown1.p8",
+    "tokens": 684,
+    "chars": 4136
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/trajectory1.p8",
+    "tokens": 251,
+    "chars": 1426
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/trigonometry1.p8",
+    "tokens": 288,
+    "chars": 2001
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/10tropy.p8",
+    "tokens": 140,
+    "chars": 263
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/2chet.p8",
+    "tokens": 125,
+    "chars": 275
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/beach_day.p8",
+    "tokens": 134,
+    "chars": 239
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/bresenham_bounce.p8",
+    "tokens": 143,
+    "chars": 264
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/constellations.p8",
+    "tokens": 172,
+    "chars": 280
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/fade_meteor.p8",
+    "tokens": 93,
+    "chars": 196
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/furnace.p8",
+    "tokens": 136,
+    "chars": 266
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/helio.p8",
+    "tokens": 190,
+    "chars": 268
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/howdy.p8",
+    "tokens": 85,
+    "chars": 234
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/ripples.p8",
+    "tokens": 75,
+    "chars": 141
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/spiral_sphere.p8",
+    "tokens": 141,
+    "chars": 223
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/truchet.p8",
+    "tokens": 93,
+    "chars": 209
+  }
+]

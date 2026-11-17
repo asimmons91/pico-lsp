@@ -1,8 +1,8 @@
 # Neovim 0.11+ setup
 
-This config attaches `pico-lsp` to `.p8` carts and exercises the M0 server:
-lifecycle, document sync, incremental edits, and position-encoding negotiation.
-PICO-8 language features arrive in later milestones.
+This config attaches `pico-lsp` to `.p8` carts. The server speaks LSP, syncs
+documents incrementally, reports syntax and include diagnostics, and provides
+document symbols and folding ranges. Token-budget UI arrives in M5.
 
 ## Prerequisites
 
@@ -75,10 +75,26 @@ vim.lsp.config("pico_lsp", {
    :lua =vim.lsp.get_clients({ bufnr = 0 })[1].offset_encoding
    ```
 
-4. Edit, save, and close the buffer. The language server must stay attached and
+4. Try the M1 language features:
+
+   ```vim
+   :lua vim.lsp.buf.document_symbol()
+   ```
+
+   For folding, enable LSP folding in the buffer:
+
+   ```vim
+   :setlocal foldmethod=expr foldexpr=v:lua.vim.lsp.foldexpr()
+   ```
+
+   Open a cart with a deliberate syntax error and confirm the diagnostic lands
+   on the right file and line. Included `.lua` files produce diagnostics even
+   when they are not open in a buffer.
+
+5. Edit, save, and close the buffer. The language server must stay attached and
    Neovim must not report protocol errors.
 
-5. Stop Neovim while the server is running (for example with `:qa`). The server
+6. Stop Neovim while the server is running (for example with `:qa`). The server
    should exit cleanly rather than hang.
 
 ## Incremental sync check

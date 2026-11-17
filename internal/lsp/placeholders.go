@@ -10,11 +10,6 @@ import (
 // now so features can replace them individually, but their capabilities are not
 // advertised until they return real results.
 
-// DocumentSymbol is implemented in M1.
-func (s *Server) DocumentSymbol(ctx context.Context, params *protocol.DocumentSymbolParams) (protocol.DocumentSymbolResult, error) {
-	return nil, nil
-}
-
 // Definition is implemented in M2.
 func (s *Server) Definition(ctx context.Context, params *protocol.DefinitionParams) (protocol.DefinitionResult, error) {
 	return nil, nil
@@ -38,11 +33,6 @@ func (s *Server) Completion(ctx context.Context, params *protocol.CompletionPara
 // SignatureHelp is implemented in M3.
 func (s *Server) SignatureHelp(ctx context.Context, params *protocol.SignatureHelpParams) (*protocol.SignatureHelp, error) {
 	return nil, nil
-}
-
-// FoldingRanges is implemented in M1.
-func (s *Server) FoldingRanges(ctx context.Context, params *protocol.FoldingRangeParams) ([]protocol.FoldingRange, error) {
-	return []protocol.FoldingRange{}, nil
 }
 
 // SemanticTokensFull is implemented in M3.

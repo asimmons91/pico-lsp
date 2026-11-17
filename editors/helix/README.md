@@ -1,8 +1,9 @@
 # Helix setup
 
-This config attaches `pico-lsp` to `.p8` carts and exercises the M0 server:
-lifecycle, document sync, incremental edits, and position-encoding negotiation.
-PICO-8 language features and syntax highlighting arrive in later milestones.
+This config attaches `pico-lsp` to `.p8` carts. The server syncs documents
+incrementally, reports syntax and include diagnostics, and provides document
+symbols and folding ranges. Syntax highlighting requires a tree-sitter grammar
+and arrives in a later milestone; token-budget UI arrives in M5.
 
 ## Prerequisites
 
@@ -61,10 +62,18 @@ command = "/absolute/path/to/pico-lsp"
    hx testdata/smoke.p8
    ```
 
-3. Edit, save, and close the file. The server must stay attached and Helix must
+3. Open the symbol picker with `<space>s` to inspect tabs, functions, and
+   includes. Open a cart with a deliberate syntax error and confirm the
+   diagnostic lands on the right line.
+
+   Helix 25.07 has no code-folding feature or LSP folding consumer, so the
+   server's folding ranges are not displayed there. Folding works in Neovim and
+   clients that support `textDocument/foldingRange`.
+
+4. Edit, save, and close the file. The server must stay attached and Helix must
    not report protocol errors.
 
-4. Quit Helix while the server is running (for example with `:q`). The server
+5. Quit Helix while the server is running (for example with `:q`). The server
    should exit cleanly rather than hang.
 
 ## Verifying the server logs
