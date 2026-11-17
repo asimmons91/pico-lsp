@@ -318,7 +318,10 @@ func (s *Server) dispatch(next jsonrpc2.Handler) jsonrpc2.Handler {
 			cancelCtx, cancel := context.WithCancel(parent)
 			s.registerCancel(id, cancel)
 			ctx = cancellableRequestContext{Context: cancelCtx, values: ctx}
-			defer s.unregisterCancel(id)
+			defer func() {
+				s.unregisterCancel(id)
+				cancel()
+			}()
 		}
 
 		result, err = next(ctx, req)
