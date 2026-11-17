@@ -166,6 +166,11 @@ function Clicker:click()
 end
 ---@type Clicker
 local clicker = {hits = 0}
+
+---@class Open
+---@field x number
+---@type Open
+local openValue = {}
 `
 	result := analyzeTextMode(t, text, TypeCheckingBasic)
 	missingDiag := findDiagnostic(result, CodeMissingFields)
