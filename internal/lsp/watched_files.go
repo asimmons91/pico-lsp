@@ -39,7 +39,6 @@ func (s *Server) registerFileWatchers(ctx context.Context) {
 	if client == nil {
 		return
 	}
-	jsonrpc2.Async(ctx)
 	options, err := protocol.Marshal(protocol.DidChangeWatchedFilesRegistrationOptions{
 		Watchers: []protocol.FileSystemWatcher{
 			{GlobPattern: protocol.Pattern("**/*.p8")},

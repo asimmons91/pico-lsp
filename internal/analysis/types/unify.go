@@ -157,12 +157,11 @@ func assignablePrimitive(src Type, dst Primitive, strict bool, depth int) bool {
 		}
 		return false
 	case KindFunction:
-		switch src.(type) {
+		switch src := src.(type) {
 		case *Function, Function:
 			return true
 		case Primitive:
-			p, _ := src.(Primitive)
-			return p.Kind == KindFunction
+			return src.Kind == KindFunction
 		}
 		return false
 	case KindThread:
@@ -309,10 +308,7 @@ func assignableTuple(src Type, dst Tuple, strict bool, depth int) bool {
 }
 
 func optionalTupleTail(tuple Tuple) bool {
-	if tuple.Vararg != nil {
-		return true
-	}
-	return false
+	return tuple.Vararg != nil
 }
 
 func literalEqual(a, b any) bool {

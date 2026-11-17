@@ -509,7 +509,7 @@ func (l *lexer) lexPunctOrInvalid() {
 
 func (l *lexer) validNonASCII() bool {
 	r, size := utf8.DecodeRuneInString(l.text[l.offset:])
-	return !(r == utf8.RuneError && size == 1)
+	return r != utf8.RuneError || size != 1
 }
 
 func strconvQuoteByte(c byte) string {

@@ -712,3 +712,37 @@ func TestM5CartLimitDiagnosticsPublished(t *testing.T) {
 		}
 	}
 }
+
+func TestM5WatcherRegistrationAndConfigurationPullTogether(t *testing.T) {
+	client := newTestClient()
+	client.configValues = []protocol.LSPAny{
+		protocol.LSPAny([]byte(`{"typeChecking":"strict"}`)),
+	}
+	h := newHarness(t, client)
+	dynamic := true
+	h.initialize(t, &protocol.InitializeParams{
+		Capabilities: protocol.ClientCapabilities{
+			Workspace: &protocol.WorkspaceClientCapabilities{
+				Configuration:         boolPtr(true),
+				DidChangeWatchedFiles: &protocol.DidChangeWatchedFilesClientCapabilities{DynamicRegistration: &dynamic},
+			},
+		},
+	})
+
+	select {
+	case params := <-h.client.registrations:
+		if len(params.Registrations) != 1 || params.Registrations[0].Method != protocol.MethodWorkspaceDidChangeWatchedFiles {
+			t.Fatalf("registrations = %+v", params.Registrations)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("file watcher registration not sent")
+	}
+	select {
+	case <-h.client.configCalls:
+	case <-time.After(2 * time.Second):
+		t.Fatal("configuration pull not sent")
+	}
+	waitFor(t, "pulled configuration", func() bool {
+		return h.srv.cfg.Settings().TypeChecking == config.TypeCheckingStrict
+	})
+}

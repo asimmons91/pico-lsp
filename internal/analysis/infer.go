@@ -842,7 +842,7 @@ func (inf *inferer) recordCall(callee *Symbol, args []types.Type) {
 }
 
 func (inf *inferer) checkCall(callee *Symbol, args []types.Type, argExprs []syntax.Expr) {
-	if !inf.final || callee == nil || callee.Builtin || callee.TypeExplicit == false {
+	if !inf.final || callee == nil || callee.Builtin || !callee.TypeExplicit {
 		return
 	}
 	fn, ok := types.AsFunction(callee.Type)
@@ -1162,7 +1162,9 @@ func (inf *inferer) applyNarrowBinary(env map[*Symbol]types.Type, e *syntax.Bina
 		}
 	}
 	notEqual := e.Op.Text == "~=" || e.Op.Text == "!="
-	if !(e.Op.Text == "==" && truthy) && !(notEqual && !truthy) {
+	matchesEquality := e.Op.Text == "==" && truthy
+	matchesInequality := notEqual && !truthy
+	if !matchesEquality && !matchesInequality {
 		return
 	}
 	call, literal := typeCall(e.Left, e.Right)

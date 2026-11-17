@@ -1,0 +1,9 @@
+[language-server.pico-lsp]
+command = "pico-lsp"
+
+[[language]]
+name = "pico8"
+scope = "source.pico8"
+file-types = ["p8"]
+comment-token = "--"
+language-servers = ["pico-lsp"]

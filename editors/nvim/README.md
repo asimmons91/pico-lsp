@@ -1,22 +1,33 @@
 # Neovim 0.11+ setup
 
-This config attaches `pico-lsp` to `.p8` carts. The server speaks LSP, syncs
-documents incrementally, reports syntax and include diagnostics, and provides
-document symbols and folding ranges. Token-budget UI arrives in M5.
+This directory contains:
 
-## Prerequisites
+- the recommended `vim.lsp.config` setup for `.p8` carts;
+- an optional helper for attaching `pico-lsp` to cart-owned `.lua` buffers;
+- `ftdetect` and `syntax` files for PICO-8 carts;
+- a headless smoke test for the helper.
 
-Build or install `pico-lsp` so it is on `PATH`:
+The syntax and helper are optional. The server works with the base LSP config
+alone.
+
+## Install
+
+Install a release binary with the instructions in
+[../../docs/install.md](../../docs/install.md), or build from a checkout:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@latest
-# or, from a checkout:
-go build -o ./pico-lsp ./cmd/pico-lsp
+CGO_ENABLED=0 go build -trimpath -o pico-lsp ./cmd/pico-lsp
 ```
 
-## Neovim config
+Make sure `pico-lsp` is on `PATH`, then verify it:
 
-Add this to `init.lua` (or a file under `lua/`):
+```sh
+pico-lsp --version
+```
+
+## Base LSP config
+
+Add this to `init.lua` or a file under `lua/`:
 
 ```lua
 vim.filetype.add({ extension = { p8 = "pico8" } })
@@ -39,11 +50,10 @@ vim.lsp.enable("pico_lsp")
 
 The same settings can be passed as `init_options = { pico8 = { ... } }`
 instead of `settings`. If the client supports `workspace/configuration`, the
-server pulls the `pico8` section after the `initialized` notification and
-prefers pulled values per field; fields the client does not return fall back to
-`init_options`.
+server pulls the `pico8` section after `initialized` and prefers pulled values
+per field; fields the client does not return fall back to `init_options`.
 
-To run a locally built binary without installing it, use an absolute path:
+For a locally built binary, use an absolute path:
 
 ```lua
 vim.lsp.config("pico_lsp", {
@@ -51,6 +61,83 @@ vim.lsp.config("pico_lsp", {
   filetypes = { "pico8" },
 })
 ```
+
+## Optional helper for included `.lua` files
+
+The server analyzes included `.lua` files whenever the owning `.p8` cart is
+attached, even when the include is closed. To edit an included `.lua` buffer
+with the same client, add this repository's `editors/nvim` directory to your
+runtime path and enable the helper:
+
+```lua
+vim.opt.runtimepath:append("/absolute/path/to/pico-lsp/editors/nvim")
+require("pico_lsp").setup()
+```
+
+The helper:
+
+- walks up from the `.lua` buffer to find a nearby `.p8` cart that includes it;
+- starts or reuses the `pico_lsp` client with the cart directory as `root_dir`;
+- ignores unrelated `.lua` buffers;
+- does not create duplicate clients for the same cart;
+- re-scans loaded `.lua` buffers after a `.p8` file is saved.
+
+It reuses `vim.lsp.config["pico_lsp"]` when defined. You can pass fallbacks or
+overrides directly:
+
+```lua
+require("pico_lsp").setup({
+  cmd = { "/absolute/path/to/pico-lsp" },
+  settings = {
+    pico8 = { typeChecking = "strict" },
+  },
+})
+```
+
+Disable it with `require("pico_lsp").setup({ disable = true })` or
+`vim.g.pico_lsp_helper_disabled = 1`.
+
+If you prefer not to use the helper, attach manually from the cart root:
+
+```vim
+:lua vim.lsp.start({ name = "pico_lsp", cmd = { "pico-lsp" }, root_dir = vim.fn.getcwd() })
+```
+
+Avoid running `lua_ls` and `pico-lsp` on the same cart-owned `.lua` buffer.
+
+## Syntax highlighting
+
+Add the runtime path as above. The included `ftdetect` sets `filetype=pico8`
+for `.p8` files and `syntax/pico8.vim` highlights sections, tab markers,
+comments, strings, numbers, dialect keywords, and operators.
+
+The syntax file is independent of the LSP and can be copied to
+`~/.config/nvim/syntax/` if you do not want the helper. LSP semantic tokens
+cover Lua code; the syntax file also highlights non-code `.p8` sections.
+
+## Keymaps and cart budget
+
+The server does not install keymaps. Recommended mappings:
+
+```lua
+vim.keymap.set("n", "gd", vim.lsp.buf.definition)
+vim.keymap.set("n", "K", vim.lsp.buf.hover)
+vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename)
+vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action)
+vim.keymap.set("n", "<leader>ci", function()
+  vim.lsp.buf_request(0, "pico8/cartInfo", {
+    textDocument = { uri = vim.uri_from_bufnr(0) },
+  }, function(err, result)
+    if not err and result then
+      print(("%d / %d tokens · %d / %d chars"):format(
+        result.tokens, result.tokenLimit, result.chars, result.charLimit))
+    end
+  end)
+end)
+```
+
+The cart root also gets a budget code lens. Run it to show the
+`pico8.showCartInfo` summary.
 
 ## Smoke test
 
@@ -68,70 +155,36 @@ vim.lsp.config("pico_lsp", {
    :lua =vim.lsp.get_clients({ bufnr = 0 })
    ```
 
-3. Inspect the negotiated position encoding (default `utf-16`, or `utf-8`
-   when the client offers it):
-
-   ```vim
-   :lua =vim.lsp.get_clients({ bufnr = 0 })[1].offset_encoding
-   ```
-
-4. Try the M1 language features:
+3. Try document symbols, hover, completion, and the cart info request:
 
    ```vim
    :lua vim.lsp.buf.document_symbol()
+   :lua vim.lsp.buf.hover()
    ```
 
-   For folding, enable LSP folding in the buffer:
+4. Open an included `.lua` file from a cart and confirm the helper attaches:
 
    ```vim
-   :setlocal foldmethod=expr foldexpr=v:lua.vim.lsp.foldexpr()
+   :lua =vim.lsp.get_clients({ bufnr = 0 })
    ```
 
-   Open a cart with a deliberate syntax error and confirm the diagnostic lands
-   on the right file and line. Included `.lua` files produce diagnostics even
-   when they are not open in a buffer.
+5. Run the headless helper test:
 
-5. Edit, save, and close the buffer. The language server must stay attached and
-   Neovim must not report protocol errors.
+   ```sh
+   CGO_ENABLED=0 go build -trimpath -o pico-lsp ./cmd/pico-lsp
+   PICO_LSP_BIN="$PWD/pico-lsp" editors/nvim/tests/run.sh
+   ```
 
-6. Stop Neovim while the server is running (for example with `:qa`). The server
-   should exit cleanly rather than hang.
-
-## Incremental sync check
-
-The server advertises incremental sync. To confirm a change was applied, use a
-temporary log file and enable debug logging:
-
-```lua
-vim.lsp.config("pico_lsp", {
-  cmd = { "pico-lsp", "--log-level", "debug", "--log-file", "/tmp/pico-lsp.log" },
-  filetypes = { "pico8" },
-})
-```
-
-Then edit the cart and look for `document changed` lines in
-`/tmp/pico-lsp.log`. Routine server logs never go to stdout, so they cannot
-corrupt the protocol stream.
-
-## Included `.lua` files
-
-M1 analyzes included `.lua` files (including closed includes) whenever the
-owning `.p8` cart is attached. The optional Neovim helper plugin that attaches
-cart-owned `.lua` buffers automatically is part of M6. For now, attach a `.lua`
-buffer manually in a known PICO-8 project if you need to:
-
-```vim
-:lua vim.lsp.start({ name = "pico_lsp", cmd = { "pico-lsp" }, root_dir = vim.fn.getcwd() })
-```
-
-Avoid running another Lua language server on cart-owned `.lua` buffers once the
-helper is available.
+6. Stop Neovim while the server is running. The server should exit cleanly.
 
 ## Troubleshooting
 
 - `:checkhealth vim.lsp` shows Neovim's LSP health and attached clients.
 - `:lua =vim.lsp.log.get_filename()` prints Neovim's LSP client log path.
 - `pico-lsp --version` verifies which binary Neovim would run.
-- `:lua =vim.lsp.get_clients()` lists active clients and their capabilities.
-- If the server does not attach, check that `pico-lsp` is executable and on
-  `PATH`, then run `:checkhealth vim.lsp`.
+- Use `--log-level debug --log-file /tmp/pico-lsp.log` in `cmd` to collect
+  server logs. Routine logs never go to stdout, so they cannot corrupt the
+  protocol stream.
+- If the helper does not attach an include, confirm the include is exactly a
+  line beginning with `#include`, the path resolves relative to the cart, and
+  the buffer is named `.lua`.

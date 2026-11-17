@@ -56,7 +56,7 @@ func hoverMarkup(t *testing.T, h *harness, ctx context.Context, u uri.URI, posit
 		return contents.Value
 	case protocol.String:
 		return string(contents)
-	case *protocol.MarkedStringWithLanguage:
+	case *protocol.MarkedStringWithLanguage: //nolint:staticcheck // Legacy hover encoding remains supported.
 		return contents.Value
 	default:
 		t.Fatalf("hover contents type = %T", result.Contents)

@@ -245,7 +245,7 @@ func TestEndToEndCompletionBuiltinsOrderingAndResolve(t *testing.T) {
 		}
 		return -1
 	}
-	if !(index(local) < index(global) && index(global) < index(builtin) && index(builtin) < index(keyword) && index(keyword) < index(snippet)) {
+	if index(local) >= index(global) || index(global) >= index(builtin) || index(builtin) >= index(keyword) || index(keyword) >= index(snippet) {
 		t.Fatalf("completion order local=%d global=%d builtin=%d keyword=%d snippet=%d",
 			index(local), index(global), index(builtin), index(keyword), index(snippet))
 	}

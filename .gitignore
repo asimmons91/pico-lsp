@@ -1,2 +1,5 @@
 /pico-lsp
 /dist/
+coverage.out
+coverage.html
+/pico-lsp.exe

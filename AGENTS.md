@@ -2,12 +2,12 @@
 
 ## Current state
 
-- M0 (Foundation & Walking Skeleton), M1 (Cart Model & Syntax Front-End), M2 (Semantic Core & Navigation), M3 (Language Intelligence & Built-in API), M4 (Type System & Annotations), and M5 (PICO-8-Specific Polish) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis` (including `internal/analysis/types`), `internal/builtin`, `internal/config`, and `internal/version`.
-- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global/type diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including type-aware member/annotation/include completion and resolve), hover, signature help, full semantic tokens, inlay hints, cart-budget code lens, `pico8/cartInfo`, PICO-8 lint diagnostics, and code actions. LuaCATS annotations, gradual inference, flow narrowing, and `off`/`basic`/`strict` type checking are implemented.
-- M3, M4, and M5 are Done; manual Neovim/Helix verification was waived for v1 in favor of the LSP integration tests. M6 and later are not implemented. There is no packaging/release tooling or formatter yet.
-- CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests, a short fuzz pass, and a static build on pull requests. `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes. M6 expands this with lint, build matrices, and release workflows.
+- M0 (Foundation & Walking Skeleton) through M6 (Packaging, Editor Integration & v1) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis` (including `internal/analysis/types`), `internal/builtin`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global/type diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, workspace symbols, completion (including type-aware member/annotation/include completion and resolve), hover, signature help, full semantic tokens, inlay hints, cart-budget code lens, `pico8/cartInfo`, PICO-8 lint diagnostics, and code actions. LuaCATS annotations, gradual inference, flow narrowing, and `off`/`basic`/`strict` type checking are implemented. Release packaging, editor configs, and the v1 GitHub-only distribution path are in place.
+- M3 through M6 are Done. M7 and later are not implemented. The formatter and `.p8.png` support remain post-v1. Homebrew and Mason packaging are deferred to post-v1; v1 ships GitHub release archives.
+- CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests on Linux/macOS/Windows, golangci-lint, govulncheck, a six-target static build matrix, a short fuzz pass, and a goreleaser snapshot. `.github/workflows/release.yml` publishes tagged GitHub releases; `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
-- No README, lint config, or release tooling exists yet. The 51-cart corpus, token fixtures, and M3 LSP golden fixtures live under `testdata/` (`testdata/lsp/`).
+- README, LICENSE, CHANGELOG, `.golangci.yml`, `.goreleaser.yaml`, install/troubleshooting/release docs, and Neovim/Helix integration files exist. The 51-cart corpus, token fixtures, and LSP golden fixtures live under `testdata/` (`testdata/lsp/`).
 - Do not invent or claim build/test results. Run the commands below and report the actual output.
 
 ## Source of truth
@@ -82,7 +82,9 @@
 - `go test ./...` runs unit and in-memory LSP integration tests.
 - `go test -race ./...` is the required race-free gate.
 - `go vet ./...` and `gofmt -l cmd internal` catch correctness and formatting issues.
-- No lint configuration or release tooling exists yet; add and document them with the milestone that introduces them.
+- `golangci-lint run ./...` is the lint gate; `govulncheck ./...` is the vulnerability gate.
+- `goreleaser check` and `goreleaser release --snapshot --clean` validate release packaging.
+- `editors/nvim/tests/run.sh` runs the headless Neovim helper smoke test after building `pico-lsp`.
 
 ## Documentation rules
 
