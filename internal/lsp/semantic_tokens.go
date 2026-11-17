@@ -231,12 +231,14 @@ func includePathSpan(text string, directive source.Span) (source.Span, bool) {
 		i++
 	}
 	quoted := i < directive.End && (text[i] == '"' || text[i] == '\'')
+	var quote byte
 	if quoted {
+		quote = text[i]
 		i++
 	}
 	start := i
 	for i < directive.End && text[i] != '\r' && text[i] != '\n' {
-		if quoted && (text[i] == '"' || text[i] == '\'') {
+		if quoted && text[i] == quote {
 			break
 		}
 		i++

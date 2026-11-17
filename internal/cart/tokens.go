@@ -78,32 +78,29 @@ func isUnaryFoldedContext(prev syntax.Token) bool {
 
 // CountCharsBySegment attributes flattened character contributions to the
 // original file that supplied each segment. Duplicate includes are counted
-// once per occurrence.
+// once per occurrence. Characters are counted over the whole flattened text so
+// a CRLF split between a segment and a synthetic separator still counts once.
 func CountCharsBySegment(segments []Segment, flat []byte) map[source.FileID]int {
 	out := make(map[source.FileID]int)
-	previousEnd := 0
-	for _, segment := range segments {
-		start, end := segment.FlatStart, segment.FlatEnd
-		if start < 0 {
-			start = 0
-		}
-		if end > len(flat) {
-			end = len(flat)
-		}
-		if start > previousEnd {
-			// Separators inserted by the flattener are part of the root cart's
-			// assembled source.
-			out[0] += CountChars(flat[previousEnd:start])
-		}
-		if end <= start {
-			continue
-		}
-		out[segment.FileID] += CountChars(flat[start:end])
-		previousEnd = end
+	if len(segments) == 0 {
+		return out
 	}
-	if previousEnd < len(flat) {
-		out[0] += CountChars(flat[previousEnd:])
+	segmentIndex := 0
+	fileAt := func(offset int) source.FileID {
+		for segmentIndex < len(segments) && offset >= segments[segmentIndex].FlatEnd {
+			segmentIndex++
+		}
+		if segmentIndex < len(segments) {
+			segment := segments[segmentIndex]
+			if offset >= segment.FlatStart && offset < segment.FlatEnd {
+				return segment.FileID
+			}
+		}
+		return 0
 	}
+	walkChars(flat, func(offset int) {
+		out[fileAt(offset)]++
+	})
 	return out
 }
 
@@ -112,10 +109,19 @@ func CountCharsBySegment(segments []Segment, flat []byte) map[source.FileID]int 
 // codepoint plus U+FE0F (the emoji variation selector) count once. This
 // matches shrinko8 and PICO-8's editor semantics.
 func CountChars(code []byte) int {
+	return walkChars(code, nil)
+}
+
+// walkChars calls visit for each counted character with its byte offset in the
+// assembled text. CRLF pairs are visited once, at the carriage return.
+func walkChars(code []byte, visit func(offset int)) int {
 	count := 0
 	for i := 0; i < len(code); {
 		switch code[i] {
 		case '\r':
+			if visit != nil {
+				visit(i)
+			}
 			if i+1 < len(code) && code[i+1] == '\n' {
 				i++
 			}
@@ -123,12 +129,18 @@ func CountChars(code []byte) int {
 			i++
 			continue
 		case '\n':
+			if visit != nil {
+				visit(i)
+			}
 			count++
 			i++
 			continue
 		}
 		r, size := utf8.DecodeRune(code[i:])
 		if r != '\uFE0F' {
+			if visit != nil {
+				visit(i)
+			}
 			count++
 		}
 		i += size

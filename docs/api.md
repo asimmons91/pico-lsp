@@ -39,7 +39,8 @@ The result:
 
 `files`, `includes`, and `tabs` are omitted when empty. Counts are for the
 assembled cart, so duplicate includes count each occurrence. Per-file counts are
-informational.
+informational. Tab indexes are zero-based; `.p8` include selectors use the same
+numbering.
 
 If no cart can be found, the request fails with JSON-RPC error code `-32001`
 and message `cart-not-found`.

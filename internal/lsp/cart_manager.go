@@ -201,6 +201,32 @@ func isCartURI(u uri.URI) bool {
 	return strings.HasSuffix(strings.ToLower(u.Path()), ".p8")
 }
 
+func isLuaURI(u uri.URI) bool {
+	return strings.HasSuffix(strings.ToLower(u.Path()), ".lua")
+}
+
+// ownsFile reports whether root is the publishing owner for file. A .p8 owns
+// itself; a .lua file is owned by the nearest ancestor cart that includes it.
+// If no cart includes a .lua file, the file owns itself. When a cart includes a
+// shared file that another cart owns, it must not publish competing diagnostics.
+func ownsFile(resolver *cart.Resolver, root, file uri.URI) bool {
+	if root == file {
+		return true
+	}
+	if resolver == nil || !isLuaURI(file) {
+		return false
+	}
+	owner := resolver.Resolve(file)
+	return owner == root || owner == file
+}
+
+func (m *CartManager) ownsFile(root, file uri.URI) bool {
+	m.mu.Lock()
+	resolver := m.resolver
+	m.mu.Unlock()
+	return ownsFile(resolver, root, file)
+}
+
 func (m *CartManager) analyze(ctx context.Context, u uri.URI, invalidate bool) uri.URI {
 	m.analyzeMu.Lock()
 	defer m.analyzeMu.Unlock()
@@ -230,11 +256,19 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 		semantics: analysis.Analyze(snap, m.builtins, analysisOptions(m.settings())),
 		files:     make(map[uri.URI]struct{}, len(snap.Cart.Files)),
 	}
+	owned := make(map[uri.URI]bool, len(snap.Cart.Files))
+	for _, file := range snap.Cart.Files {
+		owned[file.URI] = ownsFile(resolver, root, file.URI)
+	}
 	m.mu.Lock()
 	previous := m.byRoot[root]
 	for _, file := range snap.Cart.Files {
 		entry.files[file.URI] = struct{}{}
-		m.byFile[file.URI] = root
+		if owned[file.URI] {
+			m.byFile[file.URI] = root
+		} else if m.byFile[file.URI] == root {
+			delete(m.byFile, file.URI)
+		}
 	}
 	if previous != nil {
 		for file := range previous.files {
@@ -295,7 +329,7 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 				}
 				if _, open := m.docs.Get(file); open {
 					m.analyzeLocked(ctx, file, false)
-				} else {
+				} else if ownsFile(resolver, u, file) {
 					m.diags.Clear(ctx, file)
 				}
 			}
@@ -311,9 +345,10 @@ func (m *CartManager) Closed(ctx context.Context, u uri.URI) {
 // The caller must hold analyzeMu.
 func (m *CartManager) refreshAfterLocked(ctx context.Context, changed uri.URI, cartChanged bool, analyzedRoot uri.URI) {
 	if cartChanged {
-		// A cart's include list can change which open .lua files it owns.
+		// A cart's include list can change ownership for open .lua files and
+		// change which open cart should publish a shared file.
 		for _, u := range m.docs.List() {
-			if strings.HasSuffix(strings.ToLower(u.Path()), ".lua") {
+			if isLuaURI(u) || isCartURI(u) {
 				m.analyzeLocked(ctx, u, false)
 			}
 		}
@@ -433,6 +468,11 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantic
 	}
 
 	for _, file := range snap.Cart.Files {
+		if !m.ownsFile(snap.Cart.RootURI, file.URI) {
+			m.log.Debug("skipping diagnostics for non-owned file",
+				"file", file.URI.String(), "root", snap.Cart.RootURI.String())
+			continue
+		}
 		fileItems := items[file.URI]
 		if len(fileItems) == 0 {
 			if m.diags.Has(file.URI) {
@@ -451,7 +491,7 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantic
 
 	if previous != nil {
 		for file := range previous.files {
-			if snap.Cart.FileID(file) < 0 && m.diags.Has(file) {
+			if snap.Cart.FileID(file) < 0 && m.ownsFile(snap.Cart.RootURI, file) && m.diags.Has(file) {
 				m.diags.Clear(ctx, file)
 			}
 		}

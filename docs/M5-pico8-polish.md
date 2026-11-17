@@ -417,8 +417,8 @@ cart snapshot (M1-M4)
 - File watching is dynamically registered when the client supports it.
   Deletion uses the same cleanup path as closing a document so diagnostics for
   removed files are cleared.
-- Include outside-workspace checks use configured workspace folders, or the
-  cart directory when no workspace folder exists.
+- Include outside-workspace checks use configured workspace folders plus the
+  cart directory, so carts opened outside a workspace remain usable.
 - Generated annotations merge missing `@param`/`@return` entries and omit
   inferred `any` types.
 

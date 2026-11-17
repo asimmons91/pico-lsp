@@ -171,3 +171,17 @@ func TestM5DuplicateFieldKeyCaseRules(t *testing.T) {
 		t.Fatalf("identifier keys should fold: %v", lintCodes(result))
 	}
 }
+
+func TestM5ShadowedLocalRequiresVisibleOuterDeclaration(t *testing.T) {
+	text := `if cond then
+  local x = 5
+  print(x)
+end
+local x = 6
+print(x)
+`
+	result := analyzeTextLint(t, text, LintOptions{ShadowedLocal: SeverityHint})
+	if hasDiagnostic(result, CodeShadowedLocal) {
+		t.Fatalf("shadowed-local fired for a later outer declaration: %v", lintCodes(result))
+	}
+}
