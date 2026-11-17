@@ -1,0 +1,128 @@
+[
+  {
+    "label": "hp",
+    "kind": 5,
+    "detail": "field hp",
+    "filterText": "hp",
+    "sortText": "hp",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "hp"
+    }
+  },
+  {
+    "label": "score",
+    "kind": 5,
+    "detail": "field score",
+    "filterText": "score",
+    "sortText": "score",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "score"
+    }
+  },
+  {
+    "label": "speed",
+    "kind": 5,
+    "detail": "field speed",
+    "filterText": "speed",
+    "sortText": "speed",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "speed"
+    }
+  },
+  {
+    "label": "step",
+    "kind": 2,
+    "detail": "function player:step(dx)",
+    "filterText": "step",
+    "sortText": "step",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "step"
+    }
+  },
+  {
+    "label": "x",
+    "kind": 5,
+    "detail": "field x",
+    "filterText": "x",
+    "sortText": "x",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "x"
+    }
+  },
+  {
+    "label": "y",
+    "kind": 5,
+    "detail": "field y",
+    "filterText": "y",
+    "sortText": "y",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 18
+        },
+        "end": {
+          "line": 32,
+          "character": 18
+        }
+      },
+      "newText": "y"
+    }
+  }
+]

@@ -18,6 +18,25 @@ func BuildBuiltins(api *builtin.API) map[string]*Symbol {
 		}
 		sym := table.NewSymbol(SymbolBuiltin, name.Name, name.Span, nil)
 		sym.Builtin = true
+		sym.Signature = name.Signature
+		sym.Params = append([]string(nil), name.Params...)
+		if name.Docs != nil {
+			doc := &DocComment{
+				Summary:    name.Docs.Summary,
+				Type:       name.Docs.Type,
+				Returns:    append([]string(nil), name.Docs.Returns...),
+				Deprecated: name.Docs.Deprecated,
+			}
+			for _, param := range name.Docs.Params {
+				doc.Params = append(doc.Params, ParamDoc{
+					Name:     param.Name,
+					Type:     param.Type,
+					Doc:      param.Doc,
+					Optional: param.Optional,
+				})
+			}
+			sym.Doc = doc
+		}
 		out[canonical] = sym
 	}
 	return out

@@ -1,0 +1,22 @@
+[
+  {
+    "label": "Player",
+    "kind": 7,
+    "filterText": "Player",
+    "sortText": "player",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 7,
+          "character": 15
+        },
+        "end": {
+          "line": 7,
+          "character": 16
+        }
+      },
+      "newText": "Player"
+    }
+  }
+]

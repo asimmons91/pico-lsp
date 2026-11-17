@@ -1,0 +1,44 @@
+[
+  {
+    "label": "lib/player.lua",
+    "kind": 17,
+    "detail": "Lua include",
+    "filterText": "lib/player.lua",
+    "sortText": "lib/player.lua",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 10,
+          "character": 10
+        },
+        "end": {
+          "line": 10,
+          "character": 10
+        }
+      },
+      "newText": "lib/player.lua"
+    }
+  },
+  {
+    "label": "lib/util.lua",
+    "kind": 17,
+    "detail": "Lua include",
+    "filterText": "lib/util.lua",
+    "sortText": "lib/util.lua",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 10,
+          "character": 10
+        },
+        "end": {
+          "line": 10,
+          "character": 10
+        }
+      },
+      "newText": "lib/util.lua"
+    }
+  }
+]

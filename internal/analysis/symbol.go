@@ -65,10 +65,20 @@ type Symbol struct {
 	Decls []source.Span
 	Uses  []source.Span
 
+	// Doc is the parsed LuaCATS/doc-comment metadata for user and built-in
+	// declarations.
+	Doc *DocComment
+	// Signature is a user-facing signature such as `function move(p, dx, dy)`.
+	Signature string
+	// Params contains the declared parameter names, including `...` when used.
+	Params []string
+
 	// Fields maps canonical field names declared on this value. Owner is set
-	// for field symbols and points at the receiver.
+	// for field symbols and points at the receiver. Alias links implicit method
+	// `self` to its receiver.
 	Fields map[string]*Symbol
 	Owner  *Symbol
+	Alias  *Symbol
 
 	// DynamicFields records an access such as t[k] on this value. Renaming a
 	// field on this receiver is unsafe once this is set.
@@ -143,9 +153,49 @@ type Result struct {
 	Table       *SymbolTable
 	Diagnostics []Diagnostic
 
-	occs   []Occurrence
-	byFile map[source.FileID][]Occurrence
-	meta   map[source.FileID]bool
+	// Classes holds shallow `---@class` metadata used by M3 member completion.
+	Classes map[string]*Class
+
+	occs       []Occurrence
+	byFile     map[source.FileID][]Occurrence
+	meta       map[source.FileID]bool
+	scopes     []*Scope
+	chunkScope *Scope
+}
+
+// ScopeAt returns the innermost lexical scope containing offset. It falls back
+// to the scope of the closest preceding occurrence, then to the chunk scope.
+func (r *Result) ScopeAt(fileID source.FileID, offset int) *Scope {
+	if r == nil {
+		return nil
+	}
+	var best *Scope
+	bestLen := int(^uint(0) >> 1)
+	for _, scope := range r.scopes {
+		if scope == nil || scope.Span.FileID != fileID || scope.Span.IsEmpty() {
+			continue
+		}
+		if offset < scope.Span.Start || offset > scope.Span.End {
+			continue
+		}
+		if length := scope.Span.Len(); length <= bestLen {
+			best = scope
+			bestLen = length
+		}
+	}
+	if best != nil {
+		return best
+	}
+	for i := len(r.occs) - 1; i >= 0; i-- {
+		occ := &r.occs[i]
+		if occ.Span.FileID != fileID || occ.Span.Start > offset {
+			continue
+		}
+		if occ.Scope != nil {
+			return occ.Scope
+		}
+	}
+	return r.chunkScope
 }
 
 // Occurrences returns occurrences in fileID in source order.

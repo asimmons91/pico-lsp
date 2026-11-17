@@ -83,11 +83,12 @@ const (
 type Server struct {
 	protocol.UnimplementedServer
 
-	log   *slog.Logger
-	docs  *DocumentStore
-	cfg   *config.Manager
-	diags *Diagnostics
-	carts *CartManager
+	log      *slog.Logger
+	docs     *DocumentStore
+	cfg      *config.Manager
+	diags    *Diagnostics
+	carts    *CartManager
+	builtins *builtin.API
 
 	client atomic.Value // protocol.Client
 
@@ -140,6 +141,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 		// continue to work when the embedded stub is broken.
 		log.Error("failed to load PICO-8 built-in API; built-in symbols are disabled", "error", err)
 	} else {
+		s.builtins = api
 		builtins = analysis.BuildBuiltins(api)
 	}
 
@@ -467,8 +469,14 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
-			PositionEncoding:          encoding,
-			TextDocumentSync:          syncOptions,
+			PositionEncoding: encoding,
+			TextDocumentSync: syncOptions,
+			CompletionProvider: &protocol.CompletionOptions{
+				TriggerCharacters: []string{".", ":", "@", "#"},
+				ResolveProvider:   boolPtr(true),
+			},
+			HoverProvider:             protocol.Boolean(true),
+			SignatureHelpProvider:     &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
 			DefinitionProvider:        protocol.Boolean(true),
 			ReferencesProvider:        protocol.Boolean(true),
 			DocumentHighlightProvider: protocol.Boolean(true),
@@ -476,6 +484,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 			FoldingRangeProvider:      protocol.Boolean(true),
 			WorkspaceSymbolProvider:   protocol.Boolean(true),
 			RenameProvider:            &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
+			SemanticTokensProvider:    semanticTokensOptions(),
 			Workspace: &protocol.WorkspaceOptions{
 				WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
 					Supported:           boolPtr(true),

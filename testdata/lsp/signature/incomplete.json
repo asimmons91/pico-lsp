@@ -1,0 +1,16 @@
+{
+  "label": "function move(dx, dy)",
+  "parameters": [
+    {
+      "label": "dx",
+      "documentation": "`number`"
+    },
+    {
+      "label": "dy",
+      "documentation": "`number`"
+    }
+  ],
+  "documentation": "Move the player.",
+  "activeSignature": 0,
+  "activeParameter": 0
+}

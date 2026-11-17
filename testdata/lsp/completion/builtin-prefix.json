@@ -1,0 +1,44 @@
+[
+  {
+    "label": "circ",
+    "kind": 3,
+    "detail": "function circ(x, y, r, [col])",
+    "filterText": "circ",
+    "sortText": "2_circ",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 2
+        },
+        "end": {
+          "line": 32,
+          "character": 6
+        }
+      },
+      "newText": "circ"
+    }
+  },
+  {
+    "label": "circfill",
+    "kind": 3,
+    "detail": "function circfill(x, y, r, [col])",
+    "filterText": "circfill",
+    "sortText": "2_circfill",
+    "insertTextFormat": 1,
+    "textEdit": {
+      "range": {
+        "start": {
+          "line": 32,
+          "character": 2
+        },
+        "end": {
+          "line": 32,
+          "character": 6
+        }
+      },
+      "newText": "circfill"
+    }
+  }
+]

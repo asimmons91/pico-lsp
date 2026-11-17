@@ -197,6 +197,54 @@ func TestMethodSelfSharesReceiverFields(t *testing.T) {
 	}
 }
 
+func TestUserDocsAndFunctionSignature(t *testing.T) {
+	text := "--- Move the player.\n---@param p table\n---@param dx? number\n---@return number\nfunction move(p, dx)\n  return 1\nend\n"
+	result, _ := analyzeText(t, text)
+	sym := result.Table.Globals["move"]
+	if sym == nil {
+		t.Fatal("missing move")
+	}
+	if sym.Signature != "function move(p, dx)" {
+		t.Fatalf("signature = %q", sym.Signature)
+	}
+	if sym.Doc == nil || sym.Doc.Summary != "Move the player." {
+		t.Fatalf("docs = %+v", sym.Doc)
+	}
+	if len(sym.Doc.Params) != 2 || !sym.Doc.Params[1].Optional {
+		t.Fatalf("params = %+v, want optional dx", sym.Doc.Params)
+	}
+	if len(sym.Doc.Returns) != 1 {
+		t.Fatalf("returns = %+v", sym.Doc.Returns)
+	}
+}
+
+func TestScopeAtFindsFunctionAndBlock(t *testing.T) {
+	text := "local outer = 1\nfunction f(param)\n  local inner = 2\n  do\n    print(inner)\n  end\nend\n"
+	result, _ := analyzeText(t, text)
+	functionScope := result.ScopeAt(0, strings.Index(text, "inner = 2"))
+	blockScope := result.ScopeAt(0, strings.Index(text, "print(inner)"))
+	if functionScope == nil || blockScope == nil {
+		t.Fatal("missing scopes")
+	}
+	if functionScope == blockScope {
+		t.Fatal("expected inner block scope")
+	}
+	inner := result.OccurrenceAt(0, strings.Index(text, "inner = 2")).Symbol
+	if inner == nil {
+		t.Fatal("missing inner")
+	}
+	visible := blockScope.VisibleSymbols()
+	foundInner := false
+	for _, sym := range visible {
+		if sym == inner {
+			foundInner = true
+		}
+	}
+	if !foundInner {
+		t.Fatalf("visible symbols %v, missing inner", visible)
+	}
+}
+
 func TestGlobalsForwardReferenceAndMultipleDecls(t *testing.T) {
 	text := "function f() return g() end\nfunction g() end\nx = 1\nx = 2\nprint(x)\n"
 	result, _ := analyzeText(t, text)

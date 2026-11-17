@@ -7,6 +7,9 @@ import (
 	_ "embed"
 	"fmt"
 	"sort"
+	"strings"
+
+	"go.lsp.dev/protocol"
 
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
@@ -28,9 +31,12 @@ const (
 
 // Name is one built-in declaration.
 type Name struct {
-	Name string
-	Kind Kind
-	Span source.Span
+	Name      string
+	Kind      Kind
+	Span      source.Span
+	Signature string
+	Params    []string
+	Docs      *Docs
 }
 
 // API is the parsed, immutable built-in API stub.
@@ -64,20 +70,42 @@ func Load() (*API, error) {
 		Chunk:  chunk,
 		byName: make(map[string]Name),
 	}
+	index := syntax.NewCommentIndex(lexed.Comments)
+	lineIndex := source.New([]byte(Source), protocol.PositionEncodingKindUTF16)
 	for _, stmt := range chunk.Block.Stmts {
 		switch st := stmt.(type) {
 		case *syntax.FunctionDeclStmt:
 			if len(st.Names) != 1 || st.Method {
 				return nil, fmt.Errorf("builtin: %s API declaration is not a plain function", Version)
 			}
-			api.add(Name{Name: st.Names[0].Text, Kind: KindFunction, Span: st.Names[0].Span()})
+			name := st.Names[0]
+			docs := docsBefore(index, lineIndex, name.Span().Start)
+			api.add(Name{
+				Name:      name.Text,
+				Kind:      KindFunction,
+				Span:      name.Span(),
+				Signature: functionSignature(name.Text, st.Func, docs),
+				Params:    functionParams(st.Func),
+				Docs:      docs,
+			})
 		case *syntax.AssignStmt:
-			for _, target := range st.Targets {
+			for i, target := range st.Targets {
 				name, ok := target.(*syntax.NameExpr)
 				if !ok {
 					return nil, fmt.Errorf("builtin: %s API assignment target is not a name", Version)
 				}
-				api.add(Name{Name: name.Text, Kind: KindConstant, Span: name.Span()})
+				docs := docsBefore(index, lineIndex, name.Span().Start)
+				signature := name.Text
+				if i < len(st.Values) {
+					signature = constantSignature(name.Text, st.Values[i])
+				}
+				api.add(Name{
+					Name:      name.Text,
+					Kind:      KindConstant,
+					Span:      name.Span(),
+					Signature: signature,
+					Docs:      docs,
+				})
 			}
 		case *syntax.EmptyStmt:
 			// Comments leave no statements behind; empty statements are benign.
@@ -95,6 +123,57 @@ func Load() (*API, error) {
 		return api.Names[i].Span.Start < api.Names[j].Span.Start
 	})
 	return api, nil
+}
+
+func docsBefore(index *syntax.CommentIndex, lines *source.LineIndex, offset int) *Docs {
+	if index == nil || lines == nil {
+		return nil
+	}
+	pos, err := lines.Position(offset)
+	if err != nil {
+		return nil
+	}
+	return parseDocs(index.DocBefore(int(pos.Line)))
+}
+
+func functionParams(fn *syntax.FunctionExpr) []string {
+	if fn == nil {
+		return nil
+	}
+	params := make([]string, 0, len(fn.Params)+1)
+	for _, param := range fn.Params {
+		params = append(params, param.Text)
+	}
+	if fn.Vararg {
+		params = append(params, "...")
+	}
+	return params
+}
+
+func constantSignature(name string, value syntax.Expr) string {
+	switch v := value.(type) {
+	case *syntax.NumberExpr:
+		return name + " = " + v.Text
+	case *syntax.StringExpr:
+		return name + " = " + v.Text
+	default:
+		return name
+	}
+}
+
+func functionSignature(name string, fn *syntax.FunctionExpr, docs *Docs) string {
+	params := functionParams(fn)
+	parts := make([]string, 0, len(params))
+	for _, param := range params {
+		label := param
+		if param != "..." {
+			if doc, ok := paramByName(docs, param); ok && doc.Optional {
+				label = "[" + param + "]"
+			}
+		}
+		parts = append(parts, label)
+	}
+	return "function " + name + "(" + strings.Join(parts, ", ") + ")"
 }
 
 func (a *API) add(name Name) {

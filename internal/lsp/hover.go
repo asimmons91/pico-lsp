@@ -1,0 +1,67 @@
+package lsp
+
+import (
+	"context"
+
+	"go.lsp.dev/protocol"
+
+	"github.com/asimmons91/pico-lsp/internal/source"
+	"github.com/asimmons91/pico-lsp/internal/syntax"
+)
+
+// Hover implements textDocument/hover.
+func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	if params == nil {
+		return nil, nil
+	}
+	nav, ok := s.navigationFor(ctx, params.TextDocument.URI)
+	if !ok {
+		return nil, nil
+	}
+	offset, ok := nav.offset(params.Position)
+	if !ok {
+		return nil, nil
+	}
+
+	if include := nav.includeAt(offset); include != nil {
+		return hoverResult(nav, include.DirectiveSpan, includeMarkdown(nav, include)), nil
+	}
+	if token := nav.tokenAt(offset); token != nil {
+		switch token.Kind {
+		case syntax.TokenString, syntax.TokenComment:
+			return nil, nil
+		case syntax.TokenInclude:
+			return nil, nil
+		case syntax.TokenPunct:
+			switch token.Text {
+			case "?":
+				return hoverResult(nav, token.Span, shorthandMarkdown()), nil
+			case "@", "%", "$":
+				return hoverResult(nav, token.Span, peekMarkdown(token.Text)), nil
+			}
+		}
+	}
+
+	occ := nav.occurrenceAt(offset)
+	if occ == nil || occ.Symbol == nil {
+		return nil, nil
+	}
+	return hoverResult(nav, occ.Span, symbolMarkdown(nav, occ.Symbol)), nil
+}
+
+func hoverResult(nav *navContext, span source.Span, markdown string) *protocol.Hover {
+	if markdown == "" {
+		return nil
+	}
+	result := &protocol.Hover{
+		Contents: &protocol.MarkupContent{
+			Kind:  protocol.MarkupKindMarkdown,
+			Value: markdown,
+		},
+	}
+	if nav != nil && nav.file != nil && nav.file.Index != nil {
+		r := nav.file.Index.Range(span.Start, span.End)
+		result.Range = &r
+	}
+	return result
+}

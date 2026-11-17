@@ -1,0 +1,24 @@
+{
+  "label": "function circfill(x, y, r, [col])",
+  "parameters": [
+    {
+      "label": "x",
+      "documentation": "`number`"
+    },
+    {
+      "label": "y",
+      "documentation": "`number`"
+    },
+    {
+      "label": "r",
+      "documentation": "`number`"
+    },
+    {
+      "label": "col",
+      "documentation": "`number`"
+    }
+  ],
+  "documentation": "Draw a filled circle.",
+  "activeSignature": 0,
+  "activeParameter": 2
+}
