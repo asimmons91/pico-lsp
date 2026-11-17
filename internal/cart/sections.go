@@ -52,7 +52,8 @@ func parseSections(text string) (sections []Section, code []lineRef, version int
 		return nil, nil, 0
 	}
 
-	if strings.HasPrefix(strings.TrimSpace(lineContent(text, lines[0])), "pico-8 cartridge") && len(lines) > 1 {
+	firstLine := strings.TrimPrefix(lineContent(text, lines[0]), "\ufeff")
+	if strings.HasPrefix(strings.TrimSpace(firstLine), "pico-8 cartridge") && len(lines) > 1 {
 		versionLine := strings.TrimSpace(lineContent(text, lines[1]))
 		if rest, ok := strings.CutPrefix(versionLine, "version"); ok {
 			version, _ = strconv.Atoi(strings.TrimSpace(rest))
@@ -62,8 +63,12 @@ func parseSections(text string) (sections []Section, code []lineRef, version int
 	var current *Section
 	for i, line := range lines {
 		content := lineContent(text, line)
-		trimmed := strings.TrimSpace(content)
-		if strings.HasPrefix(content, "__") && strings.HasSuffix(trimmed, "__") && len(trimmed) > 4 {
+		headerContent := content
+		if i == 0 {
+			headerContent = strings.TrimPrefix(content, "\ufeff")
+		}
+		trimmed := strings.TrimSpace(headerContent)
+		if strings.HasPrefix(headerContent, "__") && strings.HasSuffix(trimmed, "__") && len(trimmed) > 4 {
 			if current != nil {
 				current.EndLine = i - 1
 				current.SpanVal = current.SpanVal.Merge(source.Span{
@@ -73,12 +78,16 @@ func parseSections(text string) (sections []Section, code []lineRef, version int
 				})
 			}
 			name := trimmed[2 : len(trimmed)-2]
+			headerStart := line.start
+			if i == 0 {
+				headerStart += len(content) - len(headerContent)
+			}
 			sec := Section{
 				Name:       name,
 				Known:      knownSection(name),
 				StartLine:  i,
 				EndLine:    i,
-				HeaderSpan: source.Span{Start: line.start, End: contentEnd(text, line)},
+				HeaderSpan: source.Span{Start: headerStart, End: contentEnd(text, line)},
 			}
 			if i+1 < len(lines) {
 				sec.ContentStart = lines[i+1].start
@@ -86,7 +95,7 @@ func parseSections(text string) (sections []Section, code []lineRef, version int
 				sec.ContentStart = line.end
 			}
 			sec.ContentEnd = sec.ContentStart
-			sec.SpanVal = source.Span{Start: line.start, End: line.end}
+			sec.SpanVal = source.Span{Start: headerStart, End: line.end}
 			sections = append(sections, sec)
 			current = &sections[len(sections)-1]
 			continue

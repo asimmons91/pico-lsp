@@ -663,3 +663,30 @@ func TestP8IncludeWithBOMKeepsCodeOffsets(t *testing.T) {
 		}
 	}
 }
+
+func TestP8RootWithBOM(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	p := newMapProvider()
+	snap := loadText(t, p, root, "\ufeffpico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n__gfx__\n")
+	if snap.Cart.Version != 42 {
+		t.Fatalf("version = %d, want 42", snap.Cart.Version)
+	}
+	if string(snap.Cart.Flat) != "a=1" {
+		t.Fatalf("flat = %q, want BOM-free code", snap.Cart.Flat)
+	}
+	if snap.Cart.Tokens != 3 || snap.Cart.Chars != 3 {
+		t.Fatalf("counts = %d/%d, want 3/3", snap.Cart.Tokens, snap.Cart.Chars)
+	}
+}
+
+func TestP8BOMBeforeLuaHeader(t *testing.T) {
+	root := uri.File("/tmp/p8/min.p8")
+	p := newMapProvider()
+	snap := loadText(t, p, root, "\ufeff__lua__\na=1\n")
+	if string(snap.Cart.Flat) != "a=1\n" {
+		t.Fatalf("flat = %q", snap.Cart.Flat)
+	}
+	if len(snap.Cart.Sections) != 1 || snap.Cart.Sections[0].HeaderSpan.Start != len("\ufeff") {
+		t.Fatalf("sections = %+v", snap.Cart.Sections)
+	}
+}
