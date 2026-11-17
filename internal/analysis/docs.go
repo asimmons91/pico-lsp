@@ -220,15 +220,18 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 	classes := make(map[string]*Class)
 	var current *Class
 	var previous *syntax.Comment
+	var pendingGenerics []GenericDecl
 	for i := range snap.Comments {
 		comment := snap.Comments[i]
 		if comment.Kind != syntax.CommentDoc {
 			current = nil
 			previous = nil
+			pendingGenerics = nil
 			continue
 		}
 		if previous != nil && !commentsAdjacent(snap, *previous, comment) {
 			current = nil
+			pendingGenerics = nil
 		}
 		previous = &snap.Comments[i]
 		text := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(comment.Text), "---"))
@@ -260,6 +263,11 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 			if len(generics) > 0 {
 				current.GenericDecls = generics
 			}
+			if len(pendingGenerics) > 0 {
+				current.GenericDecls = append(current.GenericDecls, pendingGenerics...)
+				pendingGenerics = nil
+			}
+			current.GenericDecls = dedupeGenericDecls(current.GenericDecls)
 			if current.DeclSpan.IsEmpty() {
 				current.DeclSpan = comment.Span
 			}
@@ -285,13 +293,17 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 			}
 			current.Operators = append(current.Operators, op)
 		case "@generic":
+			decls := parseGenericDeclList(text[len("@generic"):])
 			if current == nil {
+				pendingGenerics = append(pendingGenerics, decls...)
 				continue
 			}
-			current.GenericDecls = append(current.GenericDecls, parseGenericDeclList(text[len("@generic"):])...)
+			current.GenericDecls = append(current.GenericDecls, decls...)
+			current.GenericDecls = dedupeGenericDecls(current.GenericDecls)
 		default:
 			if strings.HasPrefix(text, "@") {
 				current = nil
+				pendingGenerics = nil
 			}
 		}
 	}
@@ -396,6 +408,26 @@ func parseGenericDecls(text string) []GenericDecl {
 		if decl.Name != "" {
 			out = append(out, decl)
 		}
+	}
+	return out
+}
+
+func dedupeGenericDecls(decls []GenericDecl) []GenericDecl {
+	if len(decls) < 2 {
+		return decls
+	}
+	seen := make(map[string]struct{}, len(decls))
+	out := decls[:0]
+	for _, decl := range decls {
+		key := CanonicalName(decl.Name)
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, decl)
 	}
 	return out
 }

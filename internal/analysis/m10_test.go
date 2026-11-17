@@ -553,3 +553,22 @@ boxed.value = "bad"
 		t.Fatalf("generic instance field assignment was not checked: %+v", result.Diagnostics)
 	}
 }
+
+func TestM10GenericClassTag(t *testing.T) {
+	text := `---@generic T
+---@class Box
+---@field value T
+local Box = {}
+
+---@type Box<number>
+local boxed = {value = 1}
+local value = boxed.value
+`
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	if hasDiagnostic(result, CodeAnnotationUnknownType) {
+		t.Fatalf("class @generic tag produced unknown types: %+v", result.Diagnostics)
+	}
+	if got := types.Display(symbolByName(result, "value").Type); got != "number" {
+		t.Fatalf("class @generic field = %q", got)
+	}
+}
