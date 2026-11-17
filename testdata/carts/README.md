@@ -12,11 +12,13 @@ license (MIT in this corpus).
 | [0xcafed00d/tac08](https://github.com/0xcafed00d/tac08) | MIT | `38c1f3bb2ae81c06983dc5132d45f0c8747dff95` | 20 |
 | [apa64/try-pico8](https://github.com/apa64/try-pico8) | MIT | `21bdc11a123db0626e304ef8e5ba9e483c080440` | 18 |
 | [brubsby/tweetcarts](https://github.com/brubsby/tweetcarts) | MIT | `7295bd5a291475c9990a431df3b6db88f9b0934b` | 12 |
+| [jesstelford/pecs](https://github.com/jesstelford/pecs) | MIT | `bf1b6851a2460e61d74a9b60a9dd87166891ef73` | 1 |
 
 ## Manifest
 
 | Path | Source |
 |---|---|
+| `jesstelford__pecs/example/particles.p8` | jesstelford/pecs (includes `../pecs.lua`) |
 | `0xcafed00d__tac08/cart.p8` | 0xcafed00d/tac08 |
 | `0xcafed00d__tac08/tests/apitest1.p8` | 0xcafed00d/tac08 |
 | `0xcafed00d__tac08/tests/btntest.p8` | 0xcafed00d/tac08 |
