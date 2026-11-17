@@ -32,7 +32,10 @@ func initializePullHarness(t *testing.T, related bool, options string) *harness 
 	if options != "" {
 		params.InitializationOptions = protocol.LSPAny([]byte(options))
 	}
-	h.initialize(t, params)
+	result := h.initialize(t, params)
+	if result.Capabilities.DiagnosticProvider == nil {
+		t.Fatal("pull diagnostics capability was not advertised")
+	}
 	return h
 }
 
