@@ -13,41 +13,51 @@ import (
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis"
 	"github.com/asimmons91/pico-lsp/internal/cart"
+	"github.com/asimmons91/pico-lsp/internal/config"
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
 )
 
-// CartManager loads and caches the cart that owns each open document and
-// publishes its diagnostics.
+// CartManager loads and caches the cart that owns each open document, binds
+// its symbols, and publishes diagnostics.
 type CartManager struct {
-	docs  *DocumentStore
-	diags *Diagnostics
-	log   *slog.Logger
+	docs     *DocumentStore
+	diags    *Diagnostics
+	log      *slog.Logger
+	settings func() config.Settings
 
 	mu        sync.Mutex
 	analyzeMu sync.Mutex
 	loader    *cart.Loader
 	resolver  *cart.Resolver
+	builtins  map[string]*analysis.Symbol
 	byRoot    map[uri.URI]*cartEntry
 	byFile    map[uri.URI]uri.URI
 }
 
 type cartEntry struct {
-	snap  *cart.Snapshot
-	files map[uri.URI]struct{}
+	snap      *cart.Snapshot
+	semantics *analysis.Result
+	files     map[uri.URI]struct{}
 }
 
-func NewCartManager(docs *DocumentStore, diags *Diagnostics, log *slog.Logger) *CartManager {
+func NewCartManager(docs *DocumentStore, diags *Diagnostics, settings func() config.Settings, builtins map[string]*analysis.Symbol, log *slog.Logger) *CartManager {
 	if log == nil {
 		log = slog.Default()
 	}
+	if settings == nil {
+		settings = func() config.Settings { return config.Default() }
+	}
 	m := &CartManager{
-		docs:   docs,
-		diags:  diags,
-		log:    log,
-		byRoot: make(map[uri.URI]*cartEntry),
-		byFile: make(map[uri.URI]uri.URI),
+		docs:     docs,
+		diags:    diags,
+		settings: settings,
+		builtins: builtins,
+		log:      log,
+		byRoot:   make(map[uri.URI]*cartEntry),
+		byFile:   make(map[uri.URI]uri.URI),
 	}
 	m.loader = cart.NewLoader(m.provider(), protocol.PositionEncodingKindUTF16, log)
 	m.resolver = cart.NewResolver(m.loader)
@@ -180,8 +190,9 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 	}
 
 	entry := &cartEntry{
-		snap:  snap,
-		files: make(map[uri.URI]struct{}, len(snap.Cart.Files)),
+		snap:      snap,
+		semantics: analysis.Analyze(snap, m.builtins, analysisOptions(m.settings())),
+		files:     make(map[uri.URI]struct{}, len(snap.Cart.Files)),
 	}
 	m.mu.Lock()
 	previous := m.byRoot[root]
@@ -199,7 +210,7 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 	m.byRoot[root] = entry
 	m.mu.Unlock()
 
-	m.publish(ctx, snap, previous)
+	m.publish(ctx, snap, entry.semantics, previous)
 	return root
 }
 
@@ -348,7 +359,7 @@ func (m *CartManager) documentVersion(u uri.URI) *int32 {
 	return nil
 }
 
-func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, previous *cartEntry) {
+func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, semantics *analysis.Result, previous *cartEntry) {
 	items := make(map[uri.URI][]protocol.Diagnostic)
 	add := func(span source.Span, severity protocol.DiagnosticSeverity, code, message string) {
 		file := snap.Cart.File(span.FileID)
@@ -367,6 +378,11 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, previous
 	}
 	for _, parseErr := range snap.Errors {
 		add(parseErr.Span, protocol.DiagnosticSeverityError, syntax.DiagnosticCode, parseErr.Message)
+	}
+	if semantics != nil {
+		for _, diag := range semantics.Diagnostics {
+			add(diag.Span, analysisSeverity(diag.Severity), diag.Code, diag.Message)
+		}
 	}
 
 	for _, file := range snap.Cart.Files {
@@ -398,6 +414,23 @@ func (m *CartManager) publish(ctx context.Context, snap *cart.Snapshot, previous
 // SnapshotFor returns the cached cart snapshot containing u, loading it on
 // demand if necessary.
 func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapshot, source.FileID, bool) {
+	entry, id, ok := m.entryFor(ctx, u)
+	if !ok {
+		return nil, -1, false
+	}
+	return entry.snap, id, true
+}
+
+// SemanticsFor returns the cached snapshot and symbol model containing u.
+func (m *CartManager) SemanticsFor(ctx context.Context, u uri.URI) (*cart.Snapshot, *analysis.Result, source.FileID, bool) {
+	entry, id, ok := m.entryFor(ctx, u)
+	if !ok {
+		return nil, nil, -1, false
+	}
+	return entry.snap, entry.semantics, id, true
+}
+
+func (m *CartManager) entryFor(ctx context.Context, u uri.URI) (*cartEntry, source.FileID, bool) {
 	m.mu.Lock()
 	resolver := m.resolver
 	m.mu.Unlock()
@@ -427,5 +460,29 @@ func (m *CartManager) SnapshotFor(ctx context.Context, u uri.URI) (*cart.Snapsho
 	if id < 0 {
 		return nil, -1, false
 	}
-	return entry.snap, id, true
+	return entry, id, true
+}
+
+// LoadRoot loads and binds a cart without adding it to the open-document cache.
+// Workspace symbol scans use it so they honor overlays without evicting cached
+// analysis for open files.
+func (m *CartManager) LoadRoot(root uri.URI) (*cart.Snapshot, *analysis.Result, error) {
+	m.mu.Lock()
+	loader := m.loader
+	builtins := m.builtins
+	settings := m.settings
+	m.mu.Unlock()
+
+	snap, err := loader.Load(root)
+	if err != nil {
+		return nil, nil, err
+	}
+	return snap, analysis.Analyze(snap, builtins, analysisOptions(settings())), nil
+}
+
+// Resolver returns the ownership resolver for workspace scans.
+func (m *CartManager) Resolver() *cart.Resolver {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.resolver
 }

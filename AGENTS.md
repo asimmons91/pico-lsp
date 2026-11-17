@@ -2,9 +2,9 @@
 
 ## Current state
 
-- M0 (Foundation & Walking Skeleton) and M1 (Cart Model & Syntax Front-End) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/config`, and `internal/version`.
-- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include diagnostics, and serves document symbols and folding ranges.
-- M2 and later are not implemented. There is no scope/symbol navigation, completion, hover, signature help, type checking, token-budget UI, or formatter yet.
+- M0 (Foundation & Walking Skeleton), M1 (Cart Model & Syntax Front-End), and M2 (Semantic Core & Navigation) are implemented: `cmd/pico-lsp` plus `internal/lsp`, `internal/cart`, `internal/syntax`, `internal/source`, `internal/analysis`, `internal/builtin`, `internal/config`, and `internal/version`.
+- The server speaks LSP over stdio, syncs documents, analyzes `.p8`/`.lua` carts and includes, publishes syntax/include/undefined-global diagnostics, and serves document symbols, folding ranges, definitions, references, document highlights, rename, and workspace symbols.
+- M3 and later are not implemented. There is no completion, hover, signature help, semantic tokens, type checking, token-budget UI, or formatter yet.
 - CI: `.github/workflows/ci.yml` runs gofmt, vet, unit/race tests, a short fuzz pass, and a static build on pull requests. `.github/workflows/fuzz-nightly.yml` runs longer fuzz passes. M6 expands this with lint, build matrices, and release workflows.
 - Module: `github.com/asimmons91/pico-lsp`. Go 1.27.4 is pinned in `mise.toml`.
 - No README, lint config, or release tooling exists yet. The 51-cart corpus and token fixtures live under `testdata/`.

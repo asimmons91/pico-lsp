@@ -20,6 +20,46 @@ var keywords = map[string]struct{}{
 	"while": {},
 }
 
+// IsKeyword reports whether text is a PICO-8 keyword. Keyword matching is
+// case-insensitive, like every PICO-8 identifier.
+func IsKeyword(text string) bool {
+	_, ok := keywords[strings.ToLower(text)]
+	return ok
+}
+
+// IsIdentifier reports whether text is a valid PICO-8 identifier. This mirrors
+// the lexer: ASCII letters, digits, underscores, and control glyphs, plus valid
+// non-ASCII runes such as PICO-8 button glyphs. It cannot start with a digit or
+// be a keyword.
+func IsIdentifier(text string) bool {
+	if text == "" || IsKeyword(text) {
+		return false
+	}
+	first := true
+	for i := 0; i < len(text); {
+		c := text[i]
+		if c < utf8.RuneSelf {
+			if first {
+				if !isIdentStart(c) {
+					return false
+				}
+			} else if !isIdentContinue(c) {
+				return false
+			}
+			i++
+			first = false
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(text[i:])
+		if r == utf8.RuneError && size == 1 {
+			return false
+		}
+		i += size
+		first = false
+	}
+	return true
+}
+
 // Lex tokenizes a flattened PICO-8 program. mapper maps flat byte offsets back
 // to original files; when nil, an identity mapper with FileID 0 is used.
 func Lex(src []byte, mapper Mapper) Result {
