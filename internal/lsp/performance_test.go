@@ -27,8 +27,8 @@ func largeCartText() string {
 }
 
 func TestPerformanceTargets(t *testing.T) {
-	if raceDetectorEnabled {
-		t.Skip("timing targets are not meaningful under the race detector")
+	if raceDetectorEnabled || testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}
 	if runtime.GOOS != "linux" {
 		t.Skip("timing targets are measured on Linux runners")
