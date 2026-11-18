@@ -100,8 +100,9 @@ Confirmed before implementation:
 - The initial control-code set is `\*`, `\#`, `\-`, `\|`, `\+`, `\^`, `\a`,
   `\f`, `\14`, and `\15`. The remaining control codes and arbitrary `\0xxx`
   forms are deferred.
-- Custom entries append to the built-in catalog. Invalid entries are skipped
-  with a single logged warning per entry; they never fail completion.
+- Custom entries are merged after the built-in catalog. A duplicate custom
+  name or alias overrides the built-in entry. Invalid entries are skipped with
+  a single logged warning per entry; they never fail completion.
 - Catalog construction is cheap and may be rebuilt per request. Do not add
   incremental infrastructure for 256 entries.
 
@@ -121,11 +122,14 @@ The schema for this milestone:
 }
 ```
 
-- Each entry has exactly one of `byte`, `glyph`, or `text`.
+- Each entry has exactly one of `byte`, `glyph`, or `text`. Field presence, not
+  a zero value, distinguishes `byte: 0` from an omitted field.
 - `byte` is authoritative for custom font slots; the server inserts the
   canonical Unicode spelling for that byte.
 - `glyph` is accepted only when it encodes to one P8SCII byte.
-- `text` is intended for control-code escapes and is offered only in strings.
+- `text` is intended for control-code escapes and must set
+  `"context": "string"` so it is offered only in strings. Glyph and byte entries
+  default to both identifier and string contexts.
 - `name` is ASCII and matches `[a-z0-9_]+` case-insensitively. It is used as
   `p8_<name>` unless an alias supplies a different trigger.
 - Aliases are full completion triggers, for example `p8_logo` or `p8-logo`.
@@ -193,8 +197,8 @@ The schema for this milestone:
 
 ### Editor integration
 
-- **VS Code:** contribute `pico8.client.insertGlyph`, activated with the
-  extension. It requests `pico8/glyphs`, shows a Quick Pick with
+- **VS Code:** contribute `pico8.client.insertGlyph` in `contributes.commands`
+  and `activationEvents`. It requests `pico8/glyphs`, shows a Quick Pick with
   `matchOnDescription` and `matchOnDetail`, and invokes `pico8.insertGlyph`.
   Provide an optional keybinding placeholder but no default conflict-prone
   shortcut.
@@ -207,8 +211,9 @@ The schema for this milestone:
 
 ### Encoding and budgets
 
-- Inserting a glyph entry must add exactly one P8SCII character and one byte to
-  the compressed representation.
+- The inserted glyph itself must be one P8SCII character and encode to exactly
+  one compressed byte. Completion replaces a longer `p8_...` alias, so the net
+  change in cart size depends on the trigger length.
 - Control-code entries insert source escape text such as `\14`; the character
   and compressed budgets count the source characters, not the runtime byte the
   escape produces.
@@ -244,7 +249,8 @@ The schema for this milestone:
   - read-only `.p8.png` virtual documents are rejected;
   - `workspace/applyEdit` and fallback-result paths both work.
 - Budget tests:
-  - inserted glyphs count as one character and one compressed byte;
+  - the inserted glyph encodes to one compressed byte;
+  - net character/compressed changes account for the replaced trigger;
   - `\14` counts as source characters;
   - token counts are unchanged until acceptance.
 - Editor tests:
