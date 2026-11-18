@@ -49,6 +49,7 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 	if s.cfg.Settings().Refactors.Enabled {
 		start, end, err := nav.file.Index.RangeOffsets(params.Range)
 		if err == nil {
+			start, end = trimRefactorRange(nav.file.Text, start, end)
 			actions = append(actions, s.refactorActions(nav, params.Context.Diagnostics, start, end)...)
 		}
 	}

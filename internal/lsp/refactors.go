@@ -84,6 +84,31 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 	return actions
 }
 
+func trimRefactorRange(text string, start, end int) (int, int) {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(text) {
+		end = len(text)
+	}
+	for start < end && isRefactorSpace(text[start]) {
+		start++
+	}
+	for end > start && isRefactorSpace(text[end-1]) {
+		end--
+	}
+	return start, end
+}
+
+func isRefactorSpace(b byte) bool {
+	switch b {
+	case ' ', '\t', '\r', '\n':
+		return true
+	default:
+		return false
+	}
+}
+
 // refactorAtOccurrence finds the first name occurrence inside a selection. It
 // handles selections that begin at line indentation or cover a whole line.
 func refactorAtOccurrence(ctx *refactor.Context, start, end int, fn func(*refactor.Context, int) *refactor.Action) *refactor.Action {
