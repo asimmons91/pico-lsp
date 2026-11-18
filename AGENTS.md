@@ -86,7 +86,7 @@
 - `goreleaser check` and `goreleaser release --snapshot --clean` validate release packaging.
 - `editors/nvim/tests/run.sh` runs the headless Neovim helper smoke test after building `pico-lsp`.
 - `editors/tree-sitter-pico8/test.sh` runs grammar generation, corpus tests, query validation, full-corpus parsing, and truncated-cart safety with the pinned tree-sitter 0.24.7 CLI.
-- `PICO_LSP_PERF=1 go test -run TestFormatPerformance -p 1 ./internal/format` runs the isolated formatter timing gate.
+- `PICO_LSP_PERF=1 go test -count=1 -p 1 -run Performance ./...` runs the opt-in wall-clock performance gates. The manual `Performance` workflow runs the same command; default CI skips timing assertions because shared runners are too noisy.
 - `pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png` decodes a read-only PNG cart for scripted/editor fallback use.
 
 ## Documentation rules

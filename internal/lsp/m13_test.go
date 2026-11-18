@@ -18,6 +18,7 @@ import (
 
 	"github.com/asimmons91/pico-lsp/internal/cart"
 	"github.com/asimmons91/pico-lsp/internal/config"
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func TestLimitSeverityThresholds(t *testing.T) {
@@ -354,6 +355,7 @@ func TestCorpusCompressedBudgets(t *testing.T) {
 }
 
 func TestCompressedSizePerformance(t *testing.T) {
+	testutil.SkipUnlessPerf(t)
 	if raceDetectorEnabled || runtime.GOOS != "linux" || testing.CoverMode() != "" {
 		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}

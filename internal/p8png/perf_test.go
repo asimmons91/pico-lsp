@@ -5,9 +5,12 @@ import (
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func TestDecodePerformance(t *testing.T) {
+	testutil.SkipUnlessPerf(t)
 	if testing.CoverMode() != "" {
 		t.Skip("timing targets are not meaningful under coverage instrumentation")
 	}

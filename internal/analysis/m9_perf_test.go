@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func annotatedTypeCartText() string {
@@ -31,6 +33,7 @@ func annotatedTypeCartText() string {
 }
 
 func TestM9AnnotatedInferencePerformance(t *testing.T) {
+	testutil.SkipUnlessPerf(t)
 	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" || testing.CoverMode() != "" {
 		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}
