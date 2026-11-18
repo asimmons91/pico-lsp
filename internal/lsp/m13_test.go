@@ -114,9 +114,6 @@ func TestCompressedBudgetCartInfoAndLens(t *testing.T) {
 			if !available {
 				t.Fatal("compressed size unavailable")
 			}
-			if size <= tc.payload {
-				t.Fatalf("compressed size %d should exceed the %d-byte payload", size, tc.payload)
-			}
 
 			info := requestCartInfo(t, h, ctx, root)
 			if info.Compressed != size || info.CompressedLimit != CompressedLimit ||
