@@ -16,6 +16,11 @@ import (
 
 func testContext(t *testing.T, text string) *Context {
 	t.Helper()
+	return testContextMode(t, text, analysis.TypeCheckingBasic)
+}
+
+func testContextMode(t *testing.T, text string, mode analysis.TypeCheckingMode) *Context {
+	t.Helper()
 	u := uri.File("/test/main.lua")
 	file := &cart.File{ID: 0, URI: u, Text: text, Index: source.New([]byte(text), protocol.PositionEncodingKindUTF16)}
 	c := &cart.Cart{RootURI: u, Files: []*cart.File{file}}
@@ -29,7 +34,7 @@ func testContext(t *testing.T, text string) *Context {
 	snap := &cart.Snapshot{Cart: c, Chunk: chunk, Comments: lexed.Comments, Index: syntax.NewCommentIndex(lexed.Comments)}
 	result := analysis.Analyze(snap, nil, analysis.Options{
 		UndefinedGlobal: analysis.SeverityWarning,
-		TypeChecking:    analysis.TypeCheckingBasic,
+		TypeChecking:    mode,
 		Lint: analysis.LintOptions{
 			UnusedLocal: analysis.SeverityHint,
 		},
@@ -273,6 +278,21 @@ func TestShorthandExpandPreservesNextLineElse(t *testing.T) {
 	}
 }
 
+func TestShorthandCollapseLeavesOuterNextLineElse(t *testing.T) {
+	text := "if a then\n  if b then\n    play()\n  end\nelse\n  stop()\nend\n"
+	ctx := testContext(t, text)
+	start := offsetOf(t, text, "if b")
+	action := ConvertShorthand(ctx, start)
+	if action == nil {
+		t.Fatal("collapse returned nil")
+	}
+	out := applyEdits(t, text, action.Edits)
+	want := "if a then\n  if (b) play()\nelse\n  stop()\nend\n"
+	if out != want {
+		t.Fatalf("result = %q, want %q", out, want)
+	}
+}
+
 func TestShorthandExpandPreservesTabIndentation(t *testing.T) {
 	text := "\tif (x) play()\n"
 	ctx := testContext(t, text)
@@ -328,6 +348,14 @@ func TestRemoveUnusedRefusesImpureInitializer(t *testing.T) {
 	ctx := testContext(t, text)
 	if action := RemoveUnused(ctx, offsetOf(t, text, "unused")); action != nil {
 		t.Fatalf("remove unused removed a call initializer: %+v", action)
+	}
+}
+
+func TestAddMissingFieldsDoesNotTouchOpenClasses(t *testing.T) {
+	text := "---@class Point\n---@field x number\n---@type Point\nlocal p = {}\n"
+	ctx := testContextMode(t, text, analysis.TypeCheckingStrict)
+	if len(ctx.Result.MissingFieldFixes) != 0 {
+		t.Fatalf("open class recorded a fix: %+v", ctx.Result.MissingFieldFixes)
 	}
 }
 

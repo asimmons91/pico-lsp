@@ -94,7 +94,7 @@ func (s *Server) missingFieldsAction(nav *navContext, diag protocol.Diagnostic) 
 		if fix.Span.FileID != nav.fileID {
 			continue
 		}
-		if fix.Span.Start > start || fix.Span.End < end {
+		if fix.Span.Start > end || fix.Span.End < start {
 			continue
 		}
 		action := refactor.AddMissingFields(navContextForRefactor(nav), fix.Span, fix.Fields)
