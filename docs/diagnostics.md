@@ -95,13 +95,15 @@ Cart budget diagnostics are attached to the cart root and controlled by
 `missing-fields` diagnostics carry a `quickfix.pico-lsp.add-missing-fields`
 action for explicit `(exact)` classes. It inserts the absent fields into the
 flagged table literal with type-appropriate placeholder values; open classes and
-`strict`-only missing-field checks do not get the fix.
+`strict`-only missing-field checks do not get the fix. If a required field name
+cannot be written as a Lua identifier, the action is not offered.
 
 `unused-local` diagnostics carry a `quickfix.pico-lsp.remove-unused` action.
 The action is also offered from the declaration itself when the diagnostic is
 disabled. It is executed through the `pico8.removeUnused` confirmation command
-and is refused for write-only locals, impure initializers, or unresolved
-same-name uses. See [api.md](api.md) for all refactor kinds.
+and is refused for write-only locals, impure initializers, unresolved same-name
+uses, meta files, and attached doc blocks with file-level tags. See
+[api.md](api.md) for all refactor kinds.
 
 ## Suppression
 

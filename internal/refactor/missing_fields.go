@@ -26,7 +26,9 @@ func AddMissingFields(ctx *Context, span source.Span, fields []types.FieldInfo) 
 	var names []string
 	for _, field := range fields {
 		if field.Name == "" || !validIdentifier(field.Name) {
-			continue
+			// A partial edit would leave the missing-fields diagnostic
+			// unresolved, so refuse the quickfix entirely.
+			return nil
 		}
 		canonical := analysis.CanonicalName(field.Name)
 		if identifiers[canonical] || stringKeys[field.Name] {

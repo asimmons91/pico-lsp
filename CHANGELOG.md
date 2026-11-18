@@ -35,6 +35,15 @@ All notable changes to this project are documented here. The format follows
 - Ship M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed
   size budgets, and conservative refactors — as a batched v1.2.0 release.
 
+### Fixed
+
+- Keep M14 refactors working at the top level of included `.lua` files when
+  earlier cart code makes the flattened chunk span belong to another file.
+- Prevent remove-unused from deleting `---@meta` markers and type annotations
+  that use alternate spacing, and stop offering it in meta files.
+- Refuse add-missing-fields when a required class field cannot be represented
+  as a Lua identifier instead of returning a partial quickfix.
+
 ## [1.1.0] - 2026-11-17
 
 ### Added

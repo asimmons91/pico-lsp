@@ -1,6 +1,8 @@
 package refactor
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -196,6 +198,56 @@ func TestExtractFunctionRefusesMultiValueCall(t *testing.T) {
 	start := offsetOf(t, text, "f()")
 	if action := ExtractFunction(ctx, start, start+len("f()")); action != nil {
 		t.Fatalf("extract accepted a multi-value call: %+v", action)
+	}
+}
+
+func TestTopLevelIncludedFileActions(t *testing.T) {
+	dir := t.TempDir()
+	rootText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nlocal root = 1\n#include \"lib.lua\"\n"
+	libText := "local a = 1\nscore = 0\nprint(a + 2)\n"
+	rootPath := filepath.Join(dir, "cart.p8")
+	libPath := filepath.Join(dir, "lib.lua")
+	if err := os.WriteFile(rootPath, []byte(rootText), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(libPath, []byte(libText), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	snap, err := cart.NewLoader(nil, "", nil).Load(uri.File(rootPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := analysis.Analyze(snap, nil, analysis.Options{
+		UndefinedGlobal: analysis.SeverityWarning,
+		TypeChecking:    analysis.TypeCheckingBasic,
+	})
+	fileID := snap.Cart.FileID(uri.File(libPath))
+	file := snap.Cart.File(fileID)
+	if file == nil {
+		t.Fatal("included file missing from cart")
+	}
+	ctx := &Context{Snap: snap, Result: result, FileID: fileID, File: file}
+
+	start := offsetOf(t, libText, "a + 2")
+	if ctx.parentBlock(ctx.enclosingStatement(start)) != snap.Chunk.Block {
+		t.Fatal("top-level included statement was not attached to the chunk block")
+	}
+	extract := ExtractFunction(ctx, start, start+len("a + 2"))
+	if extract == nil {
+		t.Fatal("extract function was not offered in a top-level included file")
+	}
+	for _, edit := range extract.Edits {
+		if edit.FileID != fileID {
+			t.Fatalf("extract edit targeted file %d, want %d", edit.FileID, fileID)
+		}
+	}
+
+	local := GlobalToLocal(ctx, offsetOf(t, libText, "score"))
+	if local == nil {
+		t.Fatal("global-to-local was not offered in a top-level included file")
+	}
+	if len(local.Edits) != 1 || local.Edits[0].FileID != fileID {
+		t.Fatalf("local edit = %+v", local.Edits)
 	}
 }
 
@@ -404,6 +456,28 @@ func TestRemoveUnused(t *testing.T) {
 	}
 }
 
+func TestRemoveUnusedRefusesMetaFile(t *testing.T) {
+	text := "---@meta\nlocal unused = 1\n"
+	ctx := testContext(t, text)
+	if !ctx.Result.IsMetaFile(ctx.FileID) {
+		t.Fatal("test context was not recognized as a meta file")
+	}
+	if action := RemoveUnused(ctx, offsetOf(t, text, "unused")); action != nil {
+		t.Fatalf("remove unused was offered in a meta file: %+v", action)
+	}
+}
+
+func TestRemoveUnusedProtectsSpacedTypeTags(t *testing.T) {
+	text := "--- @class Used\n---@field x number\n---@type Used\nlocal unused = 1\n"
+	ctx := testContext(t, text)
+	if len(ctx.Result.Classes) == 0 {
+		t.Fatal("spaced @class annotation was not parsed")
+	}
+	if action := RemoveUnused(ctx, offsetOf(t, text, "unused")); action != nil {
+		t.Fatalf("remove unused deleted a protected type declaration: %+v", action)
+	}
+}
+
 func TestRemoveUnusedRemovesAttachedDocs(t *testing.T) {
 	text := "---@type number\nlocal unused = 1\nlocal used = 2\nprint(used)\n"
 	ctx := testContext(t, text)
@@ -450,6 +524,18 @@ func TestAddMissingFieldsKeepsStringKeyCaseSensitivity(t *testing.T) {
 	out := applyEdits(t, text, action.Edits)
 	if !strings.Contains(out, "[\"X\"] = 0, x = 0") {
 		t.Fatalf("result = %q", out)
+	}
+}
+
+func TestAddMissingFieldsRefusesUnrepresentableField(t *testing.T) {
+	text := "---@class (exact) Bad\n---@field bad-name number\n---@field ok number\n---@type Bad\nlocal v = {}\n"
+	ctx := testContext(t, text)
+	if len(ctx.Result.MissingFieldFixes) == 0 {
+		t.Fatalf("no missing-field fix recorded: %+v", ctx.Result.Diagnostics)
+	}
+	fix := ctx.Result.MissingFieldFixes[0]
+	if action := AddMissingFields(ctx, fix.Span, fix.Fields); action != nil {
+		t.Fatalf("partial add-missing-fields action was offered: %+v", action)
 	}
 }
 

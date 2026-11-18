@@ -20,6 +20,12 @@ func RemoveUnused(ctx *Context, offset int) *Action {
 		return nil
 	}
 	sym := occ.Symbol
+	if ctx.Result.IsMetaFile(ctx.FileID) {
+		// Meta stubs define types and globals for other code; unused-local
+		// diagnostics are already suppressed there, and deleting the marker
+		// would change how the whole file is analyzed.
+		return nil
+	}
 	if !ctx.Result.IsUnusedLocal(sym) {
 		return nil
 	}
@@ -73,11 +79,7 @@ func RemoveUnused(ctx *Context, offset int) *Action {
 		return nil
 	}
 	if docStart := ctx.docBlockStart(stmt.Span().Start); docStart >= 0 && docStart < start {
-		block := ctx.currentText()[docStart:start]
-		if strings.Contains(block, "---@class") || strings.Contains(block, "---@alias") ||
-			strings.Contains(block, "---@enum") {
-			// Type declarations may be referenced elsewhere even when the
-			// variable itself is unused.
+		if protectedDocBlock(ctx.currentText()[docStart:start]) {
 			return nil
 		}
 		start = docStart
@@ -107,6 +109,31 @@ func RemoveUnused(ctx *Context, offset int) *Action {
 			Span: sym.DeclSpan,
 		},
 	}
+}
+
+// protectedDocBlock reports whether an attached doc block contains tags whose
+// meaning is not local to the removed declaration. Keep meta/type/diagnostic
+// declarations even when the annotated variable is unused.
+func protectedDocBlock(block string) bool {
+	for _, line := range strings.Split(block, "\n") {
+		text := strings.TrimSpace(line)
+		if !strings.HasPrefix(text, "---") {
+			continue
+		}
+		text = strings.TrimSpace(strings.TrimPrefix(text, "---"))
+		if !strings.HasPrefix(text, "@") {
+			continue
+		}
+		fields := strings.Fields(text)
+		if len(fields) == 0 {
+			continue
+		}
+		switch strings.TrimPrefix(fields[0], "@") {
+		case "class", "alias", "enum", "meta", "diagnostic", "cast":
+			return true
+		}
+	}
+	return false
 }
 
 func pureInitializer(expr syntax.Expr) bool {
