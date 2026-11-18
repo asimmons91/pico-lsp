@@ -115,6 +115,15 @@ func TestExtractFunctionRefusesWriteToCapture(t *testing.T) {
 	}
 }
 
+func TestExtractFunctionRefusesMidLineStatement(t *testing.T) {
+	text := "first() second()\n"
+	ctx := testContext(t, text)
+	start := offsetOf(t, text, "second()")
+	if action := ExtractFunction(ctx, start, start+len("second()")); action != nil {
+		t.Fatalf("extract split a shared line: %+v", action)
+	}
+}
+
 func TestExtractFunctionRefusesMultiValueCall(t *testing.T) {
 	text := "local function f() return 1, 2 end\nlocal a, b = f()\n"
 	ctx := testContext(t, text)
@@ -141,15 +150,23 @@ func TestGlobalToLocal(t *testing.T) {
 }
 
 func TestGlobalToLocalPreservesIndentation(t *testing.T) {
-	text := "do\n  score = 0\nend\n"
+	text := "  score = 0\n"
 	ctx := testContext(t, text)
 	action := GlobalToLocal(ctx, offsetOf(t, text, "score"))
 	if action == nil {
 		t.Fatal("global-to-local returned nil")
 	}
 	out := applyEdits(t, text, action.Edits)
-	if out != "do\n  local score = 0\nend\n" {
+	if out != "  local score = 0\n" {
 		t.Fatalf("result = %q", out)
+	}
+}
+
+func TestGlobalToLocalRefusesNestedDeclarationWithOutsideUse(t *testing.T) {
+	text := "if flag then\n  score = 0\nend\nprint(score)\n"
+	ctx := testContext(t, text)
+	if action := GlobalToLocal(ctx, offsetOf(t, text, "score")); action != nil {
+		t.Fatalf("global-to-local scoped a local into a block: %+v", action)
 	}
 }
 

@@ -102,9 +102,12 @@ func ExtractFunction(ctx *Context, start, end int) *Action {
 	}
 	insertOffset := anchor.Span().Start
 	lineStart := ctx.lineStart(insertOffset)
-	if strings.TrimSpace(text[lineStart:insertOffset]) == "" {
-		insertOffset = lineStart
+	if strings.TrimSpace(text[lineStart:insertOffset]) != "" {
+		// A multi-line function cannot be inserted in the middle of a line
+		// without disturbing neighboring statements.
+		return nil
 	}
+	insertOffset = lineStart
 	indent := ctx.indentAt(insertOffset)
 
 	name := extractedName(ctx)
@@ -290,6 +293,11 @@ func extractedName(ctx *Context) string {
 	for _, sym := range ctx.Result.Table.Symbols {
 		if sym != nil {
 			used[sym.Canonical] = true
+		}
+	}
+	for _, occ := range ctx.Result.Occurrences(ctx.FileID) {
+		if occ.Text != "" {
+			used[analysis.CanonicalName(occ.Text)] = true
 		}
 	}
 	base := "extracted"

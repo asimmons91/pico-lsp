@@ -39,6 +39,9 @@ func AddMissingFields(ctx *Context, span source.Span, fields []types.FieldInfo) 
 	text := ctx.currentText()
 	openLine := ctx.lineStart(table.Open.Start)
 	closeLine := ctx.lineStart(table.Close.Start)
+	if openLine == closeLine && ctx.hasComment(table.Open.Start, table.Close.End) {
+		return nil
+	}
 	if openLine == closeLine {
 		var parts []string
 		for _, field := range missing {
@@ -58,8 +61,7 @@ func AddMissingFields(ctx *Context, span source.Span, fields []types.FieldInfo) 
 		}
 	}
 
-	indent := ctx.indentAt(table.Close.Start)
-	fieldIndent := indent + ctx.indentUnit()
+	fieldIndent := ctx.indentAt(table.Open.Start) + ctx.indentUnit()
 	var b strings.Builder
 	for _, field := range missing {
 		b.WriteString(fieldIndent)

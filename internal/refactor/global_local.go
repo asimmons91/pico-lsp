@@ -43,6 +43,11 @@ func GlobalToLocal(ctx *Context, offset int) *Action {
 	if stmt == nil {
 		return nil
 	}
+	if block := ctx.parentBlock(stmt); block == nil || block != ctx.Snap.Chunk.Block {
+		// Moving a declaration inside a nested block would drop the local at
+		// the end of that block for any uses outside it.
+		return nil
+	}
 	if _, ok := ctx.statementLineStart(stmt); !ok {
 		return nil
 	}

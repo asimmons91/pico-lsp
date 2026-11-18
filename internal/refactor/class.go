@@ -64,6 +64,9 @@ func GenerateClass(ctx *Context, offset int) *Action {
 		return nil
 	}
 	if docStart := ctx.docBlockStart(declStart); docStart >= 0 && docStart < insertOffset {
+		if strings.Contains(ctx.currentText()[docStart:declStart], "---@class") {
+			return nil
+		}
 		insertOffset = docStart
 	}
 	indent := ctx.indentAt(insertOffset)

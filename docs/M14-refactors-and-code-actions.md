@@ -114,9 +114,9 @@ the missing fields.
 - Extract-function targets a single expression or statement, refuses writes to
   captured locals, nested functions, varargs, labels/goto/break/return, and
   multi-value call contexts. Captured locals become parameters.
-- Global-to-local only prefixes the first declaration and refuses cross-file
-  uses, earlier function references, lifecycle callbacks, and unresolved
-  same-name occurrences.
+- Global-to-local only prefixes a top-level first declaration and refuses
+  nested-block declarations, cross-file uses, earlier function references,
+  lifecycle callbacks, and unresolved same-name occurrences.
 - Generate-class uses the assignment target as the class name. Identifier
   fields use inferred/annotated types; string-key identifier fields are emitted
   as `any`; array and dynamic keys are omitted. An existing class with the same
