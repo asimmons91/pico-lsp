@@ -94,6 +94,20 @@ local p = {x = 1, y = 2}
 		!strings.Contains(edits[0].NewText, "---@field y number") {
 		t.Fatalf("class edits = %+v", edits)
 	}
+
+	// A whole-line selection that starts before the table should still find
+	// the literal through the trailing edge.
+	line := protocol.Range{Start: protocol.Position{Line: 6}, End: protocol.Position{Line: 7}}
+	actions, err = h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Range:        line,
+	})
+	if err != nil {
+		t.Fatalf("line class code action: %v", err)
+	}
+	if findActionByKind(t, actions, "refactor.rewrite.class") == nil {
+		t.Fatalf("missing whole-line class action in %+v", actions)
+	}
 }
 
 func TestM14IncludedFileEditsStayInOriginalFile(t *testing.T) {
