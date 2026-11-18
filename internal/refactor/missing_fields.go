@@ -21,14 +21,18 @@ func AddMissingFields(ctx *Context, span source.Span, fields []types.FieldInfo) 
 	if table == nil {
 		return nil
 	}
-	existing := tableFieldNames(table)
+	identifiers, stringKeys := tableFieldNames(table)
 	var missing []types.FieldInfo
 	var names []string
 	for _, field := range fields {
-		if field.Name == "" || existing[analysis.CanonicalName(field.Name)] {
+		if field.Name == "" || !validIdentifier(field.Name) {
 			continue
 		}
-		existing[analysis.CanonicalName(field.Name)] = true
+		canonical := analysis.CanonicalName(field.Name)
+		if identifiers[canonical] || stringKeys[field.Name] {
+			continue
+		}
+		identifiers[canonical] = true
 		missing = append(missing, field)
 		names = append(names, field.Name)
 	}
@@ -109,24 +113,25 @@ func (c *Context) tableAtSpan(span source.Span) *syntax.TableExpr {
 	return nil
 }
 
-func tableFieldNames(table *syntax.TableExpr) map[string]bool {
-	out := make(map[string]bool)
+func tableFieldNames(table *syntax.TableExpr) (identifiers, stringKeys map[string]bool) {
+	identifiers = make(map[string]bool)
+	stringKeys = make(map[string]bool)
 	if table == nil {
-		return out
+		return identifiers, stringKeys
 	}
 	for _, field := range table.Fields {
 		switch key := field.Key.(type) {
 		case *syntax.NameExpr:
 			if !field.BracketKey {
-				out[analysis.CanonicalName(key.Text)] = true
+				identifiers[analysis.CanonicalName(key.Text)] = true
 			}
 		case *syntax.StringExpr:
-			if field.BracketKey && validIdentifier(key.Value) {
-				out[analysis.CanonicalName(key.Value)] = true
+			if field.BracketKey {
+				stringKeys[key.Value] = true
 			}
 		}
 	}
-	return out
+	return identifiers, stringKeys
 }
 
 func placeholderFor(t types.Type) string {

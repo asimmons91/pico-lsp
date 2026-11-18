@@ -120,6 +120,16 @@ func TestExtractFunctionRefusesWriteToCapture(t *testing.T) {
 	}
 }
 
+func TestExtractFunctionRefusesMultilineString(t *testing.T) {
+	text := "local s = [[line one\n  line two]]\nprint(s)\n"
+	ctx := testContext(t, text)
+	start := offsetOf(t, text, "[[line one")
+	end := start + len("[[line one\n  line two]]")
+	if action := ExtractFunction(ctx, start, end); action != nil {
+		t.Fatalf("extract reindented a multi-line string: %+v", action)
+	}
+}
+
 func TestExtractFunctionRefusesMidLineStatement(t *testing.T) {
 	text := "first() second()\n"
 	ctx := testContext(t, text)
@@ -348,6 +358,23 @@ func TestRemoveUnusedRefusesImpureInitializer(t *testing.T) {
 	ctx := testContext(t, text)
 	if action := RemoveUnused(ctx, offsetOf(t, text, "unused")); action != nil {
 		t.Fatalf("remove unused removed a call initializer: %+v", action)
+	}
+}
+
+func TestAddMissingFieldsKeepsStringKeyCaseSensitivity(t *testing.T) {
+	text := "---@class (exact) Point\n---@field x number\n---@type Point\nlocal p = {[\"X\"] = 0}\n"
+	ctx := testContext(t, text)
+	if len(ctx.Result.MissingFieldFixes) == 0 {
+		t.Fatalf("no missing-field fix recorded: %+v", ctx.Result.Diagnostics)
+	}
+	fix := ctx.Result.MissingFieldFixes[0]
+	action := AddMissingFields(ctx, fix.Span, fix.Fields)
+	if action == nil {
+		t.Fatal("add missing fields returned nil")
+	}
+	out := applyEdits(t, text, action.Edits)
+	if !strings.Contains(out, "[\"X\"] = 0, x = 0") {
+		t.Fatalf("result = %q", out)
 	}
 }
 

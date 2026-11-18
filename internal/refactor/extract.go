@@ -27,12 +27,18 @@ func ExtractFunction(ctx *Context, start, end int) *Action {
 
 	refused := false
 	syntax.Walk(node, func(child syntax.Node) bool {
-		switch child.(type) {
+		switch child := child.(type) {
 		case *syntax.FunctionExpr, *syntax.FunctionDeclStmt,
 			*syntax.LabelStmt, *syntax.BreakStmt, *syntax.GotoStmt,
 			*syntax.ReturnStmt, *syntax.VarargExpr:
 			refused = true
 			return false
+		case *syntax.StringExpr:
+			// Reindenting a multi-line long string would change its value.
+			if strings.ContainsAny(spanText(text, child.Span()), "\r\n") {
+				refused = true
+				return false
+			}
 		}
 		return true
 	})
