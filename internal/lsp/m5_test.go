@@ -520,6 +520,9 @@ func TestM5WatchedFilesRegistration(t *testing.T) {
 }
 
 func TestM5CartInfoPerformance(t *testing.T) {
+	if raceDetectorEnabled || testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
+	}
 	text := largeCartText()
 	root := writeTemp(t, t.TempDir(), "cart.p8", text)
 	h := newHarness(t, newTestClient())

@@ -27,8 +27,8 @@ func largeCartText() string {
 }
 
 func TestPerformanceTargets(t *testing.T) {
-	if raceDetectorEnabled {
-		t.Skip("timing targets are not meaningful under the race detector")
+	if raceDetectorEnabled || testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}
 	if runtime.GOOS != "linux" {
 		t.Skip("timing targets are measured on Linux runners")
@@ -102,6 +102,16 @@ func TestPerformanceTargets(t *testing.T) {
 			TextDocument: protocol.TextDocumentIdentifier{URI: root},
 		}); err != nil {
 			t.Fatalf("semantic tokens: %v", err)
+		}
+	})
+
+	actionPos := positionAt(t, text, "circfill(", 0)
+	measure("code actions 64 KB", 10*time.Millisecond, func() {
+		if _, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Range:        protocol.Range{Start: actionPos, End: actionPos},
+		}); err != nil {
+			t.Fatalf("code actions: %v", err)
 		}
 	})
 }

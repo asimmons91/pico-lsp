@@ -35,8 +35,8 @@ func m10AnnotatedCartText() string {
 }
 
 func TestM10AnnotatedInferencePerformance(t *testing.T) {
-	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" {
-		t.Skip("timing targets are not meaningful under the race detector")
+	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" || testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}
 	text := m10AnnotatedCartText()
 	if len(text) < 64*1024 {

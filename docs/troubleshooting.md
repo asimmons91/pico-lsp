@@ -128,6 +128,17 @@ Code actions cover generated type annotations, diagnostic suppression, and
 creating missing `.lua` includes. A “Create missing include file” action is only
 offered for `.lua` paths inside the workspace boundary.
 
+M14 refactors add extract-to-local-function, safe global-to-local conversion,
+generated `---@class` blocks, `if`/`while` shorthand conversion,
+exact-class missing-field inserts, and unused-local removal. Refactors are
+deliberately conservative: they refuse selections that cross functions,
+control-flow boundaries, comments, multi-value calls, or include ordering. No
+action is offered when the editor buffer differs from the analyzed snapshot.
+Remove-unused is applied through the `pico8.removeUnused` command so the editor
+can ask for confirmation; an impure initializer (such as a function call) blocks
+removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
+[api.md](api.md) for the action kinds.
+
 ## Logs and stdout
 
 Routine logs go to stderr or the `--log-file` path. The server never writes to

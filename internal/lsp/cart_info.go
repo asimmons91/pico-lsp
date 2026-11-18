@@ -186,6 +186,16 @@ func (s *Server) ExecuteCommand(ctx context.Context, params *protocol.ExecuteCom
 			return nil, err
 		}
 		return protocol.LSPAny(data), nil
+	case CommandRemoveUnused:
+		result, err := s.applyRemoveUnused(ctx, params)
+		if err != nil {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%v", err)
+		}
+		data, err := protocol.Marshal(result)
+		if err != nil {
+			return nil, err
+		}
+		return protocol.LSPAny(data), nil
 	default:
 		return nil, jsonrpc2.Errorf(jsonrpc2.MethodNotFound, "unknown command %q", params.Command)
 	}

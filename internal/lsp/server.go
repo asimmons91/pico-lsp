@@ -496,7 +496,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 		DocumentFormattingProvider: protocol.Boolean(true),
 		CodeActionProvider:         protocol.Boolean(true),
 		CodeLensProvider:           &protocol.CodeLensOptions{},
-		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo}},
+		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo, CommandRemoveUnused}},
 		DefinitionProvider:         protocol.Boolean(true),
 		ReferencesProvider:         protocol.Boolean(true),
 		DocumentHighlightProvider:  protocol.Boolean(true),

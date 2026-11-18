@@ -64,6 +64,12 @@ type Settings struct {
 	Format      FormatSettings     `json:"format"`
 	Diagnostics DiagnosticSettings `json:"diagnostics"`
 	Lint        LintSettings       `json:"lint"`
+	Refactors   RefactorSettings   `json:"refactors"`
+}
+
+// RefactorSettings controls the M14 code actions and refactors.
+type RefactorSettings struct {
+	Enabled bool `json:"enabled"`
 }
 
 // LimitsSettings controls cart budget UI.
@@ -130,7 +136,8 @@ func Default() Settings {
 			IncludeUnusualType:      DefaultIncludeUnusualType,
 			IncludeDuplicate:        DefaultIncludeDuplicate,
 		},
-		Lint: LintSettings{APIRanges: false},
+		Lint:      LintSettings{APIRanges: false},
+		Refactors: RefactorSettings{Enabled: true},
 	}
 }
 
@@ -319,6 +326,11 @@ type partialSettings struct {
 	Format       *partialFormatSettings     `json:"format"`
 	Diagnostics  *partialDiagnosticSettings `json:"diagnostics"`
 	Lint         *partialLintSettings       `json:"lint"`
+	Refactors    *partialRefactorSettings   `json:"refactors"`
+}
+
+type partialRefactorSettings struct {
+	Enabled *bool `json:"enabled"`
 }
 
 type partialLimitsSettings struct {
@@ -377,6 +389,9 @@ func (p partialSettings) apply(base Settings) Settings {
 	}
 	if p.Lint != nil && p.Lint.APIRanges != nil {
 		base.Lint.APIRanges = *p.Lint.APIRanges
+	}
+	if p.Refactors != nil && p.Refactors.Enabled != nil {
+		base.Refactors.Enabled = *p.Refactors.Enabled
 	}
 	if p.Diagnostics != nil {
 		if p.Diagnostics.Mode != nil {

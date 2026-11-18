@@ -1223,8 +1223,15 @@ func (inf *inferer) checkAssignment(sym *Symbol, declared, valueType types.Type,
 	valueRecord, valueIsRecord := types.Resolve(valueType).(*types.Record)
 	if declaredIsRecord && declaredRecord != nil && (inf.mode == TypeCheckingStrict || declaredRecord.Exact) && valueIsRecord && valueRecord != nil {
 		reported := false
-		if missing := missingFields(declaredRecord, valueRecord); len(missing) > 0 {
-			inf.report(CodeMissingFields, fmt.Sprintf("missing fields: %s", strings.Join(missing, ", ")), valueSpan)
+		if missing := missingFieldInfos(declaredRecord, valueRecord); len(missing) > 0 {
+			names := make([]string, 0, len(missing))
+			for _, field := range missing {
+				names = append(names, field.Name)
+			}
+			if declaredRecord.Exact {
+				inf.recordMissingFields(valueSpan, missing)
+			}
+			inf.report(CodeMissingFields, fmt.Sprintf("missing fields: %s", strings.Join(names, ", ")), valueSpan)
 			reported = true
 		}
 		if declaredRecord.Exact {
@@ -1294,20 +1301,43 @@ func (inf *inferer) checkAssignmentValue(want, got types.Type, span source.Span)
 	}
 }
 
-func missingFields(want, got *types.Record) []string {
+func missingFieldInfos(want, got *types.Record) []types.FieldInfo {
 	if want == nil || got == nil {
 		return nil
 	}
-	var missing []string
+	var missing []types.FieldInfo
 	for _, field := range types.Fields(want) {
 		if field.Optional || field.Inherited {
 			continue
 		}
 		if _, ok, _ := types.LookupField(got, field.Name); !ok {
-			missing = append(missing, field.Name)
+			missing = append(missing, field)
 		}
 	}
 	return missing
+}
+
+// MissingFieldsFix is the structured form of one missing-fields diagnostic.
+// Span is the flagged value expression and Fields are the required class fields
+// absent from it.
+type MissingFieldsFix struct {
+	Span   source.Span
+	Fields []types.FieldInfo
+}
+
+func (inf *inferer) recordMissingFields(span source.Span, fields []types.FieldInfo) {
+	if inf == nil || inf.result == nil || span.IsEmpty() || len(fields) == 0 {
+		return
+	}
+	for _, existing := range inf.result.MissingFieldFixes {
+		if existing.Span == span {
+			return
+		}
+	}
+	inf.result.MissingFieldFixes = append(inf.result.MissingFieldFixes, MissingFieldsFix{
+		Span:   span,
+		Fields: fields,
+	})
 }
 
 func namedRecordType(t types.Type) bool {

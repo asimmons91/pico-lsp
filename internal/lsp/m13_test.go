@@ -354,8 +354,8 @@ func TestCorpusCompressedBudgets(t *testing.T) {
 }
 
 func TestCompressedSizePerformance(t *testing.T) {
-	if raceDetectorEnabled || runtime.GOOS != "linux" {
-		t.Skip("timing targets are not meaningful under the race detector")
+	if raceDetectorEnabled || runtime.GOOS != "linux" || testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}
 	var b strings.Builder
 	b.WriteString("pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n")

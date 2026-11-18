@@ -168,32 +168,57 @@ func lintUnreachableCode(snap *cart.Snapshot, result *Result, severity Severity)
 	})
 }
 
+// UnusedLocalSymbols returns locals and local functions whose declarations are
+// never read. It is the shared basis for the unused-local lint diagnostic and
+// the remove-unused code action.
+func (r *Result) UnusedLocalSymbols() []*Symbol {
+	if r == nil || r.Table == nil {
+		return nil
+	}
+	var out []*Symbol
+	for _, sym := range r.Table.Symbols {
+		if unusedLocal(r, sym) {
+			out = append(out, sym)
+		}
+	}
+	return out
+}
+
+// IsUnusedLocal reports whether sym is a local or local function that is never
+// read. Underscore-prefixed names are intentionally exempt, matching the lint.
+func (r *Result) IsUnusedLocal(sym *Symbol) bool {
+	return unusedLocal(r, sym)
+}
+
+func unusedLocal(result *Result, sym *Symbol) bool {
+	if result == nil || result.Table == nil || sym == nil {
+		return false
+	}
+	if sym.Builtin || sym.DeclSpan.IsEmpty() || sym.Owner != nil {
+		return false
+	}
+	if result.Table.Globals[sym.Canonical] == sym {
+		// Global functions share SymbolFunction; they are not locals.
+		return false
+	}
+	if sym.Kind != SymbolLocal && sym.Kind != SymbolFunction {
+		return false
+	}
+	if strings.HasPrefix(sym.Name, "_") {
+		return false
+	}
+	for _, occ := range result.OccurrencesForSymbol(sym) {
+		if !occ.Decl && !occ.Write {
+			return false
+		}
+	}
+	return true
+}
+
 func lintUnusedLocals(result *Result, severity Severity) {
-	for _, sym := range result.Table.Symbols {
-		if sym == nil || sym.Builtin || sym.DeclSpan.IsEmpty() || sym.Owner != nil {
-			continue
-		}
-		if result.Table.Globals[sym.Canonical] == sym {
-			// Global functions share SymbolFunction; they are not locals.
-			continue
-		}
-		if sym.Kind != SymbolLocal && sym.Kind != SymbolFunction {
-			continue
-		}
-		if strings.HasPrefix(sym.Name, "_") {
-			continue
-		}
-		read := false
-		for _, occ := range result.OccurrencesForSymbol(sym) {
-			if !occ.Decl && !occ.Write {
-				read = true
-				break
-			}
-		}
-		if !read {
-			result.addLintDiagnostic(severity, CodeUnusedLocal,
-				fmt.Sprintf("local %q is never read", sym.Name), sym.DeclSpan)
-		}
+	for _, sym := range result.UnusedLocalSymbols() {
+		result.addLintDiagnostic(severity, CodeUnusedLocal,
+			fmt.Sprintf("local %q is never read", sym.Name), sym.DeclSpan)
 	}
 }
 

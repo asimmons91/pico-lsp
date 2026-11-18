@@ -423,6 +423,21 @@ func TestM5Settings(t *testing.T) {
 	}
 }
 
+func TestRefactorSettings(t *testing.T) {
+	m := New(testLogger())
+	if !m.Settings().Refactors.Enabled {
+		t.Fatal("refactors should be enabled by default")
+	}
+	m.ApplyInitializationOptions(lspValue(`{"pico8": {"refactors": {"enabled": false}}}`))
+	if m.Settings().Refactors.Enabled {
+		t.Fatal("refactors.enabled was not applied")
+	}
+	m.ApplyDidChange(lspValue(`{"pico8": {"refactors": {}}}`))
+	if m.Settings().Refactors.Enabled {
+		t.Fatal("didChange without enabled reset the initialization value")
+	}
+}
+
 func TestFormatSettings(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyInitializationOptions(lspValue(`{"pico8":{"format":{"maxBlankLines":0}}}`))

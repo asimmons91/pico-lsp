@@ -28,6 +28,8 @@ type testClient struct {
 	messages      chan *protocol.ShowMessageParams
 	registrations chan *protocol.RegistrationParams
 	progress      chan *protocol.ProgressParams
+	applied       chan *protocol.ApplyWorkspaceEditParams
+	applyResult   *protocol.ApplyWorkspaceEditResult
 }
 
 func newTestClient() *testClient {
@@ -37,6 +39,7 @@ func newTestClient() *testClient {
 		messages:      make(chan *protocol.ShowMessageParams, 8),
 		registrations: make(chan *protocol.RegistrationParams, 4),
 		progress:      make(chan *protocol.ProgressParams, 8),
+		applied:       make(chan *protocol.ApplyWorkspaceEditParams, 4),
 	}
 }
 
@@ -63,6 +66,14 @@ func (c *testClient) RegisterCapability(ctx context.Context, params *protocol.Re
 func (c *testClient) Progress(ctx context.Context, params *protocol.ProgressParams) error {
 	c.progress <- params
 	return nil
+}
+
+func (c *testClient) ApplyEdit(ctx context.Context, params *protocol.ApplyWorkspaceEditParams) (*protocol.ApplyWorkspaceEditResult, error) {
+	c.applied <- params
+	if c.applyResult != nil {
+		return c.applyResult, nil
+	}
+	return &protocol.ApplyWorkspaceEditResult{Applied: true}, nil
 }
 
 type harness struct {

@@ -8,6 +8,9 @@ import (
 )
 
 func TestDecodePerformance(t *testing.T) {
+	if testing.CoverMode() != "" {
+		t.Skip("timing targets are not meaningful under coverage instrumentation")
+	}
 	data, err := os.ReadFile("../../testdata/p8png/smoke.p8.png")
 	if err != nil {
 		t.Fatal(err)

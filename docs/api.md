@@ -116,6 +116,44 @@ it directly:
 The server shows a compact `window/showMessage` summary and returns the
 `CartInfo` object as the command result.
 
+## Code actions and refactors
+
+`textDocument/codeAction` returns standard `CodeAction`s. The M14 actions use
+these kinds:
+
+| Kind | Action |
+|---|---|
+| `refactor.extract.function` | Extract a single expression or statement into a local function. |
+| `refactor.rewrite.class` | Generate a `---@class` block from a table literal. |
+| `refactor.rewrite.local` | Convert a safe global declaration to `local`. |
+| `refactor.rewrite.shorthand` | Convert between standard and PICO-8 shorthand `if`/`while`. |
+| `quickfix.pico-lsp.add-missing-fields` | Add required fields to a table literal flagged by `missing-fields`. |
+| `quickfix.pico-lsp.remove-unused` | Remove an unused local or local function. |
+
+All actions except remove-unused embed a previewable `WorkspaceEdit`. Edits are
+always expressed in the coordinates of the original `.p8` file or included
+`.lua` file; includes are never added, removed, or reordered. No action is
+offered when an open document differs from the analyzed snapshot. Disable the
+M14 actions with `pico8.refactors.enabled: false`.
+
+Remove-unused returns a code action with a `pico8.removeUnused` command instead
+of an embedded edit so the editor can treat it as an explicit confirmation. The
+command re-validates the symbol and sends a standard `workspace/applyEdit`:
+
+```json
+{
+  "command": "pico8.removeUnused",
+  "arguments": [
+    { "uri": "file:///path/to/cart.p8", "start": 123, "end": 129 }
+  ]
+}
+```
+
+The server refuses the command if the analysis is stale, the symbol is no longer
+an unused local, or the edit cannot be constructed. Code actions require the
+symbol to be a local or local function with no reads. Write-only locals and
+declarations with impure initializers (such as calls) are not removable.
+
 ## Budget code lens
 
 The root cart document has one code lens on line 0:
