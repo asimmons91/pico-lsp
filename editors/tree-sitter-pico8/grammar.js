@@ -444,10 +444,10 @@ export default grammar({
       ),
 
     _doublequote_string_content: ($) =>
-      repeat1(choice(token.immediate(prec(1, /[^"\\]+/)), $.escape_sequence)),
+      repeat1(choice(token.immediate(prec(1, /[^"\\\r\n]+/)), $.escape_sequence)),
 
     _singlequote_string_content: ($) =>
-      repeat1(choice(token.immediate(prec(1, /[^'\\]+/)), $.escape_sequence)),
+      repeat1(choice(token.immediate(prec(1, /[^'\\\r\n]+/)), $.escape_sequence)),
 
     _block_string: ($) =>
       seq(
@@ -460,7 +460,7 @@ export default grammar({
     // part of the Lua escape set. Accept any escaped character; highlighting
     // does not need to validate the escape value.
     escape_sequence: () =>
-      token.immediate(seq('\\', /[^\r\n]/)),
+      token.immediate(seq('\\', choice(/\r?\n/, /[^\r\n]/))),
 
     // '...'
     vararg_expression: (_) => '...',

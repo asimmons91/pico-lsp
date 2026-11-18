@@ -1767,7 +1767,7 @@
               "value": 1,
               "content": {
                 "type": "PATTERN",
-                "value": "[^\"\\\\]+"
+                "value": "[^\"\\\\\\r\\n]+"
               }
             }
           },
@@ -1790,7 +1790,7 @@
               "value": 1,
               "content": {
                 "type": "PATTERN",
-                "value": "[^'\\\\]+"
+                "value": "[^'\\\\\\r\\n]+"
               }
             }
           },
@@ -1855,8 +1855,17 @@
             "value": "\\"
           },
           {
-            "type": "PATTERN",
-            "value": "[^\\r\\n]"
+            "type": "CHOICE",
+            "members": [
+              {
+                "type": "PATTERN",
+                "value": "\\r?\\n"
+              },
+              {
+                "type": "PATTERN",
+                "value": "[^\\r\\n]"
+              }
+            ]
           }
         ]
       }

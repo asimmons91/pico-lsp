@@ -14,6 +14,8 @@ nested = [==[level two ]=] still inside]==]
 with __lua__ inside ]==]
 // line comment with __gfx__ inside
 x = 1 -- trailing comment
+continued = "one\
+two"
 
 ---
 
@@ -60,6 +62,13 @@ x = 1 -- trailing comment
         (variable_list
           (identifier))
         (expression_list
-          (number)))))
-  (comment
-    (comment_content)))
+          (number)))
+      (comment
+        (comment_content))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content
+              (escape_sequence))))))))
