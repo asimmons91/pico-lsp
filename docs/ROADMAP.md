@@ -1,7 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
 **Status:** v1.1.0 released  
-**Last updated:** 2026-11-17  
+**Last updated:** 2026-11-18  
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -70,11 +70,11 @@ These decisions were made before milestone specs were written. Changing one requ
 | M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Done |
 | M11 | Pull Diagnostics | LSP 3.17 pull diagnostics with related files and push fallback | M10 | Done |
 | M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Done |
-| M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Planned |
+| M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Planned |
 
-M7–M10 shipped together as **v1.1.0**. M11 and M12 are implemented; M13–M14
-are scheduled for **v1.2.0** in the order shown. Each milestone is independently
+M7–M10 shipped together as **v1.1.0**. M11–M13 are implemented; M14 remains
+scheduled for **v1.2.0** in the order shown. Each milestone is independently
 mergeable, but the release is cut only after all four meet their exit criteria.
 
 Each milestone has a detailed spec:

@@ -1,0 +1,206 @@
+[
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/cart.p8",
+    "compressed": 147
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/apitest1.p8",
+    "compressed": 275
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/btntest.p8",
+    "compressed": 169
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/coroutine.p8",
+    "compressed": 191
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/exfont.p8",
+    "compressed": 509
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/expal.p8",
+    "compressed": 142
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/font.p8",
+    "compressed": 404
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/fstest.p8",
+    "compressed": 136
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/geomtest.p8",
+    "compressed": 439
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/mousetest.p8",
+    "compressed": 272
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/oldfont.p8",
+    "compressed": 404
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/paltest.p8",
+    "compressed": 169
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sfxmusictest.p8",
+    "compressed": 334
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sfxtest.p8",
+    "compressed": 210
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/soundlooptest.p8",
+    "compressed": 373
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/sspr.p8",
+    "compressed": 274
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/stattest.p8",
+    "compressed": 146
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/time.p8",
+    "compressed": 66
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/touchtest.p8",
+    "compressed": 204
+  },
+  {
+    "path": "testdata/carts/0xcafed00d__tac08/tests/zoomtest.p8",
+    "compressed": 252
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/anim1.p8",
+    "compressed": 309
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/closures1.p8",
+    "compressed": 244
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/colourful_circles1.p8",
+    "compressed": 235
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/draw1.p8",
+    "compressed": 364
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/factorial1.p8",
+    "compressed": 264
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/fn_as_arg.p8",
+    "compressed": 189
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/func1.p8",
+    "compressed": 143
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/greenfield1.p8",
+    "compressed": 168
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/helloworld1.p8",
+    "compressed": 78
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/oop-topdown1.p8",
+    "compressed": 2491
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/oop1.p8",
+    "compressed": 1861
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/operators1.p8",
+    "compressed": 172
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tables1.p8",
+    "compressed": 401
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tables2.p8",
+    "compressed": 362
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/tictactoe1.p8",
+    "compressed": 1440
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/topdown1.p8",
+    "compressed": 1702
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/trajectory1.p8",
+    "compressed": 663
+  },
+  {
+    "path": "testdata/carts/apa64__try-pico8/trigonometry1.p8",
+    "compressed": 764
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/10tropy.p8",
+    "compressed": 228
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/2chet.p8",
+    "compressed": 223
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/beach_day.p8",
+    "compressed": 200
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/bresenham_bounce.p8",
+    "compressed": 203
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/constellations.p8",
+    "compressed": 255
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/fade_meteor.p8",
+    "compressed": 165
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/furnace.p8",
+    "compressed": 253
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/helio.p8",
+    "compressed": 236
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/howdy.p8",
+    "compressed": 204
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/ripples.p8",
+    "compressed": 138
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/spiral_sphere.p8",
+    "compressed": 206
+  },
+  {
+    "path": "testdata/carts/brubsby__tweetcarts/truchet.p8",
+    "compressed": 167
+  },
+  {
+    "path": "testdata/carts/jesstelford__pecs/example/particles.p8",
+    "compressed": 4584
+  }
+]

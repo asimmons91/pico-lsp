@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
@@ -127,6 +128,10 @@ type Snapshot struct {
 	Index    *syntax.CommentIndex
 	Chunk    *syntax.Chunk
 	Errors   []syntax.Error
+
+	compressedOnce sync.Once
+	compressedSize int
+	compressedOK   bool
 }
 
 // Provider supplies file contents and directory listings, checking open

@@ -1,6 +1,12 @@
-package p8png
+// Package p8scii maps between PICO-8's 256-character P8SCII encoding and
+// Unicode strings. The mapping follows PICO-8 0.2.7's charset and matches
+// shrinko8's k_charset (MIT, thisismypassport).
+package p8scii
 
-var p8scii = [256]string{
+import "unicode/utf8"
+
+// charset maps each P8SCII byte to its Unicode glyph.
+var charset = [256]string{
 	"\x00", "\u00b9", "\u00b2", "\u00b3", "\u2074", "\u2075", "\u2076", "\u2077",
 	"\u2078", "\t", "\n", "\u1d47", "\u1d9c", "\r", "\u1d49", "\u1da0",
 	"\u25ae", "\u25a0", "\u25a1", "\u2059", "\u2058", "\u2016", "\u25c0", "\u25b6",
@@ -35,21 +41,69 @@ var p8scii = [256]string{
 	"\u30f2", "\u30f3", "\u30c3", "\u30e3", "\u30e5", "\u30e7", "\u25dc", "\u25dd",
 }
 
-var oldCodeTable = [0x3c]byte{
-	0, 0x0a, 0x20, 0x30, 0x31, 0x32, 0x33, 0x34,
-	0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63,
-	0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b,
-	0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73,
-	0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x21,
-	0x23, 0x25, 0x28, 0x29, 0x7b, 0x7d, 0x5b, 0x5d,
-	0x3c, 0x3e, 0x2b, 0x3d, 0x2f, 0x2a, 0x3a, 0x3b,
-	0x2e, 0x2c, 0x7e, 0x5f,
+// unicap maps the Unicode mathematical italic letters PICO-8 uses for
+// uppercase glyphs when copying text, back to their ASCII P8SCII indexes.
+var unicap = [26]string{
+	"\U0001d622", "\U0001d623", "\U0001d624", "\U0001d625", "\U0001d626",
+	"\U0001d627", "\U0001d628", "\U0001d629", "\U0001d62a", "\U0001d62b",
+	"\U0001d62c", "\U0001d62d", "\U0001d62e", "\U0001d62f", "\U0001d630",
+	"\U0001d631", "\U0001d632", "\U0001d633", "\U0001d634", "\U0001d635",
+	"\U0001d636", "\U0001d637", "\U0001d638", "\U0001d639", "\U0001d63a",
+	"\U0001d63b",
 }
 
-func decodeP8SCII(code []byte) string {
-	var b []byte
-	for _, c := range code {
-		b = append(b, p8scii[c]...)
+var encodeMap = func() map[string]byte {
+	m := make(map[string]byte, len(charset)+len(unicap))
+	for i, glyph := range charset {
+		m[glyph] = byte(i)
 	}
-	return string(b)
+	for i, glyph := range unicap {
+		m[glyph] = byte('A' + i)
+	}
+	return m
+}()
+
+// Decode converts P8SCII bytes to Unicode text.
+func Decode(code []byte) string {
+	out := make([]byte, 0, len(code))
+	for _, c := range code {
+		out = append(out, charset[c]...)
+	}
+	return string(out)
+}
+
+// Encode converts Unicode text to the P8SCII bytes PICO-8 would store.
+// Unknown characters are reinterpreted as their UTF-8 bytes, matching
+// PICO-8/shrinko8 behavior.
+func Encode(text string) []byte {
+	out := make([]byte, 0, len(text))
+	for i := 0; i < len(text); {
+		r, size := utf8.DecodeRuneInString(text[i:])
+		if r == utf8.RuneError && size == 1 {
+			out = append(out, text[i])
+			i++
+			continue
+		}
+		if r < utf8.RuneSelf {
+			out = append(out, byte(r))
+			i += size
+			continue
+		}
+		if b, ok := encodeMap[text[i:i+size]]; ok {
+			out = append(out, b)
+			i += size
+			continue
+		}
+		if i+size < len(text) {
+			_, size2 := utf8.DecodeRuneInString(text[i+size:])
+			if b, ok := encodeMap[text[i:i+size+size2]]; ok {
+				out = append(out, b)
+				i += size + size2
+				continue
+			}
+		}
+		out = append(out, text[i:i+size]...)
+		i += size
+	}
+	return out
 }

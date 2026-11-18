@@ -89,6 +89,22 @@ several carts in the same directory include the file, the server chooses
 deterministically and logs the others at debug level. Rename or move carts to
 make ownership unambiguous.
 
+## Cart budgets and compressed size
+
+Token, character, and compressed-size budgets describe the assembled cart after
+include expansion and tab joining. Compressed size is cart-wide, uses PICO-8's
+pxa stream format, and counts each P8SCII glyph as one byte. It is not the byte
+size of the `.p8` file on disk.
+
+- Standalone `.lua` files report `compressedStatus: "unavailable"`; PICO-8 only
+  applies the compressed limit when saving a cart.
+- Oversized or pathological code can also report unavailable instead of a
+  misleading limit error. Token and character diagnostics continue to work.
+- A `.p8` text cart may exceed the compressed limit; PICO-8 only refuses to save
+  that code as `.p8.png` or `.p8.rom`.
+- Use `pico8.limits.diagnostics` and `pico8.limits.codeLens` to turn the budget
+  UI off independently.
+
 ## `.p8.png` carts
 
 Read-only PNG carts open as decoded virtual documents. In Neovim, use

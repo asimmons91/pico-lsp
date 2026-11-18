@@ -41,7 +41,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   docs. It is highlighting-only and never used by analysis.
 - Read-only `.p8.png` support through a decoded virtual document, `:Pico8OpenPng`
   in Neovim, and the `pico-lsp decode` CLI command.
-- Cart token/character budget code lens, `pico8/cartInfo`, and limit warnings.
+- Cart token/character/compressed-size budget code lens, `pico8/cartInfo`, and
+  limit warnings. Compressed sizes come from a PICO-8-compatible pxa
+  compressor.
 - Include diagnostics and quick fixes, generated annotations, and diagnostic
   suppression.
 - Optional auto-attachment to cart-owned `.lua` buffers in Neovim.
@@ -137,9 +139,10 @@ See [docs/configuration.md](docs/configuration.md) for every setting and
 [docs/diagnostics.md](docs/diagnostics.md) for diagnostic codes, severities, and
 suppression.
 
-`pico8/cartInfo` returns the current cart budget and per-file contributions.
-`pico8.showCartInfo` is the matching `workspace/executeCommand` command used by
-the code lens. Both are documented in [docs/api.md](docs/api.md).
+`pico8/cartInfo` returns the current cart budget (tokens, characters, and
+compressed size) and per-file contributions. `pico8.showCartInfo` is the
+matching `workspace/executeCommand` command used by the code lens. Both are
+documented in [docs/api.md](docs/api.md).
 
 ## Known limitations
 

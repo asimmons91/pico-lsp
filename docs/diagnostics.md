@@ -37,6 +37,12 @@ suppression rules as pushed diagnostics.
 | `include-duplicate` | Off | Same include target appears more than once. |
 | `token-limit` | Error/Warning | Assembled cart is over or near the 8192-token limit. |
 | `char-limit` | Error/Warning | Assembled cart is over or near the 65535-character limit. |
+| `compressed-size-limit` | Error/Warning | Assembled cart is over or near PICO-8's 15616-byte compressed code limit. Warning from 14054 bytes; error above 15616 bytes. |
+
+Cart budget diagnostics are attached to the cart root and controlled by
+`pico8.limits.diagnostics`. They are not suppressible with
+`---@diagnostic` directives. Compressed size is reported only for `.p8` carts
+(including decoded `.p8.png` virtual carts), not for standalone `.lua` files.
 
 ## Semantic
 
