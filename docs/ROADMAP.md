@@ -74,9 +74,11 @@ These decisions were made before milestone specs were written. Changing one requ
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
+| M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Draft |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
-M15 shipped as **v1.3.0**.
+M15 shipped as **v1.3.0**. M16 is a draft spec with its scope decisions
+confirmed; it is not yet committed to a release.
 
 Each milestone has a detailed spec:
 
@@ -96,6 +98,7 @@ Each milestone has a detailed spec:
 - [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 - [M15 — VS Code Client](M15-vscode-client.md)
+- [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md) (draft)
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
