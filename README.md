@@ -46,6 +46,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   compressor.
 - Include diagnostics and quick fixes, generated annotations, and diagnostic
   suppression.
+- A VS Code extension with a contributed `pico8` language, TextMate
+  highlighting, managed checksummed server downloads, `.p8`/Lua attachment, and
+  cart-budget status bar.
 - Conservative refactors: extract to local function, safe global-to-local,
   generated `---@class`, `if`/`while` shorthand conversion, exact-class
   missing-field inserts, and confirmed unused-local removal. All edits are
@@ -73,6 +76,11 @@ pico-lsp --version
 
 See [docs/install.md](docs/install.md) for per-OS instructions, checksums,
 upgrades, and uninstalling.
+
+VS Code support ships as `pico-lsp-vscode-<version>.vsix` with the matching
+release. Install it with **Extensions: Install from VSIX...**; see
+[editors/vscode/README.md](editors/vscode/README.md). Marketplace and Open VSX
+publishing are follow-ups.
 
 ## Neovim 0.11+
 

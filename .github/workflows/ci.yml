@@ -90,6 +90,71 @@ jobs:
           PICO_LSP_PERF: "1"
         run: go test -count=1 -run TestFormatPerformance -p 1 ./internal/format
 
+  vscode:
+    name: vscode extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up mise tools
+        uses: jdx/mise-action@v5
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: editors/vscode
+
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: editors/vscode
+
+      - name: Lint
+        run: npm run lint
+        working-directory: editors/vscode
+
+      - name: Unit tests
+        run: npm run test:unit
+        working-directory: editors/vscode
+
+      - name: Build test server
+        run: go build -o /tmp/pico-lsp ./cmd/pico-lsp
+
+      - name: Integration tests
+        run: xvfb-run -a env PICO_LSP_TEST_SERVER=/tmp/pico-lsp npm run test:integration
+        working-directory: editors/vscode
+
+      - name: Package VSIX
+        run: npm run package
+        working-directory: editors/vscode
+
+      - name: Verify VSIX contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./editors/vscode/package.json').version")"
+          archive="pico-lsp-vscode-${version}.vsix"
+          for entry in \
+            extension/dist/extension.js \
+            extension/syntaxes/pico8.tmLanguage.json \
+            extension/language-configuration.json \
+            extension/readme.md \
+            extension/changelog.md \
+            extension/LICENSE.txt; do
+            unzip -Z1 "$archive" | grep -qx "$entry"
+          done
+          if unzip -Z1 "$archive" | grep -q '^extension/src/'; then
+            echo "VSIX contains extension source" >&2
+            exit 1
+          fi
+
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: vscode-vsix
+          path: pico-lsp-vscode-*.vsix
+          retention-days: 7
+
   build:
     name: build (${{ matrix.goos }}/${{ matrix.goarch }})
     runs-on: ubuntu-latest

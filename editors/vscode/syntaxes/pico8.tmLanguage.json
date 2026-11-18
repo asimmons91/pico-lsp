@@ -1,0 +1,106 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "PICO-8",
+  "scopeName": "source.pico8",
+  "patterns": [
+    { "include": "#tab-marker" },
+    { "include": "#section-header" },
+    { "include": "#include-directive" },
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "tab-marker": {
+      "match": "^\\s*-->8\\b.*$",
+      "name": "comment.line.tab-marker.pico8"
+    },
+    "section-header": {
+      "match": "^\\s*(__[a-z0-9_]+__)\\s*$",
+      "captures": {
+        "1": { "name": "keyword.other.section.pico8" }
+      }
+    },
+    "include-directive": {
+      "match": "^\\s*(#include)\\b(.*)$",
+      "captures": {
+        "1": { "name": "keyword.control.include.pico8" },
+        "2": { "name": "string.unquoted.path.pico8" }
+      }
+    },
+    "comments": {
+      "patterns": [
+        {
+          "begin": "--\\[\\[",
+          "end": "\\]\\]",
+          "name": "comment.block.pico8"
+        },
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.pico8"
+        },
+        {
+          "match": "--.*$",
+          "name": "comment.line.double-dash.pico8"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\\[\\[",
+          "end": "\\]\\]",
+          "name": "string.quoted.other.multiline.pico8"
+        },
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.pico8",
+          "patterns": [
+            { "match": "\\\\.", "name": "constant.character.escape.pico8" }
+          ]
+        },
+        {
+          "begin": "'",
+          "end": "'",
+          "name": "string.quoted.single.pico8",
+          "patterns": [
+            { "match": "\\\\.", "name": "constant.character.escape.pico8" }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "match": "\\b0[xX][0-9a-fA-F]+(?:\\.[0-9a-fA-F]*)?\\b", "name": "constant.numeric.hex.pico8" },
+        { "match": "\\b0[bB][01]+\\b", "name": "constant.numeric.binary.pico8" },
+        { "match": "\\b\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?\\b", "name": "constant.numeric.decimal.pico8" }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(if|then|elseif|else|end|while|do|for|in|repeat|until|break|return|goto|function|local|and|or|not|true|false|nil)\\b",
+          "name": "keyword.control.pico8"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { "match": "\\.\\.=|\\.\\.|<<>|>><|<<=|>>=|>>>=", "name": "keyword.operator.pico8" },
+        { "match": "\\+=|-=|\\*=|/=|\\\\=|%=|\\^=|&=|\\|=|\\^\\^=|<<=|>>=|>>>=", "name": "keyword.operator.assignment.pico8" },
+        { "match": "==|~=|!=|<=|>=|<<|>>|>>>|\\^\\^", "name": "keyword.operator.comparison.pico8" },
+        { "match": "[+\\-*/\\\\%^&|~#<>=@$]", "name": "keyword.operator.pico8" },
+        { "match": "\\?", "name": "keyword.operator.print.pico8" }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": "[()\\[\\]{}.,:;]", "name": "punctuation.separator.pico8" }
+      ]
+    }
+  }
+}

@@ -72,11 +72,11 @@ These decisions were made before milestone specs were written. Changing one requ
 | M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Done |
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
-| M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Planned |
+| M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | In progress |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**
-in the order shown. M15 is planned for **v1.3.0**; each milestone is
-independently mergeable, and the release is cut only after its exit criteria
+in the order shown. M15 implementation is complete and awaiting release
+verification for **v1.3.0**; the release is cut only after its exit criteria
 pass.
 
 Each milestone has a detailed spec:
@@ -272,7 +272,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 is scheduled for v1.3.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

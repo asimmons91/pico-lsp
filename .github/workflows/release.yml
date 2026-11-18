@@ -32,6 +32,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Set up mise tools
+        uses: jdx/mise-action@v5
+
       - name: Download modules
         run: go mod download
 
@@ -52,6 +55,42 @@ jobs:
       - name: Vulnerability scan
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
+      - name: Validate VS Code extension version
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          manifest="$(node -p "require('./editors/vscode/package.json').version")"
+          test "$manifest" = "$version"
+
+      - name: Install VS Code extension dependencies
+        run: npm ci
+        working-directory: editors/vscode
+
+      - name: Build extension test server
+        run: go build -o /tmp/pico-lsp ./cmd/pico-lsp
+
+      - name: Test VS Code extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run lint
+          npm run typecheck
+          npm run test:unit
+          xvfb-run -a env PICO_LSP_TEST_SERVER=/tmp/pico-lsp npm run test:integration
+        working-directory: editors/vscode
+
+      - name: Package VS Code extension
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          npm run package
+          (
+            cd ../..
+            sha256sum "pico-lsp-vscode-${version}.vsix" > "pico-lsp-vscode-${version}.vsix.sha256"
+          )
+        working-directory: editors/vscode
+
       - name: Validate version injection
         shell: bash
         run: |
@@ -65,6 +104,18 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload VS Code extension
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          gh release upload "$GITHUB_REF_NAME" \
+            "pico-lsp-vscode-${version}.vsix" \
+            "pico-lsp-vscode-${version}.vsix.sha256" \
+            --clobber
 
       - name: Verify released assets
         shell: bash
@@ -82,5 +133,8 @@ jobs:
                 test -f "$work/pico-lsp_${version}_${os}_${arch}.zip"
             done
           done
+          test -f "$work/pico-lsp-vscode-${version}.vsix"
+          test -f "$work/pico-lsp-vscode-${version}.vsix.sha256"
+          (cd "$work" && sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256")
           tar -xzf "$work/pico-lsp_${version}_linux_amd64.tar.gz" -C "$work"
           test "$("$work/pico-lsp" --version)" = "$GITHUB_REF_NAME"
