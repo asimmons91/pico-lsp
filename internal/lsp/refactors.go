@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
@@ -34,10 +35,7 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 		if action == nil {
 			return
 		}
-		key := action.Title
-		if action.Kind != nil {
-			key = string(*action.Kind) + "\x00" + key
-		}
+		key := codeActionKey(action)
 		if seen[key] {
 			return
 		}
@@ -140,6 +138,47 @@ func refactorAt(ctx *refactor.Context, start, end int, fn func(*refactor.Context
 		return fn(ctx, end-1)
 	}
 	return nil
+}
+
+func codeActionKey(action *protocol.CodeAction) string {
+	if action == nil {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(action.Title)
+	if action.Kind != nil {
+		b.WriteString("\x00")
+		b.WriteString(string(*action.Kind))
+	}
+	type fileEdits struct {
+		uri   string
+		edits []protocol.TextEdit
+	}
+	var files []fileEdits
+	if action.Edit != nil {
+		for u, edits := range action.Edit.Changes {
+			files = append(files, fileEdits{uri: u.String(), edits: edits})
+		}
+	}
+	sort.SliceStable(files, func(i, j int) bool { return files[i].uri < files[j].uri })
+	for _, file := range files {
+		b.WriteString("\x00")
+		b.WriteString(file.uri)
+		for _, edit := range file.edits {
+			fmt.Fprintf(&b, "|%d:%d-%d:%d:%s",
+				edit.Range.Start.Line, edit.Range.Start.Character,
+				edit.Range.End.Line, edit.Range.End.Character, edit.NewText)
+		}
+	}
+	if action.Command.Command != "" {
+		b.WriteString("\x00")
+		b.WriteString(action.Command.Command)
+		for _, argument := range action.Command.Arguments {
+			b.WriteString("|")
+			b.Write(argument)
+		}
+	}
+	return b.String()
 }
 
 func (s *Server) missingFieldsAction(nav *navContext, rctx *refactor.Context, diag protocol.Diagnostic) *protocol.CodeAction {
