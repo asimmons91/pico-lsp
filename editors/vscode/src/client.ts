@@ -19,6 +19,7 @@ const CLIENT_NAME = 'PICO-8 Language Server';
 
 export class PicoClient implements vscode.Disposable {
   private client: LanguageClient | undefined;
+  private running: LanguageClient | undefined;
   private operation = Promise.resolve();
   private disposed = false;
 
@@ -133,7 +134,8 @@ export class PicoClient implements vscode.Disposable {
         'Show Log'
       );
       if (choice === 'Retry') {
-        await this.restart();
+        // The current operation must finish before the queued restart can run.
+        void this.restart();
       } else if (choice === 'Open Settings') {
         await vscode.commands.executeCommand('workbench.action.openSettings', 'pico8.serverPath');
       } else if (choice === 'Show Log') {
@@ -165,14 +167,29 @@ export class PicoClient implements vscode.Disposable {
     const client = new LanguageClient(CLIENT_ID, CLIENT_NAME, serverOptions, clientOptions);
     this.client = client;
     client.onDidChangeState((event) => {
-      if (event.newState === State.Stopped && this.client === client && !this.disposed) {
+      if (event.newState === State.Stopped && this.running === client && !this.disposed) {
         this.output.warn('pico-lsp stopped unexpectedly.');
+        this.running = undefined;
         this.statusBar.updateNow();
+        void vscode.window
+          .showWarningMessage('pico-lsp stopped unexpectedly.', 'Show Log', 'Restart')
+          .then((choice) => {
+            if (choice === 'Show Log') {
+              this.output.show(true);
+            } else if (choice === 'Restart') {
+              void this.restart();
+            }
+          });
       }
     });
 
     try {
       await client.start();
+      if (this.disposed) {
+        await this.stopNow();
+        return;
+      }
+      this.running = client;
       try {
         await this.applyTrace(client, settings.traceServer);
       } catch (error) {
@@ -182,6 +199,7 @@ export class PicoClient implements vscode.Disposable {
       this.statusBar.updateNow();
     } catch (error) {
       this.client = undefined;
+      this.running = undefined;
       this.output.error(`unable to start pico-lsp: ${errorMessage(error)}`);
       void vscode.window.showErrorMessage(`Unable to start pico-lsp: ${errorMessage(error)}`);
     }
@@ -238,6 +256,7 @@ export class PicoClient implements vscode.Disposable {
   private async stopNow(): Promise<void> {
     const client = this.client;
     this.client = undefined;
+    this.running = undefined;
     if (!client) {
       return;
     }

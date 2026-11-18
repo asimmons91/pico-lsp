@@ -272,7 +272,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 is scheduled for v1.3.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
