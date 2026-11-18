@@ -127,6 +127,10 @@ func (s *Server) codeActionForRefactor(nav *navContext, action *refactor.Action,
 		Kind:        &kind,
 		Diagnostics: diagnostics,
 	}
+	if action.Kind == refactor.KindAddMissingFields {
+		preferred := true
+		result.IsPreferred = &preferred
+	}
 	if action.Confirmation != nil {
 		argument := removeUnusedArgument{
 			URI:   nav.file.URI.String(),
@@ -195,7 +199,8 @@ func (s *Server) applyRemoveUnused(ctx context.Context, params *protocol.Execute
 		return nil, fmt.Errorf("%s: analysis is stale", CommandRemoveUnused)
 	}
 	action := refactor.RemoveUnused(navContextForRefactor(nav), argument.Start)
-	if action == nil || action.Confirmation == nil {
+	if action == nil || action.Confirmation == nil ||
+		action.Confirmation.Span.Start != argument.Start || action.Confirmation.Span.End != argument.End {
 		return nil, fmt.Errorf("%s: symbol is no longer an unused local", CommandRemoveUnused)
 	}
 	edit, ok := s.workspaceEdit(nav, action.Edits)

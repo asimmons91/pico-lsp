@@ -107,11 +107,13 @@ func GlobalToLocal(ctx *Context, offset int) *Action {
 
 	// Unresolved same-name occurrences would be captured by the new local (or
 	// indicate that not every read resolves to this global).
-	for _, candidate := range ctx.Result.Occurrences(ctx.FileID) {
-		if candidate.Symbol != nil || analysis.CanonicalName(candidate.Text) != sym.Canonical {
-			continue
+	for _, file := range ctx.Snap.Cart.Files {
+		for _, candidate := range ctx.Result.Occurrences(file.ID) {
+			if candidate.Symbol != nil || analysis.CanonicalName(candidate.Text) != sym.Canonical {
+				continue
+			}
+			return nil
 		}
-		return nil
 	}
 
 	return &Action{
