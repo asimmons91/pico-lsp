@@ -116,6 +116,94 @@ it directly:
 The server shows a compact `window/showMessage` summary and returns the
 `CartInfo` object as the command result.
 
+## `pico8/glyphs`
+
+Custom request that returns the server's P8SCII glyph catalog for a picker or
+tooling integration.
+
+```json
+{
+  "textDocument": { "uri": "file:///path/to/cart.p8" },
+  "position": { "line": 10, "character": 4 }
+}
+```
+
+Both parameters are optional; when supplied, they must be supplied together.
+A position filters out string-only control entries when the cursor is not
+inside a string. Without parameters, the request returns every entry with its
+`context` field.
+
+```json
+{
+  "glyphs": [
+    {
+      "name": "left",
+      "text": "⬅️",
+      "byte": 139,
+      "aliases": ["p8-left"],
+      "category": "button",
+      "description": "Left button",
+      "context": "both"
+    },
+    {
+      "name": "font_custom",
+      "text": "\\14",
+      "byte": 14,
+      "category": "control",
+      "description": "Switch to the custom font at 0x5600",
+      "context": "string"
+    }
+  ]
+}
+```
+
+`byte` is the P8SCII code, not a Unicode codepoint. `context` is `both` or
+`string`. Custom entries from `pico8.glyphs` appear in the same list and may
+include `"custom": true`.
+
+## `pico8.insertGlyph`
+
+`workspace/executeCommand` command used by the glyph picker. It inserts at the
+cursor, or replaces a `p8_`/`p8-` trigger immediately before the cursor:
+
+```json
+{
+  "command": "pico8.insertGlyph",
+  "arguments": [
+    {
+      "textDocument": { "uri": "file:///path/to/cart.p8" },
+      "position": { "line": 10, "character": 4 },
+      "name": "left"
+    }
+  ]
+}
+```
+
+Use exactly one of `name` or `byte`. The command refuses read-only `.p8.png`
+virtual documents and string-only control entries outside a string.
+
+When the client advertises `workspace.applyEdit`, the server applies the edit
+and returns `{"applied": true}`. Otherwise it returns the edit for the client:
+
+```json
+{
+  "applied": false,
+  "edit": {
+    "changes": {
+      "file:///path/to/cart.p8": [
+        {
+          "range": {
+            "start": { "line": 10, "character": 0 },
+            "end": { "line": 10, "character": 5 }
+          },
+          "newText": "⬅️"
+        }
+      ]
+    }
+  }
+}
+```
+
 ## Code actions and refactors
 
 `textDocument/codeAction` returns standard `CodeAction`s. The M14 actions use

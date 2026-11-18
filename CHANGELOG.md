@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- P8SCII glyph input (M16): `p8_`/`p8-` completion in code and strings, the
+  `pico8/glyphs` catalog request, the `pico8.insertGlyph` command, custom
+  `pico8.glyphs` entries for built-in and custom font slots, a VS Code Quick
+  Pick command, and the Neovim `:Pico8InsertGlyph` picker.
+
 ## [1.3.0] - 2026-11-18
 
 ### Added

@@ -126,6 +126,29 @@ If you do not use the helper, decode to a text file for a static fallback:
 pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
 ```
 
+## P8SCII glyph input
+
+Type `p8_left` in code or a string and accept the completion to insert `⬅️`.
+The `p8-` form is accepted for pico8-ls compatibility. Control entries such as
+`p8_font_custom` (`\14`) are offered only inside strings.
+
+The helper adds a searchable picker:
+
+```vim
+:Pico8InsertGlyph
+```
+
+Pass a name to insert directly:
+
+```vim
+:Pico8InsertGlyph left
+```
+
+Custom font slots are declared in `pico8.glyphs`; see the
+[configuration reference](../../docs/configuration.md#p8scii-glyph-snippets).
+The server inserts the canonical Unicode spelling for the chosen byte because
+it cannot inspect custom font pixels.
+
 ## Syntax highlighting
 
 The repository ships an editor-oriented tree-sitter grammar at

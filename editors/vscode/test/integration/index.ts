@@ -63,6 +63,14 @@ export async function run(): Promise<void> {
   );
   assert.ok(hover.length > 0, 'circfill hover was empty');
 
+  const stringOffset = cart.getText().indexOf('local bad = "x"');
+  assert.ok(stringOffset >= 0, 'fixture has no local bad string');
+  const glyphPosition = cart.positionAt(stringOffset + 'local bad = "x'.length);
+  const editor = await vscode.window.showTextDocument(cart, { preview: false });
+  editor.selection = new vscode.Selection(glyphPosition, glyphPosition);
+  await vscode.commands.executeCommand('pico8.client.insertGlyph', 'left');
+  await waitFor(() => cart.getText().includes('"x⬅️"'), 'glyph insertion');
+
   const badOffset = cart.getText().indexOf('local bad');
   const badLineEnd = cart.getText().indexOf('\n', badOffset);
   const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(

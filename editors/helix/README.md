@@ -88,6 +88,16 @@ See [../../docs/configuration.md](../../docs/configuration.md) for every setting
 5. Quit Helix while the server is running. It should exit cleanly rather than
    hang.
 
+## P8SCII glyph input
+
+Type `p8_left`, `p8_heart`, or another glyph trigger in code or a string and
+accept the completion to insert the glyph. The `p8-` form is accepted for
+pico8-ls compatibility. Control entries such as `p8_font_custom` (`\14`) are
+offered only inside strings. Helix receives the standard completion items;
+there is no native Helix picker in this milestone. Custom font slots use the
+`pico8.glyphs` setting documented in
+[../../docs/configuration.md](../../docs/configuration.md#p8scii-glyph-snippets).
+
 ## Read-only `.p8.png` carts
 
 Helix does not have a portable command for opening virtual documents. Decode a

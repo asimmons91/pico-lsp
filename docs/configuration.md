@@ -43,7 +43,11 @@ For installation and editor setup, see [install.md](install.md),
     },
     "refactors": {
       "enabled": true
-    }
+    },
+    "glyphs": [
+      { "name": "logo", "byte": 128, "description": "custom font slot 0x80" },
+      { "name": "my_font", "text": "\\14", "context": "string" }
+    ]
   }
 }
 ```
@@ -62,6 +66,51 @@ For installation and editor setup, see [install.md](install.md),
 | `format.maxBlankLines` | integer | `2` | Maximum consecutive blank lines; `0` removes blank lines. |
 | `lint.apiRanges` | boolean | `false` | Optional literal API range checks. |
 | `refactors.enabled` | boolean | `true` | Offer the extract, rewrite, add-missing-fields, and remove-unused code actions. |
+| `glyphs` | array | `[]` | Custom P8SCII glyph snippets for `p8_` completion and the glyph picker. |
+
+## P8SCII glyph snippets
+
+`pico8.glyphs` adds custom names for P8SCII characters. Each entry has a
+`name` and exactly one of `byte`, `glyph`, or `text`:
+
+```json
+{
+  "pico8": {
+    "glyphs": [
+      { "name": "logo", "byte": 128, "description": "custom font slot 0x80" },
+      { "name": "my_heart", "glyph": "♥", "aliases": ["p8-love"] },
+      { "name": "my_font", "text": "\\14", "context": "string" }
+    ]
+  }
+}
+```
+
+- `byte` is authoritative for custom font slots and must be a printable P8SCII
+  value from `0x10` through `0xff`. The server inserts the canonical Unicode
+  spelling for that byte. A custom font changes how PICO-8 draws the byte, not
+  which byte is stored in the cart.
+- `glyph` is accepted only when it encodes to exactly one P8SCII byte. Use the
+  variation-selector spelling for button glyphs, for example `⬅️`, not a bare
+  `⬅`.
+- `text` is a P8SCII control escape such as `\14`, `\15`, `\*`, or `\#`.
+  Text entries must set `"context": "string"` and are offered only inside
+  strings.
+- `name` is ASCII and becomes the default trigger `p8_<name>`. `aliases` add
+  full `p8_`/`p8-` triggers such as `p8-love`.
+- Custom names and aliases override built-in entries with a logged warning.
+  Invalid entries are skipped. Omitting `glyphs` preserves the current list; an
+  explicit empty array clears custom entries.
+
+Type `p8_left` (or `p8-left`) in code or a string and accept the completion to
+insert the glyph. Inside strings, `p8_font` offers the string-only control
+entries. The VS Code command **PICO-8: Insert P8SCII Glyph** and the Neovim
+`:Pico8InsertGlyph` command open a searchable picker; both commands can also be
+called with a glyph name to insert it directly. Control entries are not offered
+outside strings.
+
+The server cannot infer custom font pixels from cart code. Declare custom font
+slots with `byte` entries and a description so collaborators know what the
+placeholder represents.
 
 Compressed-size budgeting applies to `.p8` carts, including decoded `.p8.png`
 virtual carts. The server reports the size PICO-8's pxa compressor would store

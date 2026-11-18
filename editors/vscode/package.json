@@ -29,6 +29,7 @@
     "onLanguage:pico8",
     "workspaceContains:**/*.p8",
     "onCommand:pico8.client.showCartInfo",
+    "onCommand:pico8.client.insertGlyph",
     "onCommand:pico8.client.restartServer",
     "onCommand:pico8.client.showOutput",
     "onCommand:pico8.client.clearServerCache"
@@ -65,6 +66,10 @@
       {
         "command": "pico8.client.showCartInfo",
         "title": "PICO-8: Show Cart Info"
+      },
+      {
+        "command": "pico8.client.insertGlyph",
+        "title": "PICO-8: Insert P8SCII Glyph"
       },
       {
         "command": "pico8.client.restartServer",
@@ -110,6 +115,74 @@
           "default": "off",
           "scope": "window",
           "description": "Trace communication between VS Code and pico-lsp."
+        },
+        "pico8.glyphs": {
+          "type": "array",
+          "default": [],
+          "scope": "window",
+          "markdownDescription": "Custom P8SCII glyph snippets for `p8_` completion and the **PICO-8: Insert P8SCII Glyph** picker. Each item has a `name` and exactly one of `byte`, `glyph`, or `text`.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "oneOf": [
+              {
+                "required": [
+                  "byte"
+                ]
+              },
+              {
+                "required": [
+                  "glyph"
+                ]
+              },
+              {
+                "required": [
+                  "text"
+                ]
+              }
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "ASCII name used as p8_<name>."
+              },
+              "byte": {
+                "type": "integer",
+                "minimum": 16,
+                "maximum": 255,
+                "description": "Printable P8SCII byte. Use text for control codes."
+              },
+              "glyph": {
+                "type": "string",
+                "description": "A P8SCII character that encodes to exactly one byte."
+              },
+              "text": {
+                "type": "string",
+                "description": "A P8SCII control escape such as \\14. Requires context string."
+              },
+              "context": {
+                "type": "string",
+                "enum": [
+                  "both",
+                  "string"
+                ],
+                "description": "Where the glyph may be inserted. Text entries require string."
+              },
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Additional p8_ or p8- completion triggers."
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description shown in completion and the picker."
+              }
+            }
+          }
         }
       }
     }

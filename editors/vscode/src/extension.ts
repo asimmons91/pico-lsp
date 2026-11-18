@@ -39,6 +39,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<unknow
     statusBar,
     client,
     vscode.commands.registerCommand('pico8.client.showCartInfo', () => client.showCartInfo()),
+    vscode.commands.registerCommand(
+      'pico8.client.insertGlyph',
+      (selection?: string | { name?: string; byte?: number }) => client.insertGlyph(selection)
+    ),
     vscode.commands.registerCommand('pico8.client.restartServer', () => client.restart()),
     vscode.commands.registerCommand('pico8.client.showOutput', () => client.showOutput()),
     vscode.commands.registerCommand('pico8.client.clearServerCache', () => client.clearCache()),

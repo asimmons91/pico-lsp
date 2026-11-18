@@ -30,6 +30,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   rename, and workspace symbols.
 - Completion, hover, signature help, semantic tokens, and inlay hints for user
   symbols and the PICO-8 0.2.7 API.
+- P8SCII glyph input: `p8_left`-style completion in code and strings, a
+  searchable glyph picker, and custom font-slot entries through
+  `pico8.glyphs`.
 - LuaCATS classes with inheritance and `(exact)` field checks, generic classes
   and functions, overloads, operator annotations, tagged-union narrowing,
   metatable factory inference, aliases, enums, params, returns, and gradual
@@ -145,7 +148,10 @@ The server reads the `pico8` configuration section from
     },
     "refactors": {
       "enabled": true
-    }
+    },
+    "glyphs": [
+      { "name": "logo", "byte": 128, "description": "custom font slot 0x80" }
+    ]
   }
 }
 ```
@@ -156,14 +162,15 @@ suppression.
 
 `pico8/cartInfo` returns the current cart budget (tokens, characters, and
 compressed size) and per-file contributions. `pico8.showCartInfo` is the
-matching `workspace/executeCommand` command used by the code lens. Both are
+matching `workspace/executeCommand` command used by the code lens.
+`pico8/glyphs` and `pico8.insertGlyph` power the P8SCII glyph picker. All are
 documented in [docs/api.md](docs/api.md).
 
 ## Known limitations
 
 - `.p8.png` carts are supported read-only. Edit and save an exported text `.p8`
   when you need to change the cart; the server never writes PNG carts.
-- VS Code and Zed clients remain in the
+- VS Code is supported by the M15 extension; Zed remains in the
   [post-v1 backlog](docs/post-v1-backlog.md). The server remains
   editor-agnostic.
 - Included `.lua` auto-attachment is a Neovim helper; Helix users open the

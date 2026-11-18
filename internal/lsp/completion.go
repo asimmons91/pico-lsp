@@ -112,6 +112,22 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 	if nav == nil || nav.file == nil {
 		return nil, false
 	}
+	lineStart, linePrefix := nav.linePrefix(offset)
+	if prefixStart, prefix, ok := glyphPrefix(nav.file.Text, offset); ok {
+		// Glyph aliases are only valid in code and ordinary strings. Keep
+		// annotations and include paths on their existing completion paths.
+		annotation := nav.inComment(offset) &&
+			strings.HasPrefix(strings.TrimLeft(linePrefix, " \t"), "---@")
+		if !isIncludeLine(linePrefix) {
+			if nav.inComment(offset) && !annotation {
+				return nil, false
+			}
+			if !annotation {
+				return s.glyphCompletions(nav, offset, prefixStart, prefix), false
+			}
+		}
+		// Include paths and annotations keep their normal completion paths.
+	}
 	if token := nav.tokenAt(offset); token != nil && (token.Kind == syntax.TokenString || token.Kind == syntax.TokenInclude) {
 		// Include paths are handled below; ordinary strings are not completion
 		// contexts.
@@ -120,7 +136,6 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 		}
 	}
 
-	lineStart, linePrefix := nav.linePrefix(offset)
 	if nav.inString(offset) {
 		return nil, false
 	}

@@ -52,6 +52,15 @@ end, 50) then
   fail("helper did not attach the included .lua buffer")
 end
 
+vim.api.nvim_win_set_cursor(0, { 1, #vim.api.nvim_buf_get_lines(0, 0, 1, false)[1] })
+vim.cmd("Pico8InsertGlyph left")
+if not vim.wait(5000, function()
+  local text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
+  return text:find("⬅️", 1, true) ~= nil
+end, 50) then
+  fail("Pico8InsertGlyph did not insert the left glyph")
+end
+
 vim.cmd.edit(vim.fn.fnameescape(unrelated))
 vim.wait(100, function()
   return true

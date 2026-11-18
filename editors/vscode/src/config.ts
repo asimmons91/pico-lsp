@@ -42,7 +42,8 @@ export function pico8InitializationOptions(): Record<string, unknown> {
       format: config.get('format'),
       diagnostics: config.get('diagnostics'),
       lint: config.get('lint'),
-      refactors: config.get('refactors')
+      refactors: config.get('refactors'),
+      glyphs: config.get('glyphs')
     }
   };
 }
