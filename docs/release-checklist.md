@@ -61,6 +61,8 @@ publishing are deferred to post-v1. The current release is **v1.2.0**.
 
 ## VS Code extension (v1.3.0+)
 
+- [ ] `PICO_LSP_PERF=1 go test -count=1 -p 1 -run Performance ./...` passes
+      locally or via the manual **Performance** workflow.
 - [ ] `editors/vscode/package.json` version matches the release tag.
 - [ ] `npm ci`, lint, typecheck, unit tests, and integration tests pass.
 - [ ] `pico-lsp-vscode-<version>.vsix` builds and contains no extension source.

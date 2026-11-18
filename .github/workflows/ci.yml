@@ -84,12 +84,6 @@ jobs:
         if: runner.os == 'Linux'
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
-      - name: Formatter performance
-        if: runner.os == 'Linux'
-        env:
-          PICO_LSP_PERF: "1"
-        run: go test -count=1 -run TestFormatPerformance -p 1 ./internal/format
-
   vscode:
     name: vscode extension
     runs-on: ubuntu-latest

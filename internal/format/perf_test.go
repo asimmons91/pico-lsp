@@ -2,20 +2,19 @@ package format
 
 import (
 	"flag"
-	"os"
 	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func TestFormatPerformance(t *testing.T) {
 	if fuzz := flag.Lookup("test.fuzz"); fuzz != nil && fuzz.Value.String() != "" {
 		t.Skip("timing checks are not meaningful under fuzz instrumentation")
 	}
-	if os.Getenv("PICO_LSP_PERF") != "1" {
-		t.Skip("set PICO_LSP_PERF=1 to run the isolated formatter timing gate")
-	}
+	testutil.SkipUnlessPerf(t)
 	var b strings.Builder
 	for i := 0; i < 1300; i++ {
 		b.WriteString("function f(x,y)\nif (x>0) then\nreturn x+y\nend\nend\n")

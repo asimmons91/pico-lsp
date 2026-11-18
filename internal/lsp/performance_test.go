@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"go.lsp.dev/protocol"
+
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func largeCartText() string {
@@ -27,6 +29,7 @@ func largeCartText() string {
 }
 
 func TestPerformanceTargets(t *testing.T) {
+	testutil.SkipUnlessPerf(t)
 	if raceDetectorEnabled || testing.CoverMode() != "" {
 		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}

@@ -1,0 +1,27 @@
+name: Performance
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  performance:
+    name: wall-clock performance gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run performance gates
+        env:
+          PICO_LSP_PERF: "1"
+        run: go test -count=1 -p 1 -run Performance ./...

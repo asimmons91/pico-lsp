@@ -14,6 +14,7 @@ import (
 	"github.com/asimmons91/pico-lsp/internal/cart"
 	"github.com/asimmons91/pico-lsp/internal/source"
 	"github.com/asimmons91/pico-lsp/internal/syntax"
+	"github.com/asimmons91/pico-lsp/internal/testutil"
 )
 
 func typeInferenceCartText() string {
@@ -52,6 +53,7 @@ func typeInferenceSnapshot(t *testing.T, text string) *cart.Snapshot {
 }
 
 func TestM4InferencePerformance(t *testing.T) {
+	testutil.SkipUnlessPerf(t)
 	if analysisRaceDetectorEnabled || runtime.GOOS != "linux" || testing.CoverMode() != "" {
 		t.Skip("timing targets are not meaningful under the race detector or coverage instrumentation")
 	}

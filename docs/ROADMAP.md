@@ -233,6 +233,10 @@ Every milestone must add tests appropriate to its surface:
 - `go test -race ./...` in CI.
 - Benchmarks for full-cart parse/analyze and common editor requests.
 
+Wall-clock performance gates are opt-in with `PICO_LSP_PERF=1` and run through
+the manual **Performance** workflow or locally. Default CI skips hard timing
+assertions because shared runners are too noisy for stable absolute thresholds.
+
 ### Performance budgets
 
 These are targets for a 64 KB cart on a typical developer machine:
