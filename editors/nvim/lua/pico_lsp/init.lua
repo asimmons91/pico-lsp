@@ -214,7 +214,7 @@ function M.open_png(path)
 end
 
 local function glyph_label(item)
-  local byte = item.byte and string.format("0x%02x", item.byte) or ""
+  local byte = item.byte ~= nil and string.format("0x%02x", item.byte) or ""
   return string.format("%s  p8_%s  %s", item.text or "", item.name or "", item.description or byte)
 end
 

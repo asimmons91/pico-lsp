@@ -145,6 +145,27 @@ func TestGlyphCompletionUsesUTF16Range(t *testing.T) {
 	}
 }
 
+func TestGlyphPrefixDoesNotSuppressIncludeCompletion(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"p8_\"\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	writeTemp(t, dir, "p8_lib.lua", "function lib() end\n")
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	pos := positionAt(t, text, `#include "p8_"`, len(`#include "p8_`))
+	items := completionItems(t, h, ctx, root, pos)
+	if findCompletion(items, "p8_lib.lua") == nil {
+		t.Fatalf("include completion = %v, missing p8_lib.lua", completionLabels(items))
+	}
+	if findGlyphCompletion(items, "p8_left") != nil {
+		t.Fatalf("glyph completion was offered in an include path: %v", completionLabels(items))
+	}
+}
+
 func TestGlyphCompletionInIncludedLua(t *testing.T) {
 	dir := t.TempDir()
 	cartText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.lua\"\n"

@@ -233,10 +233,11 @@ func (s *Server) insertGlyph(ctx context.Context, params *protocol.ExecuteComman
 		},
 	}
 
-	if s.clientSupportsApplyEdit() && s.Client() != nil {
+	client := s.Client()
+	if s.clientSupportsApplyEdit() && client != nil {
 		jsonrpc2.Async(ctx)
 		label := "Insert P8SCII glyph"
-		result, err := s.Client().ApplyEdit(ctx, &protocol.ApplyWorkspaceEditParams{
+		result, err := client.ApplyEdit(ctx, &protocol.ApplyWorkspaceEditParams{
 			Label: &label,
 			Edit:  edit,
 		})

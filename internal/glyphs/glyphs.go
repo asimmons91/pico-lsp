@@ -175,29 +175,35 @@ func Builtins() []Entry {
 // are skipped and reported as warnings. Custom entries are applied in order;
 // later definitions win on a name or trigger collision.
 func Build(custom []Definition) ([]Entry, []string) {
-	entries := cloneEntries(builtinEntries)
-	byName := make(map[string]int, len(entries)+len(custom))
-	for i := range entries {
-		byName[entries[i].Name] = i
-	}
-
 	warnings := make([]string, 0)
+	customEntries := make([]Entry, 0, len(custom))
+	customByName := make(map[string]int, len(custom))
 	for i, definition := range custom {
 		entry, err := NormalizeDefinition(definition)
 		if err != nil {
 			warnings = append(warnings, fmt.Sprintf("entry %d: %v", i+1, err))
 			continue
 		}
-		if index, ok := byName[entry.Name]; ok {
-			if !entries[index].Custom {
-				warnings = append(warnings, fmt.Sprintf("%q overrides a built-in glyph", entry.Name))
-			}
-			entries[index] = entry
+		if index, ok := customByName[entry.Name]; ok {
+			// A later custom definition wins without duplicating the name.
+			customEntries[index] = entry
 			continue
 		}
-		byName[entry.Name] = len(entries)
-		entries = append(entries, entry)
+		customByName[entry.Name] = len(customEntries)
+		customEntries = append(customEntries, entry)
 	}
+
+	// Custom entries always sort after built-ins so their names and aliases
+	// win trigger collisions regardless of where the built-in was declared.
+	entries := make([]Entry, 0, len(builtinEntries)+len(customEntries))
+	for _, builtin := range builtinEntries {
+		if _, overridden := customByName[builtin.Name]; overridden {
+			warnings = append(warnings, fmt.Sprintf("%q overrides a built-in glyph", builtin.Name))
+			continue
+		}
+		entries = append(entries, builtin)
+	}
+	entries = append(entries, customEntries...)
 
 	// Later entries win when two entries claim the same trigger. Report the
 	// conflict only for custom entries so built-in duplicates stay testable.

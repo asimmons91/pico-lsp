@@ -112,6 +112,19 @@ func TestBuildCustomOverrideAndInvalidEntries(t *testing.T) {
 	}
 }
 
+func TestCustomAliasOverridesBuiltinRegardlessOfOrder(t *testing.T) {
+	entries, warnings := Build([]Definition{
+		{Name: "my_left", Glyph: "♥", Aliases: []string{"p8-right"}},
+	})
+	if len(warnings) == 0 {
+		t.Fatal("Build did not warn about the built-in alias override")
+	}
+	entry, ok := FindByName(entries, "p8-right")
+	if !ok || entry.Name != "my_left" {
+		t.Fatalf("p8-right = %+v, %v; want custom my_left", entry, ok)
+	}
+}
+
 func TestBuildLaterCustomEntryWins(t *testing.T) {
 	first, second := 128, 129
 	entries, _ := Build([]Definition{

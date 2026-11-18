@@ -118,12 +118,15 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 		// annotations and include paths on their existing completion paths.
 		annotation := nav.inComment(offset) &&
 			strings.HasPrefix(strings.TrimLeft(linePrefix, " \t"), "---@")
-		if isIncludeLine(linePrefix) || (nav.inComment(offset) && !annotation) {
-			return nil, false
+		if !isIncludeLine(linePrefix) {
+			if nav.inComment(offset) && !annotation {
+				return nil, false
+			}
+			if !annotation {
+				return s.glyphCompletions(nav, offset, prefixStart, prefix), false
+			}
 		}
-		if !annotation {
-			return s.glyphCompletions(nav, offset, prefixStart, prefix), false
-		}
+		// Include paths and annotations keep their normal completion paths.
 	}
 	if token := nav.tokenAt(offset); token != nil && (token.Kind == syntax.TokenString || token.Kind == syntax.TokenInclude) {
 		// Include paths are handled below; ordinary strings are not completion
