@@ -40,6 +40,9 @@ For installation and editor setup, see [install.md](install.md),
     },
     "lint": {
       "apiRanges": false
+    },
+    "refactors": {
+      "enabled": true
     }
   }
 }
@@ -58,6 +61,7 @@ For installation and editor setup, see [install.md](install.md),
 | `limits.diagnostics` | boolean | `true` | Publish token, character, and compressed-size limit diagnostics. |
 | `format.maxBlankLines` | integer | `2` | Maximum consecutive blank lines; `0` removes blank lines. |
 | `lint.apiRanges` | boolean | `false` | Optional literal API range checks. |
+| `refactors.enabled` | boolean | `true` | Offer the extract, rewrite, add-missing-fields, and remove-unused code actions. |
 
 Compressed-size budgeting applies to `.p8` carts, including decoded `.p8.png`
 virtual carts. The server reports the size PICO-8's pxa compressor would store

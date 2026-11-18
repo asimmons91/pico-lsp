@@ -192,6 +192,11 @@ type Result struct {
 	AsCasts              []AsDirective
 	DiagnosticDirectives []DiagnosticDirective
 
+	// MissingFieldFixes records the structured data behind missing-fields
+	// diagnostics so code actions can add exactly the required fields without
+	// parsing diagnostic messages.
+	MissingFieldFixes []MissingFieldsFix
+
 	// flowTypes records the narrowed type of expression occurrences at the end
 	// of the final inference pass. Hover and completion use it to show
 	// flow-sensitive types without re-running inference.

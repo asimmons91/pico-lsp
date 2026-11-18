@@ -23,11 +23,17 @@ All notable changes to this project are documented here. The format follows
   above 15616 bytes. Sizes are memoized per cart snapshot and validated against
   Lexaloffle's reference compressor, with UTF-8/P8SCII fixtures and corpus
   coverage.
+- Conservative refactors and code actions: extract selection to a local
+  function, safe global-to-local conversion, generated `---@class` blocks,
+  standard/shorthand `if`/`while` conversion, exact-class missing-field fixes,
+  and unused-local removal through the `pico8.removeUnused` confirmation
+  command. All edits stay in original source coordinates and preserve include
+  order; `pico8.refactors.enabled` disables the set.
 
 ### Changed
 
-- Plan M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed
-  size budgets, and conservative refactors — for a batched v1.2.0 release.
+- Ship M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed
+  size budgets, and conservative refactors — as a batched v1.2.0 release.
 
 ## [1.1.0] - 2026-11-17
 

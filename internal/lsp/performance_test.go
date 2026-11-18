@@ -104,4 +104,14 @@ func TestPerformanceTargets(t *testing.T) {
 			t.Fatalf("semantic tokens: %v", err)
 		}
 	})
+
+	actionPos := positionAt(t, text, "circfill(", 0)
+	measure("code actions 64 KB", 10*time.Millisecond, func() {
+		if _, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Range:        protocol.Range{Start: actionPos, End: actionPos},
+		}); err != nil {
+			t.Fatalf("code actions: %v", err)
+		}
+	})
 }

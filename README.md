@@ -46,6 +46,10 @@ bugs with a minimal reproduction so they can be verified and fixed.
   compressor.
 - Include diagnostics and quick fixes, generated annotations, and diagnostic
   suppression.
+- Conservative refactors: extract to local function, safe global-to-local,
+  generated `---@class`, `if`/`while` shorthand conversion, exact-class
+  missing-field inserts, and confirmed unused-local removal. All edits are
+  previewable workspace edits in original source coordinates.
 - Optional auto-attachment to cart-owned `.lua` buffers in Neovim.
 
 ## Install

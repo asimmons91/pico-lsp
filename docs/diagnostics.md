@@ -90,6 +90,19 @@ Cart budget diagnostics are attached to the cart root and controlled by
 | `empty-block` | Off | Block contains no statements. |
 | `global-in-function` | Off | Global is assigned inside a function. |
 
+## Code actions
+
+`missing-fields` diagnostics carry a `quickfix.pico-lsp.add-missing-fields`
+action for explicit `(exact)` classes. It inserts the absent fields into the
+flagged table literal with type-appropriate placeholder values; open classes and
+`strict`-only missing-field checks do not get the fix.
+
+`unused-local` diagnostics carry a `quickfix.pico-lsp.remove-unused` action.
+The action is also offered from the declaration itself when the diagnostic is
+disabled. It is executed through the `pico8.removeUnused` confirmation command
+and is refused for impure initializers or unresolved same-name uses. See
+[api.md](api.md) for all refactor kinds.
+
 ## Suppression
 
 Type and PICO-8 lint diagnostics can be suppressed with LuaCATS directives:

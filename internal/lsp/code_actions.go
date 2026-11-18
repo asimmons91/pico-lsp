@@ -22,7 +22,7 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 		return []protocol.CommandOrCodeAction{}, nil
 	}
 	nav, ok := s.navigationFor(ctx, params.TextDocument.URI)
-	if !ok || nav.file == nil || nav.file.Index == nil {
+	if !ok || nav.file == nil || nav.file.Index == nil || !s.snapshotFresh(nav) {
 		return []protocol.CommandOrCodeAction{}, nil
 	}
 	var actions []protocol.CommandOrCodeAction
@@ -44,6 +44,12 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 		}
 		if action := s.createMissingIncludeAction(nav, diag); action != nil {
 			actions = append(actions, action)
+		}
+	}
+	if s.cfg.Settings().Refactors.Enabled {
+		start, end, err := nav.file.Index.RangeOffsets(params.Range)
+		if err == nil {
+			actions = append(actions, s.refactorActions(nav, params.Context.Diagnostics, start, end)...)
 		}
 	}
 	return filterCodeActions(actions, params.Context.Only), nil

@@ -1,6 +1,6 @@
 # M14 — Refactors and Code Actions
 
-**Status:** Planned  
+**Status:** Done  
 **Depends on:** M13  
 **Release target:** v1.2.0 (batched with M11–M13)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -102,15 +102,43 @@ the missing fields.
 - Performance check: code-action requests on a 64 KB cart stay within the
   editor-request budget.
 
+## Implementation notes
+
+- The transforms live in `internal/refactor`; the LSP layer only converts their
+  edits into `WorkspaceEdit`s and exposes the confirmation command.
+- `pico8.refactors.enabled` (default `true`) disables every M14 action without
+  affecting rename, formatting, or the existing M5 actions.
+- Remove-unused is the only action returned without an embedded edit. Its code
+  action carries `pico8.removeUnused`; executing that command re-validates the
+  symbol against fresh analysis and sends a standard `workspace/applyEdit`.
+- Extract-function targets a single expression or statement, refuses writes to
+  captured locals, nested functions, varargs, labels/goto/break/return, and
+  multi-value call contexts. Captured locals become parameters.
+- Global-to-local only prefixes the first declaration and refuses cross-file
+  uses, earlier function references, lifecycle callbacks, and unresolved
+  same-name occurrences.
+- Generate-class uses the assignment target as the class name. Identifier
+  fields use inferred/annotated types; string-key identifier fields are emitted
+  as `any`; array and dynamic keys are omitted. An existing class with the same
+  name suppresses the action.
+- Add-missing-fields only records fixes for `(exact)` classes. It inserts
+  missing fields into the flagged table literal with a type-appropriate
+  placeholder and never edits open classes.
+- Shorthand conversion only accepts single-statement bodies, refuses comments
+  and multi-line bodies, and caps generated lines at 120 columns. A next-line
+  `else` remains attached to its outer standard `if`.
+- Every action is refused when any open file in the analyzed snapshot differs
+  from the snapshot text.
+
 ## Exit criteria
 
-- [ ] The listed refactors and quick fixes are available and previewable.
-- [ ] Unsafe transformations are refused with no partial edits.
-- [ ] Include order is never mutated by a refactor.
-- [ ] Workspace edits use original source coordinates across includes/tabs.
-- [ ] Tests cover eligibility, refusals, and editor e2e behavior.
-- [ ] Documentation, configuration, and diagnostic references are updated.
-- [ ] Existing v1/v1.1 behavior and performance budgets do not regress.
+- [x] The listed refactors and quick fixes are available and previewable.
+- [x] Unsafe transformations are refused with no partial edits.
+- [x] Include order is never mutated by a refactor.
+- [x] Workspace edits use original source coordinates across includes/tabs.
+- [x] Tests cover eligibility, refusals, and editor e2e behavior.
+- [x] Documentation, configuration, and diagnostic references are updated.
+- [x] Existing v1/v1.1 behavior and performance budgets do not regress.
 
 ## Risks and mitigations
 
