@@ -95,6 +95,30 @@ func trimRefactorRange(text string, start, end int) (int, int) {
 	for end > start && isRefactorSpace(text[end-1]) {
 		end--
 	}
+	if start == end {
+		// A cursor in leading indentation should target the line's first token.
+		lineStart := start
+		for lineStart > 0 && text[lineStart-1] != '\n' && text[lineStart-1] != '\r' {
+			lineStart--
+		}
+		indented := true
+		for i := lineStart; i < start; i++ {
+			if !isRefactorSpace(text[i]) {
+				indented = false
+				break
+			}
+		}
+		if indented {
+			lineEnd := start
+			for lineEnd < len(text) && text[lineEnd] != '\n' && text[lineEnd] != '\r' {
+				lineEnd++
+			}
+			for start < lineEnd && isRefactorSpace(text[start]) {
+				start++
+			}
+			end = start
+		}
+	}
 	return start, end
 }
 
