@@ -14,6 +14,7 @@ export async function extractServerBinary(
 
   if (target.archive === 'tar.gz') {
     let found = false;
+    let unsafePath: string | undefined;
     await tar.t({
       file: archivePath,
       onentry: (entry) => {
@@ -22,10 +23,13 @@ export async function extractServerBinary(
           found = true;
         }
         if (isUnsafePath(entry.path)) {
-          throw new Error(`unsafe path in server archive: ${entry.path}`);
+          unsafePath = entry.path;
         }
       }
     });
+    if (unsafePath) {
+      throw new Error(`unsafe path in server archive: ${unsafePath}`);
+    }
     if (!found) {
       throw new Error(`server archive does not contain ${target.binary}`);
     }
@@ -68,5 +72,9 @@ export function normalizeArchivePath(entryPath: string): string {
 
 function isUnsafePath(entryPath: string): boolean {
   const normalized = normalizeArchivePath(entryPath);
-  return normalized.startsWith('/') || normalized.split('/').includes('..');
+  return (
+    normalized.startsWith('/') ||
+    /^[A-Za-z]:/.test(normalized) ||
+    normalized.split('/').includes('..')
+  );
 }
