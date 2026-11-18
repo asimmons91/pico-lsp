@@ -125,7 +125,10 @@ The schema for this milestone:
 - Each entry has exactly one of `byte`, `glyph`, or `text`. Field presence, not
   a zero value, distinguishes `byte: 0` from an omitted field.
 - `byte` is authoritative for custom font slots; the server inserts the
-  canonical Unicode spelling for that byte.
+  canonical Unicode spelling for that byte. Byte entries must be printable
+  P8SCII values (`0x10`–`0xff`).
+- Control codes `0x00`–`0x0f` must use a `text` entry with
+  `"context": "string"`, not a `byte` entry.
 - `glyph` is accepted only when it encodes to one P8SCII byte.
 - `text` is intended for control-code escapes and must set
   `"context": "string"` so it is offered only in strings. Glyph and byte entries
@@ -179,13 +182,16 @@ The schema for this milestone:
 ### Picker and command
 
 - Add a custom request `pico8/glyphs`:
-  - accepts an optional `textDocument.uri` for document context and future
-    per-cart definitions;
+  - accepts optional `textDocument.uri` and `position` so clients can request
+    context-appropriate entries and future per-cart definitions;
+  - when a position is supplied, filters out string-only entries outside a
+    string and returns each entry's `context`;
   - returns a stable JSON list of entries with `name`, `aliases`, `text`,
     `byte`, `category`, `description`, and `context`.
 - Add `pico8.insertGlyph` to `workspace/executeCommand`:
   - accepts `textDocument`, `position`, and exactly one of `name` or `byte`;
   - validates the document is open and editable;
+  - rejects a string-only entry when the position is not inside a string;
   - replaces a `p8_` or `p8-` trigger immediately before the cursor when
     present, otherwise inserts at the cursor;
   - refuses read-only `.p8.png` virtual documents;
@@ -198,12 +204,13 @@ The schema for this milestone:
 ### Editor integration
 
 - **VS Code:** contribute `pico8.client.insertGlyph` in `contributes.commands`
-  and `activationEvents`. It requests `pico8/glyphs`, shows a Quick Pick with
-  `matchOnDescription` and `matchOnDetail`, and invokes `pico8.insertGlyph`.
-  Provide an optional keybinding placeholder but no default conflict-prone
-  shortcut.
+  and `activationEvents`. It requests `pico8/glyphs` with the active cursor
+  position, shows a Quick Pick with `matchOnDescription` and `matchOnDetail`,
+  and invokes `pico8.insertGlyph`. Provide an optional keybinding placeholder
+  but no default conflict-prone shortcut.
 - **Neovim:** add `:Pico8InsertGlyph` to the optional helper. Use
-  `vim.ui.select` and the standard LSP client; do not require Telescope.
+  `vim.ui.select`, pass the cursor position to `pico8/glyphs`, and use the
+  standard LSP client; do not require Telescope.
 - **Helix:** completion works through `textDocument/completion`. A native picker
   is out of scope until Helix exposes a suitable command UI.
 - **Static snippets:** do not ship hand-maintained per-editor glyph lists. If a
@@ -232,6 +239,7 @@ The schema for this milestone:
 - Configuration tests:
   - partial settings preserve defaults;
   - `byte`, `glyph`, and `text` forms work;
+  - control bytes without a string context are rejected;
   - invalid entries warn once and are skipped;
   - changes refresh completion and the picker without restart.
 - Completion e2e tests:
@@ -244,7 +252,9 @@ The schema for this milestone:
   - custom font slot insertion inserts the canonical stand-in glyph.
 - Command and picker tests:
   - `pico8/glyphs` response is stable and includes custom settings entries;
+  - a position-limited request filters string-only entries in code;
   - `pico8.insertGlyph` inserts at cursor and replaces a typed trigger;
+  - string-only entries are rejected outside strings;
   - invalid or missing arguments are rejected;
   - read-only `.p8.png` virtual documents are rejected;
   - `workspace/applyEdit` and fallback-result paths both work.
@@ -317,7 +327,7 @@ The schema for this milestone:
 
 ## Deferred follow-ups
 
-No open decisions remain for M16. These items are intentionally deferred:
+No scope decisions remain for M16. These items are intentionally deferred:
 
 - A per-cart glyph definition file that travels with the cart.
 - Named kana aliases and other catalog expansions.
