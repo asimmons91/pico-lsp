@@ -128,13 +128,41 @@ pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
 
 ## Syntax highlighting
 
-Add the runtime path as above. The included `ftdetect` sets `filetype=pico8`
-for `.p8` files and `syntax/pico8.vim` highlights sections, tab markers,
-comments, strings, numbers, dialect keywords, and operators.
+The repository ships an editor-oriented tree-sitter grammar at
+[../tree-sitter-pico8](../tree-sitter-pico8). It keeps the `pico8` language ID
+used by the server and adds highlighting for cart headers, sections, tab
+markers, dialect syntax, and non-code payloads.
 
-The syntax file is independent of the LSP and can be copied to
-`~/.config/nvim/syntax/` if you do not want the helper. LSP semantic tokens
-cover Lua code; the syntax file also highlights non-code `.p8` sections.
+Compile the committed parser and install the queries:
+
+```sh
+cd /path/to/pico-lsp/editors/tree-sitter-pico8
+mkdir -p ~/.local/share/nvim/site/parser
+cc -shared -fPIC -I src src/parser.c src/scanner.c \
+  -o ~/.local/share/nvim/site/parser/pico8.so
+
+mkdir -p ~/.local/share/nvim/site/queries/pico8
+cp queries/*.scm ~/.local/share/nvim/site/queries/pico8/
+```
+
+Start it for `.p8` buffers:
+
+```lua
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "pico8",
+  callback = function()
+    pcall(vim.treesitter.start, 0, "pico8")
+  end,
+})
+```
+
+The committed parser targets ABI 14 for current Neovim releases. See the
+grammar [README](../tree-sitter-pico8/README.md) for regeneration details.
+
+If you prefer not to compile a parser, the included `syntax/pico8.vim` remains
+a fallback. Add the runtime path as above; `ftdetect` sets `filetype=pico8` for
+`.p8` files. LSP semantic tokens cover Lua code, while the syntax file also
+highlights non-code `.p8` sections.
 
 ## Keymaps and cart budget
 

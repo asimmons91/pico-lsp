@@ -1,0 +1,33 @@
+==================
+Empty and unknown sections
+==================
+
+pico-8 cartridge // pico-8.com
+version 42
+__lua__
+__gfx__
+__unknown__
+opaque text
+__lua__
+? 1
+__gff__
+
+---
+
+(source_file
+  (cartridge_header)
+  (version_line)
+  (lua_section
+    (lua_section_header))
+  (data_section
+    (section_header))
+  (data_section
+    (section_header)
+    (section_payload))
+  (lua_section
+    (lua_section_header)
+    (lua_chunk
+      (print_statement
+        (number))))
+  (data_section
+    (section_header)))

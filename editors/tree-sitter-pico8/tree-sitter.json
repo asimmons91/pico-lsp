@@ -1,0 +1,26 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "pico8",
+      "scope": "source.pico8",
+      "path": ".",
+      "file-types": ["p8"],
+      "highlights": "queries/highlights.scm",
+      "injection-regex": "^(pico8|pico-8)$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "PICO-8 text cart grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "pico-lsp contributors"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/asimmons91/pico-lsp"
+    }
+  }
+}

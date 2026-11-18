@@ -121,6 +121,26 @@ jobs:
       - name: Build
         run: go build -trimpath ./cmd/pico-lsp
 
+  grammar:
+    name: tree-sitter grammar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Install tree-sitter 0.24.7
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL \
+            https://github.com/tree-sitter/tree-sitter/releases/download/v0.24.7/tree-sitter-linux-x64.gz \
+            | gunzip > "$HOME/.local/bin/tree-sitter"
+          chmod +x "$HOME/.local/bin/tree-sitter"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Test grammar
+        run: editors/tree-sitter-pico8/test.sh
+
   fuzz:
     name: short fuzz
     runs-on: ubuntu-latest

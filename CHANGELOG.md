@@ -12,6 +12,10 @@ All notable changes to this project are documented here. The format follows
   related includes and tabs, bounded `workspace/diagnostic` with partial
   results, deterministic result IDs, and `pico8.diagnostics.mode` for
   `auto`/`push`/`pull` transport selection.
+- An editor-oriented tree-sitter grammar for `.p8` carts under
+  `editors/tree-sitter-pico8/`, including committed ABI 14 parser sources,
+  highlight/indent/text-object queries, corpus tests, and Neovim/Helix setup
+  documentation. The grammar is highlighting-only and does not affect analysis.
 
 ### Changed
 

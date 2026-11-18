@@ -1,6 +1,6 @@
 # M12 — PICO-8 Tree-sitter Grammar
 
-**Status:** Planned  
+**Status:** Done
 **Depends on:** M11  
 **Release target:** v1.2.0 (batched with M11, M13, M14)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -83,13 +83,34 @@ section payloads remain visible but are not parsed as Lua.
 
 ## Exit criteria
 
-- [ ] The grammar parses the full corpus and every `.p8` section/tab form.
-- [ ] Highlight, indent, and text-object queries work in supported editors.
-- [ ] Non-code sections remain visible and are not parsed as Lua.
-- [ ] Generated parser sources and usage docs are committed.
-- [ ] Grammar CI and corpus/edge-case tests pass.
-- [ ] The server parser remains independent and unchanged.
-- [ ] Existing server tests and performance budgets do not regress.
+- [x] The grammar parses the full corpus and every `.p8` section/tab form.
+- [x] Highlight, indent, and text-object queries work in supported editors.
+- [x] Non-code sections remain visible and are not parsed as Lua.
+- [x] Generated parser sources and usage docs are committed.
+- [x] Grammar CI and corpus/edge-case tests pass.
+- [x] The server parser remains independent and unchanged.
+- [x] Existing server tests and performance budgets do not regress.
+
+## Implementation notes
+
+- The grammar is derived from MIT-licensed `tree-sitter-lua` by Munif Tanjim
+  and recorded in `editors/tree-sitter-pico8/LICENSE.tree-sitter-lua`.
+- The committed parser is generated with tree-sitter CLI 0.24.7 and targets
+  ABI 14 for current Neovim and Helix releases. `test.sh` rejects a different
+  CLI series.
+- Cart sections and tab markers are explicit nodes. Section headers are
+  line-start external tokens; non-code payloads use an opaque line token and
+  are never parsed as Lua.
+- PICO-8 additions include `//` comments, `?` printing, line-bounded shorthand
+  `if`/`while`, compound assignment operators, integer division, bit
+  operations, unary peeks, hex/binary numbers, and P8SCII string escapes.
+  Shorthand and print statements consume their line terminator so a following
+  line cannot attach to the expression or to an `else` branch.
+- `editors/tree-sitter-pico8/test.sh` runs generation, checks generated sources
+  are current, runs corpus tests, validates queries, parses every `.p8` under
+  `testdata/`, and checks truncated carts for hangs or crashes.
+- CI adds a dedicated `tree-sitter grammar` job. Edits under `internal/` are
+  deliberately not required: analysis still uses the hand-written lexer/parser.
 
 ## Risks and mitigations
 

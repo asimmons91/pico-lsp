@@ -1,0 +1,227 @@
+==================
+PICO-8 dialect forms
+==================
+
+pico-8 cartridge // pico-8.com
+version 42
+__lua__
+-- dash comment
+--[[ block
+comment ]]
+// slash comment
+local n = 0x1f + 0b101 + .5 + 1e3
+t = { x = 1, ["y"] = 2 }
+if (n > 1) n += 1 else n = 2
+while (n < 10) n += 1
+? "print", n
+n -= 1
+n *= 2
+n /= 3
+n \= 2
+n %= 5
+n ^= 2
+n ..= "!"
+n &= 7
+n |= 8
+n ^^= 15
+n <<= 1
+n >>= 1
+n >>>= 1
+n <<>= 1
+n >><= 1
+a = @0x5f00 + %0x5f02 + $0x5f04
+b = 7 \ 2
+c = 1 <<> 2
+d = 2 >>< 1
+e = 4 >>> 1
+f = 1 ^^ 3
+
+---
+
+(source_file
+  (cartridge_header)
+  (version_line)
+  (lua_section
+    (lua_section_header)
+    (comment
+      (comment_content))
+    (comment
+      (comment_content))
+    (comment)
+    (lua_chunk
+      (variable_declaration
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (binary_expression
+              (binary_expression
+                (binary_expression
+                  (number)
+                  (number))
+                (number))
+              (number)))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (table_constructor
+            (field
+              (identifier)
+              (number))
+            (field
+              (string
+                (string_content))
+              (number)))))
+      (shorthand_if_statement
+        (parenthesized_expression
+          (binary_expression
+            (identifier)
+            (number)))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number)))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number))))
+      (shorthand_while_statement
+        (parenthesized_expression
+          (binary_expression
+            (identifier)
+            (number)))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number))))
+      (print_statement
+        (string
+          (string_content))
+        (identifier))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (binary_expression
+              (unary_expression
+                (number))
+              (unary_expression
+                (number)))
+            (unary_expression
+              (number)))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (number)
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (number)
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (number)
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (number)
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (binary_expression
+            (number)
+            (number)))))))
