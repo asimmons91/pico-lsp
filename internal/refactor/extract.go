@@ -114,6 +114,10 @@ func ExtractFunction(ctx *Context, start, end int) *Action {
 		return nil
 	}
 	insertOffset = lineStart
+	if docStart := ctx.docBlockStart(anchor.Span().Start); docStart >= 0 && docStart < insertOffset {
+		// Keep the existing doc block attached to the original statement.
+		insertOffset = docStart
+	}
 	indent := ctx.indentAt(insertOffset)
 
 	name := extractedName(ctx)

@@ -111,6 +111,21 @@ func TestExtractFunctionStatement(t *testing.T) {
 	}
 }
 
+func TestExtractFunctionKeepsDocsOnOriginalStatement(t *testing.T) {
+	text := "---@type number\nlocal value = a + b\n"
+	ctx := testContext(t, text)
+	start := offsetOf(t, text, "a + b")
+	action := ExtractFunction(ctx, start, start+len("a + b"))
+	if action == nil {
+		t.Fatal("extract returned nil")
+	}
+	out := applyEdits(t, text, action.Edits)
+	want := "local function extracted()\n  return a + b\nend\n---@type number\nlocal value = extracted()\n"
+	if out != want {
+		t.Fatalf("result = %q, want %q", out, want)
+	}
+}
+
 func TestExtractFunctionRefusesWriteToCapture(t *testing.T) {
 	text := "local x = 0\nx = x + 1\n"
 	ctx := testContext(t, text)
@@ -385,6 +400,22 @@ func TestRemoveUnused(t *testing.T) {
 		t.Fatalf("result still contains unused declaration: %q", out)
 	}
 	if !strings.Contains(out, "local used = 1") || !strings.Contains(out, "print(used)") {
+		t.Fatalf("result changed unrelated code: %q", out)
+	}
+}
+
+func TestRemoveUnusedRemovesAttachedDocs(t *testing.T) {
+	text := "---@type number\nlocal unused = 1\nlocal used = 2\nprint(used)\n"
+	ctx := testContext(t, text)
+	action := RemoveUnused(ctx, offsetOf(t, text, "unused"))
+	if action == nil {
+		t.Fatal("remove unused returned nil")
+	}
+	out := applyEdits(t, text, action.Edits)
+	if strings.Contains(out, "---@type number") || strings.Contains(out, "unused") {
+		t.Fatalf("result kept the removed declaration's docs: %q", out)
+	}
+	if !strings.Contains(out, "local used = 2") {
 		t.Fatalf("result changed unrelated code: %q", out)
 	}
 }

@@ -72,6 +72,16 @@ func RemoveUnused(ctx *Context, offset int) *Action {
 	if !ok {
 		return nil
 	}
+	if docStart := ctx.docBlockStart(stmt.Span().Start); docStart >= 0 && docStart < start {
+		block := ctx.currentText()[docStart:start]
+		if strings.Contains(block, "---@class") || strings.Contains(block, "---@alias") ||
+			strings.Contains(block, "---@enum") {
+			// Type declarations may be referenced elsewhere even when the
+			// variable itself is unused.
+			return nil
+		}
+		start = docStart
+	}
 	lineEnd := ctx.lineEnd(stmt.Span().End)
 	if strings.TrimSpace(ctx.currentText()[stmt.Span().End:lineEnd]) != "" {
 		return nil
