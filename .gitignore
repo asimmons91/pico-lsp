@@ -4,3 +4,4 @@ coverage.out
 coverage.html
 /pico-lsp.exe
 /pico-lsp-vscode-*.vsix
+/pico-lsp-vscode-*.vsix.sha256
