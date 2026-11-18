@@ -1,6 +1,6 @@
 // Package p8scii maps between PICO-8's 256-character P8SCII encoding and
 // Unicode strings. The mapping follows PICO-8 0.2.7's charset and matches
-// shrinko8's k_charset.
+// shrinko8's k_charset (MIT, thisismypassport).
 package p8scii
 
 import "unicode/utf8"

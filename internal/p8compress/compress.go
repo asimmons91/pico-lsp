@@ -300,7 +300,7 @@ func (c *compressor) findRepeatableBlock(pos int) (blockOffset, blockLen, scoreO
 
 func (c *compressor) findRepeatableBlockUncached(pos int) (blockOffset, blockLen, scoreOut int) {
 	maxLen := len(c.in) - pos
-	if maxLen < minBlockLen || maxHistoryLen < minBlockLen {
+	if maxLen < minBlockLen {
 		return 0, 0, -1
 	}
 	hash := miniHash(c.in, pos)
