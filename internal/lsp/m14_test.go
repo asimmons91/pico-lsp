@@ -124,6 +124,11 @@ func TestM14IncludedFileEditsStayInOriginalFile(t *testing.T) {
 	if len(local.Edit.Changes) != 1 || len(local.Edit.Changes[lib]) != 1 {
 		t.Fatalf("local edit = %+v", local.Edit)
 	}
+	edit := local.Edit.Changes[lib][0]
+	if edit.Range.Start != (protocol.Position{Line: 0, Character: 0}) ||
+		edit.Range.End != (protocol.Position{Line: 0, Character: 0}) || edit.NewText != "local " {
+		t.Fatalf("local edit = %+v", edit)
+	}
 	if _, ok := local.Edit.Changes[root]; ok {
 		t.Fatalf("local edit touched the cart: %+v", local.Edit)
 	}

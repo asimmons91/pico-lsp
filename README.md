@@ -134,6 +134,9 @@ The server reads the `pico8` configuration section from
       "mode": "auto",
       "undefinedGlobal": "warning",
       "unusedLocal": "off"
+    },
+    "refactors": {
+      "enabled": true
     }
   }
 }
