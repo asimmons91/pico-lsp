@@ -1,0 +1,67 @@
+==================
+Shorthand and print are line bounded
+==================
+
+pico-8 cartridge // pico-8.com
+version 42
+__lua__
+? 1
+f()
+if (x) y=1 else y=2
+if (x) y=3
+z=4
+while (x) x+=1
+w=5
+
+---
+
+(source_file
+  (cartridge_header)
+  (version_line)
+  (lua_section
+    (lua_section_header)
+    (lua_chunk
+      (print_statement
+        (number))
+      (function_call
+        (identifier)
+        (arguments))
+      (shorthand_if_statement
+        (parenthesized_expression
+          (identifier))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number)))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number))))
+      (shorthand_if_statement
+        (parenthesized_expression
+          (identifier))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (shorthand_while_statement
+        (parenthesized_expression
+          (identifier))
+        (assignment_statement
+          (variable_list
+            (identifier))
+          (expression_list
+            (number))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number))))))

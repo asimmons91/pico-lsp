@@ -68,8 +68,9 @@ See [../../docs/configuration.md](../../docs/configuration.md) for every setting
    hx --health pico8
    ```
 
-   The configured language server should be listed without an error. A missing
-   tree-sitter grammar is expected in v1; the LSP still attaches.
+   The configured language server should be listed without an error. If you
+   have not installed the optional tree-sitter grammar, plain highlighting is
+   expected; the LSP still attaches.
 
 2. Open the test cart:
 
@@ -110,9 +111,31 @@ If you attach Helix to `.lua` buffers in a PICO-8 project, avoid running
 
 ## Syntax highlighting
 
-v1 does not ship a PICO-8 tree-sitter grammar. LSP semantic tokens cover Lua
-code, but non-code `.p8` sections (`__gfx__`, `__map__`, `__sfx__`, and so on)
-do not have full syntax highlighting in Helix. A grammar is post-v1 work.
+The repository ships an editor-oriented tree-sitter grammar at
+[../tree-sitter-pico8](../tree-sitter-pico8). It highlights cart headers,
+section names, tab markers, Lua code, PICO-8 dialect forms, and non-code
+payloads without changing the `pico8` language ID or the server contract.
+
+Add the grammar to `~/.config/helix/languages.toml` (use an absolute path):
+
+```toml
+[[grammar]]
+name = "pico8"
+source = { path = "/absolute/path/to/pico-lsp/editors/tree-sitter-pico8" }
+```
+
+Then add `grammar = "pico8"` to the `[[language]]` entry and run:
+
+```sh
+hx --grammar build
+hx --health pico8
+```
+
+The committed parser targets ABI 14 for current Helix releases. If your Helix
+build does not load it, see the grammar's
+[README](../tree-sitter-pico8/README.md) for regeneration notes. Without the
+grammar, the LSP still attaches and semantic tokens continue to highlight Lua
+code; non-code sections fall back to plain text.
 
 ## Troubleshooting
 

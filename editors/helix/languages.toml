@@ -7,3 +7,10 @@ scope = "source.pico8"
 file-types = ["p8"]
 comment-token = "--"
 language-servers = ["pico-lsp"]
+
+# Optional tree-sitter highlighting. Uncomment after installing the grammar
+# from editors/tree-sitter-pico8 and add `grammar = "pico8"` to the language
+# entry above.
+# [[grammar]]
+# name = "pico8"
+# source = { path = "/absolute/path/to/pico-lsp/editors/tree-sitter-pico8" }

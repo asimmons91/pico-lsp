@@ -1,0 +1,74 @@
+==================
+Strings comments and escapes
+==================
+
+pico-8 cartridge // pico-8.com
+version 42
+__lua__
+s = "quote \" backslash \\ \^ \# \*"
+q = 'single \' quote'
+long = [[a long
+string with -- // and __gfx__ inside]]
+nested = [==[level two ]=] still inside]==]
+--[==[ long comment
+with __lua__ inside ]==]
+// line comment with __gfx__ inside
+x = 1 -- trailing comment
+continued = "one\
+two"
+
+---
+
+(source_file
+  (cartridge_header)
+  (version_line)
+  (lua_section
+    (lua_section_header)
+    (lua_chunk
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content
+              (escape_sequence)
+              (escape_sequence)
+              (escape_sequence)
+              (escape_sequence)
+              (escape_sequence)))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content
+              (escape_sequence)))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content))))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content))))
+      (comment
+        (comment_content))
+      (comment)
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (comment
+        (comment_content))
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (string
+            (string_content
+              (escape_sequence))))))))

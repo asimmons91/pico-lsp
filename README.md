@@ -36,6 +36,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   flow-aware type inference with `off`, `basic`, and `strict` checking.
 - AST-guided `textDocument/formatting` that preserves shorthand, comments,
   annotations, includes, and non-code cart sections.
+- An editor-oriented tree-sitter grammar for `.p8` carts, with committed ABI 14
+  parser sources, highlight/indent/text-object queries, and Neovim/Helix setup
+  docs. It is highlighting-only and never used by analysis.
 - Read-only `.p8.png` support through a decoded virtual document, `:Pico8OpenPng`
   in Neovim, and the `pico-lsp decode` CLI command.
 - Cart token/character budget code lens, `pico8/cartInfo`, and limit warnings.
@@ -162,6 +165,7 @@ go vet ./...
 golangci-lint run ./...
 govulncheck ./...
 CGO_ENABLED=0 go build -o pico-lsp ./cmd/pico-lsp
+editors/tree-sitter-pico8/test.sh
 ```
 
 Release packaging is validated with:

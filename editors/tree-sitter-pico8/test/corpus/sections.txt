@@ -1,0 +1,75 @@
+==================
+All cartridge sections and tabs
+==================
+
+pico-8 cartridge // pico-8.com
+version 42
+__lua__
+x = 1
+-->8 second tab
+y = 2
+-->8
+z = 3
+__gfx__
+0000000000000000
+1111111111111111
+__gff__
+00010203
+__label__
+hello label
+second line
+__map__
+00010203
+__sfx__
+0001000000000000000000000000000000000000
+__music__
+00 41424344
+__custom__
+opaque payload with -- "quotes" and __not_a_header__
+
+---
+
+(source_file
+  (cartridge_header)
+  (version_line)
+  (lua_section
+    (lua_section_header)
+    (lua_chunk
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (tab_marker)
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))
+      (tab_marker)
+      (assignment_statement
+        (variable_list
+          (identifier))
+        (expression_list
+          (number)))))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload))
+  (data_section
+    (section_header)
+    (section_payload)))
