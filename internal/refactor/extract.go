@@ -295,9 +295,11 @@ func extractedName(ctx *Context) string {
 			used[sym.Canonical] = true
 		}
 	}
-	for _, occ := range ctx.Result.Occurrences(ctx.FileID) {
-		if occ.Text != "" {
-			used[analysis.CanonicalName(occ.Text)] = true
+	for _, file := range ctx.Snap.Cart.Files {
+		for _, occ := range ctx.Result.Occurrences(file.ID) {
+			if occ.Text != "" {
+				used[analysis.CanonicalName(occ.Text)] = true
+			}
 		}
 	}
 	base := "extracted"
