@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-18
+
 ### Added
 
 - LSP 3.17 pull diagnostics: `textDocument/diagnostic` full/unchanged reports,
@@ -32,8 +34,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
-- Ship M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar, compressed
-  size budgets, and conservative refactors — as a batched v1.2.0 release.
+- Shipped M11–M14 — pull diagnostics, the PICO-8 tree-sitter grammar,
+  compressed size budgets, and conservative refactors — as v1.2.0. The release
+  is backward compatible with v1.1.0.
 
 ### Fixed
 
@@ -120,6 +123,7 @@ All notable changes to this project are documented here. The format follows
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.2.0
 [1.1.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.1.0
 [1.0.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.0.0
