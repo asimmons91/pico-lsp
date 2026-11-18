@@ -208,6 +208,9 @@ The server reads configuration from the `pico8` section via `workspace/configura
     },
     "lint": {
       "apiRanges": false
+    },
+    "refactors": {
+      "enabled": true
     }
   }
 }
