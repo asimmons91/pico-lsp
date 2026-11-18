@@ -91,9 +91,10 @@ release:
     # Linux/macOS: download the matching archive from this release, verify
     # checksums.txt, and place pico-lsp on PATH.
     # Windows: use the .zip archive.
+    # VS Code: install pico-lsp-vscode-<version>.vsix from this release.
     # Developers: go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@{{ .Tag }}
     ```
 
     Release binaries are unsigned. See the installation and troubleshooting
     documentation in the repository. Homebrew and Mason packaging are deferred
-    to post-v1.
+    to post-v1; Marketplace and Open VSX publishing are follow-ups.

@@ -93,5 +93,21 @@ document in both transports.
 Settings changes are applied without restarting the server. Open carts are
 re-analyzed and diagnostics are republished.
 
+## VS Code extension settings
+
+The VS Code client reads four extension-owned settings. They are not sent to
+the language server as behavior settings.
+
+| Setting | Type | Default | Scope | Meaning |
+|---|---|---|---|---|
+| `pico8.serverPath` | string | `""` | machine | Absolute path to a `pico-lsp` executable. Disables automatic download. |
+| `pico8.autoDownload` | boolean | `true` | window | Download the checksummed server matching the extension version when it is not cached. |
+| `pico8.attachLua` | boolean | `true` | window | Attach to all `.lua` files in workspace folders that contain a `.p8` cart. |
+| `pico8.trace.server` | `off`, `messages`, `verbose` | `off` | window | LSP trace level in the **PICO-8 Language Server Trace** channel. |
+
+All other `pico8.*` settings are server settings documented above and are still
+forwarded through `workspace/configuration` and
+`initializationOptions.pico8`.
+
 See [diagnostics.md](diagnostics.md) for the complete code list and
 [api.md](api.md) for `pico8/cartInfo` and `pico8.showCartInfo`.

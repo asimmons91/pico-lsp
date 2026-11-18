@@ -59,6 +59,16 @@ publishing are deferred to post-v1. The current release is **v1.2.0**.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, formatter, `.p8.png`,
       VS Code, and Zed work as needed.
 
+## VS Code extension (v1.3.0+)
+
+- [ ] `editors/vscode/package.json` version matches the release tag.
+- [ ] `npm ci`, lint, typecheck, unit tests, and integration tests pass.
+- [ ] `pico-lsp-vscode-<version>.vsix` builds and contains no extension source.
+- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [ ] Install the VSIX on Linux, macOS, and Windows local desktop VS Code.
+- [ ] First-run download, checksum failure, offline `serverPath`, and restart
+      paths work.
+
 ## Rollback
 
 If a release is broken:

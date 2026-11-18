@@ -139,6 +139,25 @@ can ask for confirmation; an impure initializer (such as a function call) blocks
 removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
 [api.md](api.md) for the action kinds.
 
+## VS Code extension
+
+The VS Code client downloads the server version matching its own version from
+the GitHub release and verifies SHA-256. If first-run download fails, check the
+proxy settings (`http.proxy` and `http.proxyStrictSSL`), configure
+`pico8.serverPath`, or use **PICO-8: Clear Downloaded Server Cache** before
+retrying. Use **PICO-8: Show Language Server Output** for download and process
+errors.
+
+The extension attaches to `.p8` files and to all `.lua` files in workspace
+folders that contain a `.p8` cart. Disable another Lua language server for those
+folders to avoid duplicate diagnostics. `.lua` files outside PICO-8 workspaces
+are intentionally not attached.
+
+The VS Code client supports local desktop windows only. Remote SSH, WSL, Dev
+Containers, Codespaces, web extension hosts, and read-only `.p8.png` virtual
+documents are not supported in the current release. Marketplace and Open VSX
+publishing are follow-ups; install the VSIX from the GitHub release.
+
 ## Logs and stdout
 
 Routine logs go to stderr or the `--log-file` path. The server never writes to

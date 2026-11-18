@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- VS Code client (M15): a TypeScript extension with a contributed `pico8`
+  language and TextMate grammar, checksum-verified matching `pico-lsp` server
+  downloads, `.p8` and PICO-8-workspace `.lua` attachment, cart-budget status
+  bar, command palette actions, and a `pico-lsp-vscode-<version>.vsix` release
+  asset. Marketplace/Open VSX publishing, remote/web hosts, and `.p8.png`
+  virtual documents remain follow-ups.
+
 ## [1.2.0] - 2026-11-18
 
 ### Added

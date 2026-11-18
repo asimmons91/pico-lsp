@@ -1,6 +1,7 @@
 # M15 — VS Code Client
 
-**Status:** Planned  
+**Status:** In progress — implementation complete; release verification pending.
+
 **Depends on:** M14  
 **Release target:** v1.3.0  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -37,6 +38,8 @@ These decisions were confirmed before the spec was written:
 - M15 supports local desktop VS Code only. Remote extension hosts and web
   extension hosts are out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
+- Node.js 24.21.0 is pinned in `mise.toml`; the extension declares VS Code
+  `^1.95.0` and integration tests run against that minimum version.
 
 ## Scope
 
@@ -257,10 +260,15 @@ Contribute:
 
 | Command | Behavior |
 |---|---|
-| `pico8.showCartInfo` | Call the server's `pico8.showCartInfo` command for the active cart; show the summary in the editor. |
-| `pico8.restartServer` | Restart the language client without reloading VS Code. |
-| `pico8.showOutput` | Reveal the **PICO-8 Language Server** output channel. |
-| `pico8.clearServerCache` | Confirm and delete cached server binaries for this extension version. |
+| `pico8.client.showCartInfo` | Call the server's `pico8.showCartInfo` command for the active cart; show the summary in the editor. |
+| `pico8.client.restartServer` | Restart the language client without reloading VS Code. |
+| `pico8.client.showOutput` | Reveal the **PICO-8 Language Server** output channel. |
+| `pico8.client.clearServerCache` | Confirm and delete cached server binaries for this extension version. |
+
+Extension command IDs use the `pico8.client.*` namespace because
+`vscode-languageclient` automatically registers server-declared commands such as
+`pico8.showCartInfo`. Keep the wrapper commands distinct so registering the
+client never collides with the server command table.
 
 Commands must report a clear error when no server is running or the active
 editor is not part of a cart.
@@ -281,7 +289,7 @@ editor is not part of a cart.
 - Refresh on active-editor changes, debounced document changes (250–500 ms),
   saves, and server reconnection.
 - Cancel superseded requests when the active editor or version changes.
-- Clicking the item runs `pico8.showCartInfo`.
+- Clicking the item runs `pico8.client.showCartInfo`.
 - If the server returns `cart-not-found` or the document is a `.p8.png`, hide
   the item.
 
@@ -302,7 +310,7 @@ The server's existing `pico8.*` settings remain authoritative in
 server settings. Extension-only keys are ignored by the server.
 
 Changing `pico8.serverPath`, `pico8.autoDownload`, or `pico8.attachLua` prompts
-or offers a restart through `pico8.restartServer`; the extension must not leave a
+or offers a restart through `pico8.client.restartServer`; the extension must not leave a
 client running against a removed or replaced binary.
 
 ## Security and trust

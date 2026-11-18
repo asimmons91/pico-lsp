@@ -1,0 +1,148 @@
+{
+  "name": "pico-lsp",
+  "displayName": "PICO-8",
+  "description": "PICO-8 language support powered by pico-lsp",
+  "version": "1.3.0",
+  "publisher": "asimmons91",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/asimmons91/pico-lsp.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters"
+  ],
+  "keywords": [
+    "pico-8",
+    "pico8",
+    "lua",
+    "language-server",
+    "lsp"
+  ],
+  "activationEvents": [
+    "onLanguage:pico8",
+    "workspaceContains:**/*.p8",
+    "onCommand:pico8.client.showCartInfo",
+    "onCommand:pico8.client.restartServer",
+    "onCommand:pico8.client.showOutput",
+    "onCommand:pico8.client.clearServerCache"
+  ],
+  "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "pico8",
+        "aliases": [
+          "PICO-8",
+          "PICO-8 Cart"
+        ],
+        "extensions": [
+          ".p8"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pico8",
+        "scopeName": "source.pico8",
+        "path": "./syntaxes/pico8.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "pico8.client.showCartInfo",
+        "title": "PICO-8: Show Cart Info"
+      },
+      {
+        "command": "pico8.client.restartServer",
+        "title": "PICO-8: Restart Language Server"
+      },
+      {
+        "command": "pico8.client.showOutput",
+        "title": "PICO-8: Show Language Server Output"
+      },
+      {
+        "command": "pico8.client.clearServerCache",
+        "title": "PICO-8: Clear Downloaded Server Cache"
+      }
+    ],
+    "configuration": {
+      "title": "PICO-8",
+      "properties": {
+        "pico8.serverPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Absolute path to a `pico-lsp` executable. When set, the extension does not download a server."
+        },
+        "pico8.autoDownload": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Download the matching checksummed pico-lsp release when no cached server is available."
+        },
+        "pico8.attachLua": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Attach pico-lsp to all .lua files in workspace folders that contain a .p8 cart."
+        },
+        "pico8.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "scope": "window",
+          "description": "Trace communication between VS Code and pico-lsp."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "build:test": "node scripts/build-test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test:unit": "vitest run",
+    "test:integration": "npm run build && npm run build:test && tsx test/integration/run.ts",
+    "package": "node scripts/package.mjs"
+  },
+  "dependencies": {
+    "adm-zip": "^0.6.1",
+    "tar": "^7.5.23",
+    "undici": "^6.29.1",
+    "vscode-jsonrpc": "^10.0.0",
+    "vscode-languageclient": "^11.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "1.95.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.1.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vitest": "^5.1.1"
+  }
+}

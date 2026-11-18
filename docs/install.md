@@ -14,6 +14,27 @@ developers. Homebrew and Mason packaging are deferred to post-v1.
 
 Every release also publishes `checksums.txt` with SHA-256 hashes.
 
+## VS Code
+
+The VS Code extension is distributed as `pico-lsp-vscode-<version>.vsix` with a
+`.vsix.sha256` checksum. Marketplace and Open VSX publishing are follow-ups.
+
+1. Download both files from the matching
+   [GitHub release](https://github.com/asimmons91/pico-lsp/releases).
+2. Verify the VSIX:
+
+   ```sh
+   sha256sum -c pico-lsp-vscode-<version>.vsix.sha256
+   ```
+
+3. In VS Code, open **Extensions**, select **...**, and choose
+   **Install from VSIX...**.
+4. Open a folder containing a `.p8` cart. The extension downloads the matching
+   server version on first use, or use `pico8.serverPath` for a manual install.
+
+See [../editors/vscode/README.md](../editors/vscode/README.md) for extension
+settings, Lua attachment behavior, and limitations.
+
 ## Download a release
 
 Set `VERSION` to the release without the leading `v` (for example `1.2.0`) and

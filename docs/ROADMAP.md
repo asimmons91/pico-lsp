@@ -72,11 +72,11 @@ These decisions were made before milestone specs were written. Changing one requ
 | M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Done |
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
-| M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Planned |
+| M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | In progress |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**
-in the order shown. M15 is planned for **v1.3.0**; each milestone is
-independently mergeable, and the release is cut only after its exit criteria
+in the order shown. M15 implementation is complete and awaiting release
+verification for **v1.3.0**; the release is cut only after its exit criteria
 pass.
 
 Each milestone has a detailed spec:
