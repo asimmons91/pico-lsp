@@ -54,7 +54,8 @@ func GenerateClass(ctx *Context, offset int) *Action {
 	if name == "" {
 		return nil
 	}
-	if ctx.Result.Classes[analysis.CanonicalName(name)] != nil {
+	canonical := analysis.CanonicalName(name)
+	if ctx.Result.Classes[canonical] != nil || ctx.Result.Aliases[canonical] != nil || ctx.Result.Enums[canonical] != nil {
 		return nil
 	}
 
