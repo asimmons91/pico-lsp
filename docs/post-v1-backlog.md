@@ -24,6 +24,11 @@ The following backlog items have been promoted and split into milestone specs:
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, and M15 in v1.3.0. The items
 below are not part of those releases.
 
+## Draft milestone specs
+
+- [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md) — draft; scope
+  decisions are confirmed, but the milestone is not yet committed to a release.
+
 ## Prioritization
 
 | Priority | Item | Value | Risk |
