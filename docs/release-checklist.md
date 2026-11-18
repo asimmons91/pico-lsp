@@ -34,42 +34,46 @@ publishing are deferred to post-v1. The current release is **v1.3.0**.
 
 ## Tag and publish
 
-- [ ] Merge the release pull request into `main`.
-- [ ] Verify the merge commit is green in CI.
-- [ ] Create the annotated tag:
+- [x] Merge the release pull request into `main`.
+- [x] Verify the merge commit is green in CI.
+- [x] Create the annotated tag:
 
   ```sh
   git tag -a v1.3.0 -m "pico-lsp v1.3.0"
   git push origin v1.3.0
   ```
 
-- [ ] Watch the `Release` workflow complete.
-- [ ] Confirm the GitHub release contains Linux, macOS, and Windows archives for
+- [x] Watch the `Release` workflow complete.
+- [x] Confirm the GitHub release contains Linux, macOS, and Windows archives for
       amd64 and arm64 plus `checksums.txt`.
-- [ ] Download and run `pico-lsp --version` from at least one release archive.
-- [ ] Verify the checksum for the downloaded archive.
-- [ ] Confirm the release notes contain install commands and the Go version and
+- [x] Download and run `pico-lsp --version` from at least one release archive.
+- [x] Verify the checksum for the downloaded archive.
+- [x] Confirm the release notes contain install commands and the Go version and
       commit.
 
 ## Post-release
 
-- [ ] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.3.0`
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.3.0`
       builds for a developer.
-- [ ] Update any documentation that needs the released version.
-- [ ] Open post-v1 tracking issues for Homebrew, Mason, formatter, `.p8.png`,
-      VS Code, and Zed work as needed.
+- [x] Update any documentation that needs the released version.
+- [ ] Open post-v1 tracking issues for Homebrew, Mason, Marketplace/Open VSX,
+      Zed, and API version selection as needed.
 
 ## VS Code extension (v1.3.0+)
 
-- [ ] `PICO_LSP_PERF=1 go test -count=1 -p 1 -run Performance ./...` passes
+- [x] `PICO_LSP_PERF=1 go test -count=1 -p 1 -run Performance ./...` passes
       locally or via the manual **Performance** workflow.
-- [ ] `editors/vscode/package.json` version matches the release tag.
-- [ ] `npm ci`, lint, typecheck, unit tests, and integration tests pass.
-- [ ] `pico-lsp-vscode-<version>.vsix` builds and contains no extension source.
-- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
-- [ ] Install the VSIX on Linux, macOS, and Windows local desktop VS Code.
-- [ ] First-run download, checksum failure, offline `serverPath`, and restart
-      paths work.
+- [x] `editors/vscode/package.json` version matches the release tag.
+- [x] `npm ci`, lint, typecheck, unit tests, and integration tests pass.
+- [x] `pico-lsp-vscode-<version>.vsix` builds and contains no extension source.
+- [x] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [x] The VSIX installs on Linux local desktop VS Code 1.95.
+- [ ] The VSIX installs on macOS and Windows local desktop VS Code.
+- [x] The downloader handles mock release assets, checksum failures, and
+      offline `pico8.serverPath` use.
+- [ ] Live first-run download from the public v1.3.0 release is verified in a
+      real VS Code window.
+- [x] Restart is covered by the integration suite.
 
 ## Rollback
 
