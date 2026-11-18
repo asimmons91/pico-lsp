@@ -24,7 +24,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
 
 - Parse and analyze `.p8` carts, tabs, and included `.lua` or `.p8` files as one
   program, with source maps back to the original files.
-- Syntax, include, undefined-global, type, and PICO-8 lint diagnostics.
+- Syntax, include, undefined-global, type, and PICO-8 lint diagnostics, with
+  LSP 3.17 push/pull transport selection and related-file pull reports.
 - Document symbols, folding ranges, go-to-definition, references, highlights,
   rename, and workspace symbols.
 - Completion, hover, signature help, semantic tokens, and inlay hints for user
@@ -121,6 +122,7 @@ The server reads the `pico8` configuration section from
       "diagnostics": true
     },
     "diagnostics": {
+      "mode": "auto",
       "undefinedGlobal": "warning",
       "unusedLocal": "off"
     }

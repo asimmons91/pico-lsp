@@ -95,10 +95,13 @@ type Server struct {
 
 	client atomic.Value // protocol.Client
 
-	mu       sync.Mutex
-	state    lifecycleState
-	encoding protocol.PositionEncodingKind
-	trace    protocol.TraceValue
+	mu                 sync.Mutex
+	state              lifecycleState
+	encoding           protocol.PositionEncodingKind
+	trace              protocol.TraceValue
+	diagnosticPull     bool
+	diagnosticRelated  bool
+	warnedPullFallback bool
 
 	workspaceMu      sync.Mutex
 	workspaceFolders []uri.URI
@@ -437,6 +440,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 
 	encoding := chooseEncoding(params)
 	pull := supportsConfiguration(params)
+	diagnosticPull, diagnosticRelated := supportsPullDiagnostics(params)
 
 	s.docs.SetEncoding(encoding)
 	s.carts.SetEncoding(encoding)
@@ -450,10 +454,13 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	}
 	s.encoding = encoding
 	s.state = stateInitialized
+	s.diagnosticPull = diagnosticPull
+	s.diagnosticRelated = diagnosticRelated
 	if params.Trace != "" {
 		s.trace = params.Trace
 	}
 	s.mu.Unlock()
+	s.applyDiagnosticTransport(ctx)
 
 	s.setWorkspaceFolders(initializeFolders(params))
 	if params.Capabilities.Workspace != nil && params.Capabilities.Workspace.DidChangeWatchedFiles != nil {
@@ -477,41 +484,89 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 		Save:      &protocol.SaveOptions{IncludeText: boolPtr(false)},
 	}
 
-	return &protocol.InitializeResult{
-		Capabilities: protocol.ServerCapabilities{
-			PositionEncoding: encoding,
-			TextDocumentSync: syncOptions,
-			CompletionProvider: &protocol.CompletionOptions{
-				TriggerCharacters: []string{".", ":", "@", "#"},
-				ResolveProvider:   boolPtr(true),
-			},
-			HoverProvider:              protocol.Boolean(true),
-			SignatureHelpProvider:      &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
-			DocumentFormattingProvider: protocol.Boolean(true),
-			CodeActionProvider:         protocol.Boolean(true),
-			CodeLensProvider:           &protocol.CodeLensOptions{},
-			ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo}},
-			DefinitionProvider:         protocol.Boolean(true),
-			ReferencesProvider:         protocol.Boolean(true),
-			DocumentHighlightProvider:  protocol.Boolean(true),
-			DocumentSymbolProvider:     protocol.Boolean(true),
-			FoldingRangeProvider:       protocol.Boolean(true),
-			WorkspaceSymbolProvider:    protocol.Boolean(true),
-			RenameProvider:             &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
-			SemanticTokensProvider:     semanticTokensOptions(),
-			InlayHintProvider:          protocol.Boolean(true),
-			Workspace: &protocol.WorkspaceOptions{
-				WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
-					Supported:           boolPtr(true),
-					ChangeNotifications: protocol.Boolean(true),
-				},
+	capabilities := protocol.ServerCapabilities{
+		PositionEncoding: encoding,
+		TextDocumentSync: syncOptions,
+		CompletionProvider: &protocol.CompletionOptions{
+			TriggerCharacters: []string{".", ":", "@", "#"},
+			ResolveProvider:   boolPtr(true),
+		},
+		HoverProvider:              protocol.Boolean(true),
+		SignatureHelpProvider:      &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
+		DocumentFormattingProvider: protocol.Boolean(true),
+		CodeActionProvider:         protocol.Boolean(true),
+		CodeLensProvider:           &protocol.CodeLensOptions{},
+		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo}},
+		DefinitionProvider:         protocol.Boolean(true),
+		ReferencesProvider:         protocol.Boolean(true),
+		DocumentHighlightProvider:  protocol.Boolean(true),
+		DocumentSymbolProvider:     protocol.Boolean(true),
+		FoldingRangeProvider:       protocol.Boolean(true),
+		WorkspaceSymbolProvider:    protocol.Boolean(true),
+		RenameProvider:             &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
+		SemanticTokensProvider:     semanticTokensOptions(),
+		InlayHintProvider:          protocol.Boolean(true),
+		Workspace: &protocol.WorkspaceOptions{
+			WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
+				Supported:           boolPtr(true),
+				ChangeNotifications: protocol.Boolean(true),
 			},
 		},
+	}
+	if diagnosticPull {
+		capabilities.DiagnosticProvider = &protocol.DiagnosticOptions{
+			InterFileDependencies: true,
+			WorkspaceDiagnostics:  true,
+		}
+	}
+
+	return &protocol.InitializeResult{
+		Capabilities: capabilities,
 		ServerInfo: protocol.ServerInfo{
 			Name:    "pico-lsp",
 			Version: protocol.NewOptional(version.Current()),
 		},
 	}, nil
+}
+
+// applyDiagnosticTransport reconciles push publication with the configured mode
+// and the client capability. Pull mode without client support falls back to
+// push so a configuration mistake cannot hide every diagnostic.
+func (s *Server) applyDiagnosticTransport(ctx context.Context) {
+	settings := s.cfg.Settings()
+	s.mu.Lock()
+	supported := s.diagnosticPull
+	warned := s.warnedPullFallback
+	if settings.Diagnostics.Mode == config.DiagnosticsModePull && !supported {
+		s.warnedPullFallback = true
+	}
+	s.mu.Unlock()
+
+	if settings.Diagnostics.Mode == config.DiagnosticsModePull && !supported && !warned {
+		s.log.Warn("pico8.diagnostics.mode is pull but the client does not support pull diagnostics; falling back to push")
+	}
+
+	push := settings.Diagnostics.Mode == config.DiagnosticsModePush ||
+		!supported
+	s.diags.SetPushAllowed(ctx, push)
+}
+
+func (s *Server) relatedDocumentsSupported() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.diagnosticRelated
+}
+
+func supportsPullDiagnostics(params *protocol.InitializeParams) (pull, related bool) {
+	if params == nil || params.Capabilities.TextDocument == nil {
+		return false, false
+	}
+	capability := params.Capabilities.TextDocument.Diagnostic
+	if capability == nil {
+		return false, false
+	}
+	related = capability.RelatedDocumentSupport != nil && *capability.RelatedDocumentSupport
+	return true, related
 }
 
 // Initialized enables diagnostics and pulls configuration without blocking the
@@ -595,6 +650,7 @@ func (s *Server) DidChangeConfiguration(ctx context.Context, params *protocol.Di
 	}
 	if params != nil {
 		s.cfg.ApplyDidChange(params.Settings)
+		s.applyDiagnosticTransport(ctx)
 		s.carts.AnalyzeOpen(ctx)
 	}
 	return nil
@@ -640,7 +696,9 @@ func (s *Server) pullConfiguration(ctx context.Context) {
 		s.log.Warn("configuration pull failed", "error", err)
 		return
 	}
-	// Diagnostics and navigation depend on the configured severity.
+	// Diagnostics and navigation depend on the configured severity and
+	// transport, so reconcile both before republishing.
+	s.applyDiagnosticTransport(ctx)
 	s.carts.AnalyzeOpen(ctx)
 }
 

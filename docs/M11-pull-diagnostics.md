@@ -1,6 +1,6 @@
 # M11 — Pull Diagnostics
 
-**Status:** Planned  
+**Status:** Done
 **Depends on:** M10  
 **Release target:** v1.2.0 (batched with M12–M14)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -106,13 +106,29 @@ authoritative. Update the configuration contract and examples in
 
 ## Exit criteria
 
-- [ ] Pull-capable clients receive full document reports and related documents.
-- [ ] Push-only clients keep the v1.1 behavior.
-- [ ] `auto`, `push`, and `pull` modes work without duplicate publication.
-- [ ] Result IDs, truncation, and suppression behave deterministically.
-- [ ] Optional workspace diagnostics are bounded and cancellable.
-- [ ] Tests, configuration docs, and the diagnostics reference are updated.
-- [ ] Existing v1/v1.1 diagnostics and performance budgets do not regress.
+- [x] Pull-capable clients receive full document reports and related documents.
+- [x] Push-only clients keep the v1.1 behavior.
+- [x] `auto`, `push`, and `pull` modes work without duplicate publication.
+- [x] Result IDs, truncation, and suppression behave deterministically.
+- [x] Optional workspace diagnostics are bounded and cancellable.
+- [x] Tests, configuration docs, and the diagnostics reference are updated.
+- [x] Existing v1/v1.1 diagnostics and performance budgets do not regress.
+
+## Implementation notes
+
+- `internal/lsp/diagnostics.go` owns push suppression and per-document
+  truncation. Switching to pull clears previously pushed sets; switching back
+  forgets the deduplication cache so the next analysis publishes one
+  authoritative set.
+- `internal/lsp/pull_diagnostics.go` builds canonical per-file reports from the
+  same `CartManager` collection used by push publication. Result IDs hash the
+  original file URI, its text, diagnostic-affecting settings, and the truncated
+  diagnostics. Related reports never include the requested document.
+- `internal/lsp/diagnostic_handlers.go` implements `textDocument/diagnostic`
+  and `workspace/diagnostic`, including capability-gated related documents,
+  open-cart bounds, cancellation, and optional partial-result streaming.
+- `pico8.diagnostics.mode` is implemented in `internal/config`; the server
+  reconciles it at initialization and after configuration changes.
 
 ## Risks and mitigations
 

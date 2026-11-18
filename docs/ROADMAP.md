@@ -68,14 +68,14 @@ These decisions were made before milestone specs were written. Changing one requ
 | M8 | Read-Only `.p8.png` Carts | Decode PNG carts into read-only virtual documents with full language features | M7 | Done |
 | M9 | Type System I | Inheritance, exact classes, metatable inference, stronger narrowing | M8 | Done |
 | M10 | Type System II | Generics, overloads, operators, and discriminated unions | M9 | Done |
-| M11 | Pull Diagnostics | LSP 3.17 pull diagnostics with related files and push fallback | M10 | Planned |
+| M11 | Pull Diagnostics | LSP 3.17 pull diagnostics with related files and push fallback | M10 | Done |
 | M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Planned |
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Planned |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Planned |
 
-M7–M10 shipped together as **v1.1.0**. M11–M14 are scheduled for **v1.2.0** in
-the order shown. Each milestone is independently mergeable, but the release is
-cut only after all four meet their exit criteria.
+M7–M10 shipped together as **v1.1.0**. M11 is implemented; M12–M14 are
+scheduled for **v1.2.0** in the order shown. Each milestone is independently
+mergeable, but the release is cut only after all four meet their exit criteria.
 
 Each milestone has a detailed spec:
 
@@ -197,6 +197,7 @@ The server reads configuration from the `pico8` section via `workspace/configura
       "diagnostics": true
     },
     "diagnostics": {
+      "mode": "auto",
       "undefinedGlobal": "warning",
       "unusedLocal": "off",
       "unreachableCode": "hint",
