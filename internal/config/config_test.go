@@ -5,10 +5,13 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"reflect"
 	"testing"
 
 	"github.com/go-json-experiment/json/jsontext"
 	"go.lsp.dev/protocol"
+
+	"github.com/asimmons91/pico-lsp/internal/glyphs"
 )
 
 func testLogger() *slog.Logger {
@@ -35,7 +38,7 @@ func lspValue(s string) protocol.LSPAny {
 func TestDefaults(t *testing.T) {
 	got := New(testLogger()).Settings()
 	want := Default()
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("settings = %+v, want %+v", got, want)
 	}
 }
@@ -209,6 +212,52 @@ func TestDiagnosticsMode(t *testing.T) {
 	}
 }
 
+func TestGlyphSettingsApplyPreserveAndClear(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{
+		"pico8": {
+			"glyphs": [
+				{"name": "logo", "byte": 128, "description": "custom font slot 0x80"},
+				{"name": "my_font_custom", "text": "\\14", "context": "string"}
+			]
+		}
+	}`))
+
+	got := m.Settings().Glyphs
+	if len(got) != 2 {
+		t.Fatalf("glyphs = %+v, want two entries", got)
+	}
+	entries, warnings := glyphs.Build(got)
+	if len(warnings) != 0 {
+		t.Fatalf("Build warnings = %v", warnings)
+	}
+	if entry, ok := glyphs.FindByName(entries, "logo"); !ok || entry.Byte != 0x80 {
+		t.Fatalf("logo = %+v, %v", entry, ok)
+	}
+	if entry, ok := glyphs.FindByName(entries, "my_font_custom"); !ok || entry.Text != `\14` {
+		t.Fatalf("my_font_custom = %+v, %v", entry, ok)
+	}
+
+	m.ApplyDidChange(lspValue(`{"pico8":{"maxProblems":5}}`))
+	if got := m.Settings().Glyphs; len(got) != 2 {
+		t.Fatalf("glyphs after unrelated change = %+v, want preserved", got)
+	}
+
+	m.ApplyDidChange(lspValue(`{"pico8":{"glyphs":[]}}`))
+	if got := m.Settings().Glyphs; len(got) != 0 {
+		t.Fatalf("glyphs after explicit clear = %+v, want empty", got)
+	}
+}
+
+func TestGlyphSettingsNullPreserves(t *testing.T) {
+	m := New(testLogger())
+	m.ApplyInitializationOptions(lspValue(`{"pico8":{"glyphs":[{"name":"logo","byte":128}]}}`))
+	m.ApplyDidChange(lspValue(`{"pico8":{"glyphs":null}}`))
+	if got := m.Settings().Glyphs; len(got) != 1 || got[0].Name != "logo" {
+		t.Fatalf("glyphs after null = %+v, want preserved", got)
+	}
+}
+
 func TestZeroMaxProblemsDisablesTruncation(t *testing.T) {
 	m := New(testLogger())
 	m.ApplyInitializationOptions(lspValue(`{"pico8":{"maxProblems":0}}`))
@@ -224,7 +273,7 @@ func TestMalformedInitializationOptionsAreIgnored(t *testing.T) {
 	m.ApplyInitializationOptions(lspValue(`{"pico8": 12}`))
 	m.ApplyInitializationOptions(lspValue(``))
 
-	if got := m.Settings(); got != Default() {
+	if got := m.Settings(); !reflect.DeepEqual(got, Default()) {
 		t.Fatalf("settings changed after malformed options: %+v", got)
 	}
 }

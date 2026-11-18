@@ -91,6 +91,32 @@ func isIdentifierByte(c byte) bool {
 		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
+// glyphPrefix reports whether text immediately before offset is a P8SCII glyph
+// trigger. Triggers are ASCII, so the scan stops at the first non-trigger byte.
+func glyphPrefix(text string, offset int) (start int, prefix string, ok bool) {
+	if offset > len(text) {
+		offset = len(text)
+	}
+	start = offset
+	for start > 0 {
+		c := text[start-1]
+		if c >= utf8.RuneSelf || !isGlyphTriggerByte(c) {
+			break
+		}
+		start--
+	}
+	prefix = strings.ToLower(text[start:offset])
+	if strings.HasPrefix(prefix, "p8_") || strings.HasPrefix(prefix, "p8-") {
+		return start, prefix, true
+	}
+	return 0, "", false
+}
+
+func isGlyphTriggerByte(c byte) bool {
+	return c == '_' || c == '-' ||
+		(c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
 func precedingMemberSeparator(text string, prefixStart int) (int, bool, bool) {
 	i := prefixStart - 1
 	for i >= 0 && (text[i] == ' ' || text[i] == '\t') {
@@ -156,4 +182,12 @@ func isIncludeLine(linePrefix string) bool {
 	trimmed := strings.TrimLeft(linePrefix, " \t")
 	return strings.HasPrefix(trimmed, "#include") &&
 		(len(trimmed) == len("#include") || trimmed[len("#include")] == ' ' || trimmed[len("#include")] == '\t')
+}
+
+func (n *navContext) onIncludeLine(offset int) bool {
+	if n == nil {
+		return false
+	}
+	_, linePrefix := n.linePrefix(offset)
+	return isIncludeLine(linePrefix)
 }

@@ -82,6 +82,24 @@ server's token and character counters follow PICO-8/shrinko8 semantics, not Go
 byte length. If a diagnostic lands on the wrong column, include the server
 version, editor version, offset encoding, and a minimal cart in the bug report.
 
+## P8SCII glyph input
+
+Type `p8_left`, `p8_heart`, or another glyph trigger in code or a string and
+accept the completion to insert the canonical P8SCII glyph. The `p8-` form
+(`p8-left`, `p8-x-key`, and pico8-ls-compatible aliases) is also accepted.
+`p8-` aliases parse as subtraction if completion is dismissed, so prefer `p8_`
+unless compatibility matters.
+
+Control-code entries such as `p8_font_custom` (`\14`) are offered only inside
+strings. Use the VS Code command **PICO-8: Insert P8SCII Glyph** or Neovim
+`:Pico8InsertGlyph` to browse the catalog, or pass a glyph name to either
+command to insert it directly.
+
+Custom font slots are declared in `pico8.glyphs` by P8SCII byte. The server
+inserts the canonical Unicode spelling for that byte; it cannot inspect runtime
+font data at `0x5600` or know the custom pixels. See
+[configuration.md](configuration.md#p8scii-glyph-snippets).
+
 ## Multiple carts and include ownership
 
 A `.lua` file belongs to the nearest ancestor `.p8` cart that includes it. If

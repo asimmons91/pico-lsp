@@ -74,11 +74,11 @@ These decisions were made before milestone specs were written. Changing one requ
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
-| M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Draft |
+| M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Done |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
-M15 shipped as **v1.3.0**. M16 is a draft spec with its scope decisions
-confirmed; it is not yet committed to a release.
+M15 shipped as **v1.3.0**. M16 is implemented for the post-v1.3.0 line; its
+release target is TBD.
 
 Each milestone has a detailed spec:
 
@@ -98,7 +98,7 @@ Each milestone has a detailed spec:
 - [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 - [M15 — VS Code Client](M15-vscode-client.md)
-- [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md) (draft)
+- [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md)
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -278,7 +278,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0. M16 is implemented and awaits a release target. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

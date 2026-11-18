@@ -17,6 +17,58 @@ import { buildDocumentSelector, isPico8Document, type Pico8WorkspaceMonitor } fr
 const CLIENT_ID = 'pico-lsp';
 const CLIENT_NAME = 'PICO-8 Language Server';
 
+interface P8GlyphEntry {
+  name: string;
+  text: string;
+  byte: number;
+  aliases?: string[];
+  category: string;
+  description?: string;
+  context: 'both' | 'string';
+}
+
+interface P8GlyphsResult {
+  glyphs: P8GlyphEntry[];
+}
+
+interface LspTextEdit {
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  newText: string;
+}
+
+interface LspWorkspaceEdit {
+  changes?: Record<string, LspTextEdit[]>;
+}
+
+interface GlyphPickItem extends vscode.QuickPickItem {
+  glyph: P8GlyphEntry;
+}
+
+async function applyLspWorkspaceEdit(edit: LspWorkspaceEdit): Promise<void> {
+  const workspaceEdit = new vscode.WorkspaceEdit();
+  for (const [uriText, edits] of Object.entries(edit.changes ?? {})) {
+    const documentUri = vscode.Uri.parse(uriText);
+    for (const item of edits) {
+      workspaceEdit.replace(
+        documentUri,
+        new vscode.Range(
+          item.range.start.line,
+          item.range.start.character,
+          item.range.end.line,
+          item.range.end.character
+        ),
+        item.newText
+      );
+    }
+  }
+  if (!(await vscode.workspace.applyEdit(workspaceEdit))) {
+    throw new Error('VS Code refused the glyph edit.');
+  }
+}
+
 export class PicoClient implements vscode.Disposable {
   private client: LanguageClient | undefined;
   private running: LanguageClient | undefined;
@@ -73,6 +125,67 @@ export class PicoClient implements vscode.Disposable {
       });
     } catch (error) {
       void vscode.window.showErrorMessage(`Unable to show PICO-8 cart info: ${errorMessage(error)}`);
+    }
+  }
+
+  async insertGlyph(selection?: string | { name?: string; byte?: number }): Promise<void> {
+    const client = this.client;
+    if (!client) {
+      void vscode.window.showErrorMessage('PICO-8 language server is not running.');
+      return;
+    }
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || !isPico8Document(editor.document, this.monitor.current(), extensionSettings().attachLua)) {
+      void vscode.window.showInformationMessage('Open a PICO-8 cart or included Lua file first.');
+      return;
+    }
+
+    let name = typeof selection === 'string' ? selection : selection?.name;
+    const byte = typeof selection === 'object' && selection ? selection.byte : undefined;
+    const position = editor.selection.active;
+    const textDocument = { uri: editor.document.uri.toString() };
+
+    try {
+      if (!name && byte === undefined) {
+        const result = await client.sendRequest<P8GlyphsResult>('pico8/glyphs', {
+          textDocument,
+          position
+        });
+        const items: GlyphPickItem[] = result.glyphs.map((glyph) => ({
+          label: `${glyph.text}  ${glyph.name}`,
+          description: `P8SCII 0x${glyph.byte.toString(16).padStart(2, '0')}`,
+          detail: glyph.description,
+          glyph
+        }));
+        const picked = await vscode.window.showQuickPick(items, {
+          placeHolder: 'Select a P8SCII glyph',
+          matchOnDescription: true,
+          matchOnDetail: true
+        });
+        if (!picked) {
+          return;
+        }
+        name = picked.glyph.name;
+      }
+
+      const argument: Record<string, unknown> = { textDocument, position };
+      if (name) {
+        argument.name = name;
+      } else if (byte !== undefined) {
+        argument.byte = byte;
+      }
+      const result = await client.sendRequest<{ applied?: boolean; edit?: LspWorkspaceEdit } | null>(
+        'workspace/executeCommand',
+        {
+          command: 'pico8.insertGlyph',
+          arguments: [argument]
+        }
+      );
+      if (result && result.applied === false && result.edit) {
+        await applyLspWorkspaceEdit(result.edit);
+      }
+    } catch (error) {
+      void vscode.window.showErrorMessage(`Unable to insert P8SCII glyph: ${errorMessage(error)}`);
     }
   }
 

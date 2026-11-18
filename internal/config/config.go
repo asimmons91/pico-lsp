@@ -13,6 +13,8 @@ import (
 	"github.com/go-json-experiment/json"
 	"github.com/go-json-experiment/json/jsontext"
 	"go.lsp.dev/protocol"
+
+	"github.com/asimmons91/pico-lsp/internal/glyphs"
 )
 
 const (
@@ -59,12 +61,13 @@ type Settings struct {
 	TypeChecking string `json:"typeChecking"`
 	InlayHints   bool   `json:"inlayHints"`
 	// MaxProblems is the diagnostic cap. Zero disables truncation.
-	MaxProblems int                `json:"maxProblems"`
-	Limits      LimitsSettings     `json:"limits"`
-	Format      FormatSettings     `json:"format"`
-	Diagnostics DiagnosticSettings `json:"diagnostics"`
-	Lint        LintSettings       `json:"lint"`
-	Refactors   RefactorSettings   `json:"refactors"`
+	MaxProblems int                 `json:"maxProblems"`
+	Limits      LimitsSettings      `json:"limits"`
+	Format      FormatSettings      `json:"format"`
+	Diagnostics DiagnosticSettings  `json:"diagnostics"`
+	Lint        LintSettings        `json:"lint"`
+	Refactors   RefactorSettings    `json:"refactors"`
+	Glyphs      []glyphs.Definition `json:"glyphs"`
 }
 
 // RefactorSettings controls the M14 code actions and refactors.
@@ -327,6 +330,7 @@ type partialSettings struct {
 	Diagnostics  *partialDiagnosticSettings `json:"diagnostics"`
 	Lint         *partialLintSettings       `json:"lint"`
 	Refactors    *partialRefactorSettings   `json:"refactors"`
+	Glyphs       *[]glyphs.Definition       `json:"glyphs"`
 }
 
 type partialRefactorSettings struct {
@@ -392,6 +396,9 @@ func (p partialSettings) apply(base Settings) Settings {
 	}
 	if p.Refactors != nil && p.Refactors.Enabled != nil {
 		base.Refactors.Enabled = *p.Refactors.Enabled
+	}
+	if p.Glyphs != nil {
+		base.Glyphs = *p.Glyphs
 	}
 	if p.Diagnostics != nil {
 		if p.Diagnostics.Mode != nil {
@@ -513,6 +520,12 @@ func normalize(s Settings, log *slog.Logger) Settings {
 	s.Diagnostics.IncludeOutsideWorkspace = normalizeSeverity(s.Diagnostics.IncludeOutsideWorkspace, d.Diagnostics.IncludeOutsideWorkspace, "includeOutsideWorkspace", log)
 	s.Diagnostics.IncludeUnusualType = normalizeSeverity(s.Diagnostics.IncludeUnusualType, d.Diagnostics.IncludeUnusualType, "includeUnusualType", log)
 	s.Diagnostics.IncludeDuplicate = normalizeSeverity(s.Diagnostics.IncludeDuplicate, d.Diagnostics.IncludeDuplicate, "includeDuplicate", log)
+
+	if _, warnings := glyphs.Build(s.Glyphs); len(warnings) > 0 {
+		for _, warning := range warnings {
+			log.Warn("pico8.glyphs", "warning", warning)
+		}
+	}
 
 	return s
 }

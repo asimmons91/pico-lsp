@@ -213,6 +213,59 @@ function M.open_png(path)
   }
 end
 
+local function glyph_label(item)
+  local byte = item.byte and string.format("0x%02x", item.byte) or ""
+  return string.format("%s  p8_%s  %s", item.text or "", item.name or "", item.description or byte)
+end
+
+function M.insert_glyph(name)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local client = vim.lsp.get_clients({ name = "pico_lsp", bufnr = bufnr })[1]
+  if not client then
+    notify("no pico_lsp client attached to this buffer")
+    return
+  end
+
+  local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
+  if not name or name == "" then
+    local response = client:request_sync("pico8/glyphs", {
+      textDocument = position.textDocument,
+      position = position.position,
+    }, 2000, bufnr)
+    if not response or response.err or not response.result then
+      notify("could not load P8SCII glyphs", vim.log.levels.ERROR)
+      return
+    end
+    vim.ui.select(response.result.glyphs, {
+      prompt = "P8SCII glyph",
+      format_item = glyph_label,
+    }, function(item)
+      if item then
+        M.insert_glyph(item.name)
+      end
+    end)
+    return
+  end
+
+  local response = client:request_sync("workspace/executeCommand", {
+    command = "pico8.insertGlyph",
+    arguments = {
+      {
+        textDocument = position.textDocument,
+        position = position.position,
+        name = name,
+      },
+    },
+  }, 3000, bufnr)
+  if not response or response.err then
+    notify("could not insert P8SCII glyph", vim.log.levels.ERROR)
+    return
+  end
+  if response.result and response.result.edit then
+    vim.lsp.util.apply_workspace_edit(response.result.edit, client.offset_encoding)
+  end
+end
+
 function M.reload_png()
   local buf = vim.api.nvim_get_current_buf()
   local info = M.png_buffers[buf]
@@ -334,6 +387,9 @@ function M.setup(opts)
     M.open_png(args.args ~= "" and args.args or nil)
   end, { nargs = "?" })
   vim.api.nvim_create_user_command("Pico8ReloadPng", M.reload_png, { nargs = 0 })
+  vim.api.nvim_create_user_command("Pico8InsertGlyph", function(args)
+    M.insert_glyph(args.args ~= "" and args.args or nil)
+  end, { nargs = "?" })
 
   attach_loaded_lua_buffers()
 end

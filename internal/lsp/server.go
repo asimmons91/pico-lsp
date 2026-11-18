@@ -37,6 +37,7 @@ var protocolMethods = func() map[string]struct{} {
 	}
 	methods[RequestCartInfo] = struct{}{}
 	methods[RequestDecodeCart] = struct{}{}
+	methods[RequestGlyphs] = struct{}{}
 	return methods
 }()
 
@@ -101,6 +102,7 @@ type Server struct {
 	trace              protocol.TraceValue
 	diagnosticPull     bool
 	diagnosticRelated  bool
+	applyEdit          bool
 	warnedPullFallback bool
 
 	workspaceMu      sync.Mutex
@@ -456,6 +458,9 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	s.state = stateInitialized
 	s.diagnosticPull = diagnosticPull
 	s.diagnosticRelated = diagnosticRelated
+	if params.Capabilities.Workspace != nil && params.Capabilities.Workspace.ApplyEdit != nil {
+		s.applyEdit = *params.Capabilities.Workspace.ApplyEdit
+	}
 	if params.Trace != "" {
 		s.trace = params.Trace
 	}
@@ -496,7 +501,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 		DocumentFormattingProvider: protocol.Boolean(true),
 		CodeActionProvider:         protocol.Boolean(true),
 		CodeLensProvider:           &protocol.CodeLensOptions{},
-		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo, CommandRemoveUnused}},
+		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo, CommandRemoveUnused, CommandInsertGlyph}},
 		DefinitionProvider:         protocol.Boolean(true),
 		ReferencesProvider:         protocol.Boolean(true),
 		DocumentHighlightProvider:  protocol.Boolean(true),
@@ -672,6 +677,12 @@ func (s *Server) Request(ctx context.Context, method string, params any) (any, e
 			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
 		}
 		return s.decodeCartRequest(ctx, raw)
+	case RequestGlyphs:
+		raw, ok := params.(protocol.LSPAny)
+		if !ok {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid params", method)
+		}
+		return s.glyphsRequest(ctx, raw)
 	default:
 		return nil, errUnhandledMethod
 	}

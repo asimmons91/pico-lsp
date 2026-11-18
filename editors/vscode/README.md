@@ -50,7 +50,9 @@ If the download fails behind a proxy, configure VS Code's `http.proxy` and
 
 The server provides diagnostics, completion, hover, signature help, document
 symbols, folding, navigation, rename, semantic tokens, formatting, inlay hints,
-code lenses, code actions, and refactors.
+code lenses, code actions, refactors, and P8SCII glyph input. Type `p8_left` in
+code or a string to insert `⬅️`, or run **PICO-8: Insert P8SCII Glyph** to open
+a searchable picker. Custom font slots are configured with `pico8.glyphs`.
 
 ## Status bar
 
@@ -66,14 +68,16 @@ and error colors appear at 90% of a limit and above a limit.
 | `pico8.autoDownload` | `true` | Download the matching verified server when not cached. |
 | `pico8.attachLua` | `true` | Attach to `.lua` files in PICO-8 workspace folders. |
 | `pico8.trace.server` | `off` | LSP trace level: `off`, `messages`, or `verbose`. |
+| `pico8.glyphs` | `[]` | Custom P8SCII glyph snippets for completion and the picker. |
 
-Server settings such as `pico8.typeChecking`, `pico8.diagnostics`, and
-`pico8.format` are documented in the
+Server settings such as `pico8.typeChecking`, `pico8.diagnostics`,
+`pico8.format`, and `pico8.glyphs` are documented in the
 [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md).
 
 ## Commands
 
 - **PICO-8: Show Cart Info** (`pico8.client.showCartInfo`)
+- **PICO-8: Insert P8SCII Glyph** (`pico8.client.insertGlyph`)
 - **PICO-8: Restart Language Server** (`pico8.client.restartServer`)
 - **PICO-8: Show Language Server Output** (`pico8.client.showOutput`)
 - **PICO-8: Clear Downloaded Server Cache** (`pico8.client.clearServerCache`)

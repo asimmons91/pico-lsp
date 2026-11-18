@@ -1,6 +1,6 @@
 # M16 — P8SCII Glyph Snippets and Input
 
-**Status:** Draft — scope decisions confirmed. Not committed to a release.  
+**Status:** Done — implemented for the post-v1.3.0 line.  
 **Depends on:** M15  
 **Release target:** TBD (post-v1.3.0)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -156,9 +156,9 @@ The schema for this milestone:
 - Support `p8_<name>` as the primary trigger and `p8-<name>` for pico8-ls
   compatibility. A dotted `p8.` namespace is not planned because `.` is already
   member access.
-- `p8_` uses the existing identifier-prefix scanner. `p8-` needs a dedicated
-  scanner because `-` terminates normal identifier completion; the edit must
-  replace the entire `p8-...` trigger.
+- Glyph triggers use an ASCII scanner over letters, digits, `_`, and `-`.
+  `p8-` needs this scanner because `-` terminates normal identifier completion;
+  the edit must replace the entire `p8-...` trigger.
 - Check for glyph completion before the normal string/comment early returns in
   `internal/lsp/completion.go` so glyphs can be inserted inside strings.
 - Offer glyph items only when the trigger prefix is present. Do not dump the
@@ -282,16 +282,16 @@ The schema for this milestone:
 ## Exit criteria
 
 - [x] D1–D8 are resolved and recorded in this spec.
-- [ ] The server-owned catalog covers the agreed glyph set and validates
+- [x] The server-owned catalog covers the agreed glyph set and validates
       one-byte encoding.
-- [ ] `p8_` completion works in code and strings; `p8-` compatibility works.
-- [ ] Custom glyph entries work from `pico8.glyphs` and override built-ins with
+- [x] `p8_` completion works in code and strings; `p8-` compatibility works.
+- [x] Custom glyph entries work from `pico8.glyphs` and override built-ins with
       a warning.
-- [ ] `pico8/glyphs` and `pico8.insertGlyph` are implemented and tested.
-- [ ] VS Code and Neovim integration works; Helix behavior is documented.
-- [ ] UTF-16, character-budget, and compressed-size tests pass.
-- [ ] Configuration, API, README, troubleshooting, and editor docs are updated.
-- [ ] Existing completion, position, and budget behavior does not regress.
+- [x] `pico8/glyphs` and `pico8.insertGlyph` are implemented and tested.
+- [x] VS Code and Neovim integration works; Helix behavior is documented.
+- [x] UTF-16, character-budget, and compressed-size tests pass.
+- [x] Configuration, API, README, troubleshooting, and editor docs are updated.
+- [x] Existing completion, position, and budget behavior does not regress.
 
 ## Risks and mitigations
 
@@ -308,13 +308,14 @@ The schema for this milestone:
 
 ## Implementation notes
 
-- Likely files:
-  - `internal/p8scii/p8scii.go` and a new catalog file;
-  - `internal/lsp/completion.go`, `completion_context.go`, and a new
-    `glyphs.go`;
+- Implemented files:
+  - `internal/glyphs/` for the built-in catalog and custom-definition
+    validation, using `internal/p8scii` for encoding;
+  - `internal/lsp/completion.go`, `completion_context.go`, and `glyphs.go`;
   - `internal/lsp/server.go` for capabilities and custom-request registration;
-  - `internal/config/config.go` for settings and validation;
-  - `editors/vscode/src/extension.ts`, `editors/vscode/package.json`, and client
+  - `internal/config/config.go` for settings and warning validation;
+  - `editors/vscode/src/extension.ts`, `editors/vscode/src/client.ts`,
+    `editors/vscode/src/config.ts`, `editors/vscode/package.json`, and client
     tests;
   - `editors/nvim/lua/pico_lsp/init.lua` and its tests;
   - `docs/configuration.md`, `docs/api.md`, `README.md`,
@@ -322,8 +323,8 @@ The schema for this milestone:
 - Reuse `analysis.CanonicalName` for ASCII alias folding.
 - Use `nav.file.Index.Range` for every completion or command edit; never compute
   columns from byte lengths.
-- `p8_` can reuse `identifierPrefixStart`; `p8-` needs a bounded scanner that
-  accepts ASCII letters, digits, `_`, and `-`, and stops at string boundaries.
+- `glyphPrefix` scans backward over ASCII letters, digits, `_`, and `-` and
+  stops at a string boundary or a non-trigger byte.
 - Detect glyph completion before the early `inString`/`inComment` returns.
 - `makeTextItem` currently sets `FilterText` to the label; glyph items need an
   explicit filter that includes the alias and byte.
