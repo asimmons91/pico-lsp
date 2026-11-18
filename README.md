@@ -61,11 +61,11 @@ v1 is distributed as checksummed GitHub release archives. Homebrew and Mason
 packaging are deferred to post-v1; see the [roadmap](docs/ROADMAP.md).
 
 Download the archive for your OS and architecture from the
-[v1.2.0 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.2.0), or
+[v1.3.0 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.3.0), or
 install with Go:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.2.0
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.3.0
 ```
 
 Verify the binary:

@@ -21,9 +21,8 @@ The following backlog items have been promoted and split into milestone specs:
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 - [M15 — VS Code Client](M15-vscode-client.md)
 
-M7–M10 shipped in v1.1.0. M11–M14 shipped in v1.2.0. M15 implementation is
-complete for v1.3.0 pending release verification. The items below are not part
-of those releases.
+M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, and M15 in v1.3.0. The items
+below are not part of those releases.
 
 ## Prioritization
 
