@@ -235,8 +235,9 @@ Local desktop builds only:
 ### Server process
 
 - Start `pico-lsp` with stdio transport.
-- Use the workspace folder as the client root; use workspace-folder
-  `workspace/workspaceFolders` for multi-root workspaces.
+- Start one language client per VS Code window. Use the workspace as the client
+  root and advertise all `workspace/workspaceFolders`; do not start one client
+  per folder.
 - Send `initializationOptions.pico8` from the effective VS Code settings as a
   fallback, and advertise `workspace.configuration` so the server's
   `workspace/configuration` request works.
@@ -402,6 +403,7 @@ Extend `.github/workflows/release.yml`:
   `pico-lsp-vscode-<version>.vsix.sha256`;
 - upload both to the GitHub release alongside the platform archives and
   `checksums.txt`;
+- ensure the release notes mention the VSIX asset and how to install it;
 - do not publish to Marketplace or Open VSX.
 
 ### Documentation
