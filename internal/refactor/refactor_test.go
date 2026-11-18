@@ -120,6 +120,42 @@ func TestExtractFunctionRefusesWriteToCapture(t *testing.T) {
 	}
 }
 
+func TestExtractFunctionRefusesNonExpressionPositions(t *testing.T) {
+	tests := []struct {
+		name   string
+		text   string
+		needle string
+	}{
+		{name: "assignment target", text: "x = 1\n", needle: "x"},
+		{name: "table key", text: "local t = {x = 1}\n", needle: "x = 1"},
+		{name: "field name", text: "local t = {}\nt.x = 1\n", needle: "x = 1"},
+		{name: "parameter", text: "local function f(a) return a end\n", needle: "a"},
+		{name: "local function name", text: "local function f() end\n", needle: "f"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := testContext(t, test.text)
+			start := offsetOf(t, test.text, test.needle)
+			end := start + len(test.needle)
+			if test.name == "table key" {
+				// Select just the key, not the value.
+				end = start + 1
+			}
+			if test.name == "field name" {
+				start = offsetOf(t, test.text, "t.x") + 2
+				end = start + 1
+			}
+			if test.name == "parameter" {
+				start = offsetOf(t, test.text, "(a)") + 1
+				end = start + 1
+			}
+			if action := ExtractFunction(ctx, start, end); action != nil {
+				t.Fatalf("extract accepted a non-expression position: %+v", action)
+			}
+		})
+	}
+}
+
 func TestExtractFunctionRefusesMultilineString(t *testing.T) {
 	text := "local s = [[line one\n  line two]]\nprint(s)\n"
 	ctx := testContext(t, text)

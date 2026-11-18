@@ -64,7 +64,7 @@ func ExtractFunction(ctx *Context, start, end int) *Action {
 			return nil
 		}
 	}
-	if selectedExpr != nil && expandsMultipleValues(ctx, selectedExpr) {
+	if selectedExpr != nil && (!expressionPosition(ctx, selectedExpr) || expandsMultipleValues(ctx, selectedExpr)) {
 		return nil
 	}
 
@@ -193,6 +193,68 @@ func isSpace(b byte) bool {
 	default:
 		return false
 	}
+}
+
+// expressionPosition reports whether replacing expr with a call is valid
+// syntax. Names used as declarations, assignment targets, labels, parameters,
+// or plain table keys cannot be replaced by a call expression.
+func expressionPosition(ctx *Context, expr syntax.Expr) bool {
+	parent := ctx.parentOf(expr)
+	switch p := parent.(type) {
+	case *syntax.LocalStmt:
+		for _, name := range p.Names {
+			if name == expr {
+				return false
+			}
+		}
+	case *syntax.LocalFunctionStmt:
+		if p.Name == expr {
+			return false
+		}
+	case *syntax.AssignStmt:
+		for _, target := range p.Targets {
+			if target == expr {
+				return false
+			}
+		}
+	case *syntax.NumericForStmt:
+		if p.Name == expr {
+			return false
+		}
+	case *syntax.GenericForStmt:
+		for _, name := range p.Names {
+			if name == expr {
+				return false
+			}
+		}
+	case *syntax.FunctionExpr:
+		for _, param := range p.Params {
+			if param == expr {
+				return false
+			}
+		}
+	case *syntax.FunctionDeclStmt:
+		for _, name := range p.Names {
+			if name == expr {
+				return false
+			}
+		}
+	case *syntax.TableField:
+		if p.Key == expr && !p.BracketKey {
+			return false
+		}
+	case *syntax.FieldExpr:
+		if p.Name == expr {
+			return false
+		}
+	case *syntax.MethodCallExpr:
+		if p.Method == expr {
+			return false
+		}
+	case *syntax.LabelStmt, *syntax.GotoStmt:
+		return false
+	}
+	return true
 }
 
 // expandsMultipleValues reports whether replacing the expression with a

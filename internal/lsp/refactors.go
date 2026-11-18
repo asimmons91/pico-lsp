@@ -8,6 +8,7 @@ import (
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis"
 	"github.com/asimmons91/pico-lsp/internal/refactor"
 )
 
@@ -26,6 +27,7 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 	if nav == nil || nav.file == nil {
 		return nil
 	}
+	rctx := navContextForRefactor(nav)
 	var actions []protocol.CommandOrCodeAction
 	seen := make(map[string]bool)
 	addAction := func(action *protocol.CodeAction) {
@@ -52,37 +54,37 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 	for i := range diagnostics {
 		diag := diagnostics[i]
 		switch diagnosticCode(diag) {
-		case "missing-fields":
-			addAction(s.missingFieldsAction(nav, diag))
-		case "unused-local":
+		case analysis.CodeMissingFields:
+			addAction(s.missingFieldsAction(nav, rctx, diag))
+		case analysis.CodeUnusedLocal:
 			diagStart, _, err := nav.file.Index.RangeOffsets(diag.Range)
 			if err != nil {
 				continue
 			}
-			if action := refactor.RemoveUnused(navContextForRefactor(nav), diagStart); action != nil {
+			if action := refactor.RemoveUnused(rctx, diagStart); action != nil {
 				addAction(s.codeActionForRefactor(nav, action, []protocol.Diagnostic{diag}))
 			}
 		}
 	}
-	if action := refactor.ExtractFunction(navContextForRefactor(nav), start, end); action != nil {
+	if action := refactor.ExtractFunction(rctx, start, end); action != nil {
 		add(action)
 	}
-	if action := refactor.GenerateClass(navContextForRefactor(nav), start); action != nil {
+	if action := refactor.GenerateClass(rctx, start); action != nil {
 		add(action)
 	}
-	if action := refactor.GlobalToLocal(navContextForRefactor(nav), start); action != nil {
+	if action := refactor.GlobalToLocal(rctx, start); action != nil {
 		add(action)
 	}
-	if action := refactor.ConvertShorthand(navContextForRefactor(nav), start); action != nil {
+	if action := refactor.ConvertShorthand(rctx, start); action != nil {
 		add(action)
 	}
-	if action := refactor.RemoveUnused(navContextForRefactor(nav), start); action != nil {
+	if action := refactor.RemoveUnused(rctx, start); action != nil {
 		add(action)
 	}
 	return actions
 }
 
-func (s *Server) missingFieldsAction(nav *navContext, diag protocol.Diagnostic) *protocol.CodeAction {
+func (s *Server) missingFieldsAction(nav *navContext, rctx *refactor.Context, diag protocol.Diagnostic) *protocol.CodeAction {
 	if nav == nil || nav.semantics == nil || nav.file == nil || nav.file.Index == nil {
 		return nil
 	}
@@ -97,7 +99,7 @@ func (s *Server) missingFieldsAction(nav *navContext, diag protocol.Diagnostic) 
 		if fix.Span.Start > end || fix.Span.End < start {
 			continue
 		}
-		action := refactor.AddMissingFields(navContextForRefactor(nav), fix.Span, fix.Fields)
+		action := refactor.AddMissingFields(rctx, fix.Span, fix.Fields)
 		if action != nil {
 			return s.codeActionForRefactor(nav, action, []protocol.Diagnostic{diag})
 		}

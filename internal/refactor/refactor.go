@@ -28,6 +28,10 @@ type Context struct {
 	Result *analysis.Result
 	FileID source.FileID
 	File   *cart.File
+
+	nodesBuilt bool
+	nodeList   []syntax.Node
+	parents    map[syntax.Node]syntax.Node
 }
 
 // Edit replaces [Start, End) in FileID with NewText.
@@ -70,17 +74,34 @@ func (c *Context) nodes() []syntax.Node {
 	if c == nil || c.Snap == nil || c.Snap.Chunk == nil {
 		return nil
 	}
-	var out []syntax.Node
+	if c.nodesBuilt {
+		return c.nodeList
+	}
+	c.nodesBuilt = true
+	c.parents = make(map[syntax.Node]syntax.Node)
+
+	// Walk is pre-order, so a span stack recovers direct parents even when a
+	// block and its only statement share exactly the same span.
+	var stack []syntax.Node
 	syntax.Walk(c.Snap.Chunk, func(node syntax.Node) bool {
 		if node == nil {
 			return false
 		}
-		if span := node.Span(); span.FileID == c.FileID && !span.IsEmpty() {
-			out = append(out, node)
+		span := node.Span()
+		if span.FileID != c.FileID || span.IsEmpty() {
+			return true
 		}
+		for len(stack) > 0 && !contains(stack[len(stack)-1].Span(), span) {
+			stack = stack[:len(stack)-1]
+		}
+		if len(stack) > 0 {
+			c.parents[node] = stack[len(stack)-1]
+		}
+		stack = append(stack, node)
+		c.nodeList = append(c.nodeList, node)
 		return true
 	})
-	return out
+	return c.nodeList
 }
 
 func contains(outer, inner source.Span) bool {
@@ -155,23 +176,8 @@ func (c *Context) parentOf(target syntax.Node) syntax.Node {
 	if target == nil {
 		return nil
 	}
-	span := target.Span()
-	var best syntax.Node
-	bestLen := int(^uint(0) >> 1)
-	for _, node := range c.nodes() {
-		if node == target {
-			continue
-		}
-		nodeSpan := node.Span()
-		if nodeSpan == span || !contains(nodeSpan, span) {
-			continue
-		}
-		if length := nodeSpan.Len(); length < bestLen {
-			best = node
-			bestLen = length
-		}
-	}
-	return best
+	c.nodes()
+	return c.parents[target]
 }
 
 func (c *Context) parentBlock(stmt syntax.Stmt) *syntax.Block {
