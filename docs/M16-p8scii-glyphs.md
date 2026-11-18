@@ -90,7 +90,8 @@ Confirmed before implementation:
   hand-writing multi-rune glyph spellings.
 - For glyph entries, `p8scii.Encode(text)` must return exactly one byte. This
   check is on bytes, not runes, so base-codepoint-plus-`U+FE0F` glyphs such as
-  `⬅️` pass.
+  `⬅️` pass. Accepted text is canonicalized back through
+  `p8scii.Decode(byte)` before insertion.
 - The built-in catalog covers the typeable symbol ranges
   (`0x10`–`0x1f`, `0x7f`–`0x99`, `0xfe`–`0xff`). ASCII characters are excluded.
   Named kana aliases are deferred; kana characters can be added through custom
@@ -125,22 +126,27 @@ The schema for this milestone:
 - Each entry has exactly one of `byte`, `glyph`, or `text`. Field presence, not
   a zero value, distinguishes `byte: 0` from an omitted field.
 - `byte` is authoritative for custom font slots; the server inserts the
-  canonical Unicode spelling for that byte. Byte entries must be printable
-  P8SCII values (`0x10`–`0xff`).
+  canonical Unicode spelling for that byte.
+- Byte and glyph entries must resolve to printable P8SCII values (`0x10`–`0xff`).
 - Control codes `0x00`–`0x0f` must use a `text` entry with
-  `"context": "string"`, not a `byte` entry.
-- `glyph` is accepted only when it encodes to one P8SCII byte.
+  `"context": "string"`, not a `byte` or `glyph` entry.
+- `glyph` is accepted only when it encodes to exactly one P8SCII byte.
 - `text` is intended for control-code escapes and must set
   `"context": "string"` so it is offered only in strings. Glyph and byte entries
   default to both identifier and string contexts.
-- `name` is ASCII and matches `[a-z0-9_]+` case-insensitively. It is used as
-  `p8_<name>` unless an alias supplies a different trigger.
+- `name` is ASCII and matches `[a-z0-9_]+` case-insensitively. Every entry is
+  available as `p8_<name>`; aliases add additional triggers.
 - Aliases are full completion triggers, for example `p8_logo` or `p8-logo`.
-- Duplicate custom names and aliases override built-ins with a logged warning.
-  Invalid entries are skipped rather than shadowing a valid definition.
+  Aliases must begin with `p8_` or `p8-` so they stay inside the glyph
+  namespace and do not pollute ordinary identifier completion.
+- Duplicate custom names and aliases override built-ins with a logged warning;
+  when two custom entries collide, the later list entry wins. Invalid entries
+  are skipped rather than shadowing a valid definition.
 - Invalid entries do not produce cart diagnostics; configuration warnings go to
   the server log.
 - Configuration changes take effect without restarting the server.
+- Omitting `pico8.glyphs` preserves the current/default custom entries; an
+  explicit empty list clears them.
 - Definitions are read from the `pico8.glyphs` settings list, which is scoped to
   the user/workspace rather than discovered from cart contents. Included `.lua`
   files use the same workspace settings as their owning cart.
@@ -182,8 +188,8 @@ The schema for this milestone:
 ### Picker and command
 
 - Add a custom request `pico8/glyphs`:
-  - accepts optional `textDocument.uri` and `position` so clients can request
-    context-appropriate entries and future per-cart definitions;
+  - accepts optional `textDocument.uri` and `position` together so clients can
+    request context-appropriate entries and future per-cart definitions;
   - when a position is supplied, filters out string-only entries outside a
     string and returns each entry's `context`;
   - returns a stable JSON list of entries with `name`, `aliases`, `text`,
@@ -204,10 +210,11 @@ The schema for this milestone:
 ### Editor integration
 
 - **VS Code:** contribute `pico8.client.insertGlyph` in `contributes.commands`
-  and `activationEvents`. It requests `pico8/glyphs` with the active cursor
-  position, shows a Quick Pick with `matchOnDescription` and `matchOnDetail`,
-  and invokes `pico8.insertGlyph`. Provide an optional keybinding placeholder
-  but no default conflict-prone shortcut.
+  and `activationEvents`, and add `pico8.glyphs` to `contributes.configuration`.
+  The command requests `pico8/glyphs` with the active cursor position, shows a
+  Quick Pick with `matchOnDescription` and `matchOnDetail`, and invokes
+  `pico8.insertGlyph`. Provide an optional keybinding placeholder but no default
+  conflict-prone shortcut.
 - **Neovim:** add `:Pico8InsertGlyph` to the optional helper. Use
   `vim.ui.select`, pass the cursor position to `pico8/glyphs`, and use the
   standard LSP client; do not require Telescope.
@@ -239,7 +246,8 @@ The schema for this milestone:
 - Configuration tests:
   - partial settings preserve defaults;
   - `byte`, `glyph`, and `text` forms work;
-  - control bytes without a string context are rejected;
+  - control bytes and control glyphs are rejected in favor of `text` entries;
+  - string-only entries without a string context are rejected;
   - invalid entries warn once and are skipped;
   - changes refresh completion and the picker without restart.
 - Completion e2e tests:
@@ -293,8 +301,9 @@ The schema for this milestone:
 | `p8-` aliases parse as subtraction if not completed | Make `p8_` primary; document `p8-` as compatibility. |
 | Glyph insertion breaks compressed-size assumptions | Validate `Encode(text)` is exactly one byte and always use `Decode(byte)` for canonical text. |
 | Completion inside strings interferes with other features | Only activate with a glyph trigger; return empty otherwise; add string-context tests. |
+| Server-initiated `workspace/applyEdit` deadlocks the request loop | Release the read loop with `jsonrpc2.Async(ctx)` before calling the client, matching the configuration-pull pattern. |
 | Bad configuration crashes completion | Validate and skip invalid entries with one warning; bound the catalog size. |
-| Custom names drift from the cart's actual font | Keep descriptions explicit; a per-cart definitions file is a deferred follow-up. |
+| Custom names drift from the cart's actual font | Settings are workspace-wide; document cart-specific names/descriptions and defer per-cart definition files. |
 | Editor behavior differs | Keep the catalog and insertion semantics in the server; use standard LSP completion, request, and command surfaces. |
 
 ## Implementation notes
@@ -322,6 +331,10 @@ The schema for this milestone:
   `protocolMethods` and dispatch it from `Server.Request`.
 - The insertion command mirrors `CommandShowCartInfo`/`CommandRemoveUnused` in
   `Server.ExecuteCommand`; use `Server.Client().ApplyEdit` when available.
+  Record the client's `workspace.applyEdit` capability during initialize and
+  fall back to returning the edit when it is absent. Call
+  `jsonrpc2.Async(ctx)` before that server-initiated request so the read loop
+  can accept the client's response, matching `pullConfiguration`.
 - Do not write to stdout outside the LSP protocol. Configuration warnings go to
   the server log.
 
