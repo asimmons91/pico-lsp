@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.1.0 released  
+**Status:** v1.2.0 released  
 **Last updated:** 2026-11-18  
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
@@ -73,9 +73,9 @@ These decisions were made before milestone specs were written. Changing one requ
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
 
-M7–M10 shipped together as **v1.1.0**. M11–M14 are implemented for **v1.2.0**
-in the order shown. Each milestone is independently mergeable, but the release
-is cut only after all four meet their exit criteria.
+M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**
+in the order shown. Each milestone is independently mergeable; the release was
+cut after all four met their exit criteria.
 
 Each milestone has a detailed spec:
 
@@ -269,7 +269,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 batches use minor releases (`v1.1.0`, `v1.2.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 are batched as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
