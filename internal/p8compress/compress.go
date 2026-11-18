@@ -162,7 +162,6 @@ func CompressLimit(code []byte, workLimit int) (out []byte, ok bool) {
 			c.literalPos[ch] = 0
 
 			pos++
-			blockLen = 1
 		}
 
 		if c.out.pos-rawPosDest >= 32 || pos == len(code) {
