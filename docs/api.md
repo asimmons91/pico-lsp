@@ -26,6 +26,10 @@ The result:
   "tokenLimit": 8192,
   "chars": 27433,
   "charLimit": 65535,
+  "compressed": 12000,
+  "compressedLimit": 15616,
+  "compressedWarning": 14054,
+  "compressedStatus": "ok",
   "files": [
     { "uri": "file:///path/to/cart.p8", "tokens": 4000, "chars": 26000, "bytes": 30000 }
   ],
@@ -42,6 +46,24 @@ The result:
 assembled cart, so duplicate includes count each occurrence. Per-file counts are
 informational. Tab indexes are zero-based; `.p8` include selectors use the same
 numbering.
+
+`compressed` is the number of bytes PICO-8 would store for the assembled code:
+a pxa stream including its 8-byte header when compression helps, or the raw
+P8SCII code length when it does not. It is computed from the flattened program
+after include expansion and tab joining, with line endings normalized and each
+P8SCII glyph counted as one byte. The value is cart-wide; per-file compressed
+contributions are not reported because compression is global.
+
+`compressedStatus` is one of:
+
+- `ok` — below the warning threshold.
+- `warning` — at or above `compressedWarning` (14054 bytes) and at or below the
+  limit.
+- `error` — above `compressedLimit` (15616 bytes); PICO-8 refuses to save a
+  `.p8.png` or `.p8.rom` above this limit.
+- `unavailable` — standalone `.lua` files, oversized code, or an input that
+  exceeds the compressor's bounded work budget. `compressed` is `0` in this
+  case, and no compressed-size diagnostic is published.
 
 If no cart can be found, the request fails with JSON-RPC error code `-32001`
 and message `cart-not-found`.
@@ -99,8 +121,10 @@ The server shows a compact `window/showMessage` summary and returns the
 The root cart document has one code lens on line 0:
 
 ```
-4210 / 8192 tokens · 27433 / 65535 chars
+4210 / 8192 tokens · 27433 / 65535 chars · 12000 / 15616 compressed
 ```
 
-Clicking it runs `pico8.showCartInfo`. Disable the lens with
+Clicking it runs `pico8.showCartInfo`. The lens appends `(warning)` at or above
+90% of the compressed-size limit and `(over limit)` above the limit; carts
+without a compressed budget show `compressed n/a`. Disable the lens with
 `pico8.limits.codeLens: false`.

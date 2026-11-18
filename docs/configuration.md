@@ -55,9 +55,17 @@ For installation and editor setup, see [install.md](install.md),
 | `maxProblems` | integer | `100` | Per-document diagnostic cap; `0` disables truncation. |
 | `diagnostics.mode` | `auto`, `push`, `pull` | `auto` | Diagnostic transport. `auto` pulls when the client supports it and pushes otherwise. |
 | `limits.codeLens` | boolean | `true` | Show the cart budget code lens. |
-| `limits.diagnostics` | boolean | `true` | Publish token/char limit diagnostics. |
+| `limits.diagnostics` | boolean | `true` | Publish token, character, and compressed-size limit diagnostics. |
 | `format.maxBlankLines` | integer | `2` | Maximum consecutive blank lines; `0` removes blank lines. |
 | `lint.apiRanges` | boolean | `false` | Optional literal API range checks. |
+
+Compressed-size budgeting applies to `.p8` carts, including decoded `.p8.png`
+virtual carts. The server reports the size PICO-8's pxa compressor would store
+for the assembled code, warns from 14054 bytes (90% of the 15616-byte limit),
+and reports an error above 15616 bytes. Standalone `.lua` files have no
+compressed budget. If compression cannot produce a bounded result, the value is
+reported as unavailable and no compressed-size diagnostic is published; token
+and character budgets are unaffected.
 
 `basic` checks explicit annotations, class inheritance, inherited members,
 `(exact)` class literals, metatable factories, generics, overloads, operator

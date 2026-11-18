@@ -1,0 +1,42 @@
+[
+  {
+    "file": "empty.lua",
+    "compressed": 0,
+    "p8sciiBytes": 0
+  },
+  {
+    "file": "high_entropy.lua",
+    "compressed": 4096,
+    "p8sciiBytes": 4096
+  },
+  {
+    "file": "near_limit.lua",
+    "compressed": 14460,
+    "p8sciiBytes": 65197
+  },
+  {
+    "file": "repetitive.lua",
+    "compressed": 320,
+    "p8sciiBytes": 4040
+  },
+  {
+    "file": "shorthand.lua",
+    "compressed": 574,
+    "p8sciiBytes": 8280
+  },
+  {
+    "file": "simple.lua",
+    "compressed": 217,
+    "p8sciiBytes": 413
+  },
+  {
+    "file": "tiny.lua",
+    "compressed": 4,
+    "p8sciiBytes": 4
+  },
+  {
+    "file": "utf8.lua",
+    "compressed": 129,
+    "p8sciiBytes": 134
+  }
+]

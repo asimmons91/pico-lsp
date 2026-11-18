@@ -16,6 +16,13 @@ All notable changes to this project are documented here. The format follows
   `editors/tree-sitter-pico8/`, including committed ABI 14 parser sources,
   highlight/indent/text-object queries, corpus tests, and Neovim/Helix setup
   documentation. The grammar is highlighting-only and does not affect analysis.
+- PICO-8-compatible pxa code compression and a compressed-size budget:
+  `pico8/cartInfo` now reports `compressed`, `compressedLimit`,
+  `compressedWarning`, and `compressedStatus`; the budget code lens shows the
+  compressed size; and `compressed-size-limit` warns from 14054 bytes and errors
+  above 15616 bytes. Sizes are memoized per cart snapshot and validated against
+  Lexaloffle's reference compressor, with UTF-8/P8SCII fixtures and corpus
+  coverage.
 
 ### Changed
 

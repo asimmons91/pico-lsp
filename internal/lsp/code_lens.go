@@ -41,6 +41,18 @@ func cartBudgetLabel(snap *cart.Snapshot) string {
 	if snap == nil || snap.Cart == nil {
 		return ""
 	}
-	return fmt.Sprintf("%d / %d tokens · %d / %d chars",
+	label := fmt.Sprintf("%d / %d tokens · %d / %d chars · ",
 		snap.Cart.Tokens, TokenLimit, snap.Cart.Chars, CharLimit)
+	size, ok := snap.CompressedSize()
+	if !ok {
+		return label + "compressed n/a"
+	}
+	label += fmt.Sprintf("%d / %d compressed", size, CompressedLimit)
+	switch {
+	case size > CompressedLimit:
+		label += " (over limit)"
+	case size >= CompressedWarning:
+		label += " (warning)"
+	}
+	return label
 }

@@ -177,16 +177,23 @@ vim.keymap.set("n", "<leader>ci", function()
   vim.lsp.buf_request(0, "pico8/cartInfo", {
     textDocument = { uri = vim.uri_from_bufnr(0) },
   }, function(err, result)
-    if not err and result then
-      print(("%d / %d tokens · %d / %d chars"):format(
-        result.tokens, result.tokenLimit, result.chars, result.charLimit))
+    if err or not result then return end
+    local parts = {
+      ("%d / %d tokens"):format(result.tokens, result.tokenLimit),
+      ("%d / %d chars"):format(result.chars, result.charLimit),
+    }
+    if result.compressedStatus ~= "unavailable" then
+      table.insert(parts, ("%d / %d compressed"):format(
+        result.compressed, result.compressedLimit))
     end
+    print(table.concat(parts, " · "))
   end)
 end)
 ```
 
 The cart root also gets a budget code lens. Run it to show the
-`pico8.showCartInfo` summary.
+`pico8.showCartInfo` summary. The lens marks compressed budgets with
+`(warning)` from 90% of the limit and `(over limit)` above it.
 
 ## Smoke test
 

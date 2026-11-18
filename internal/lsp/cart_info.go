@@ -17,6 +17,15 @@ import (
 const (
 	TokenLimit = 8192
 	CharLimit  = 65535
+	// CompressedLimit is PICO-8 0.2.0c+'s compressed code area (0x3d00).
+	// Saving .p8.png or .p8.rom fails above it.
+	CompressedLimit   = 15616
+	CompressedWarning = CompressedLimit * 9 / 10
+
+	BudgetStatusOK          = "ok"
+	BudgetStatusWarning     = "warning"
+	BudgetStatusError       = "error"
+	BudgetStatusUnavailable = "unavailable"
 
 	CommandShowCartInfo = "pico8.showCartInfo"
 	RequestCartInfo     = "pico8/cartInfo"
@@ -26,14 +35,18 @@ const (
 
 // CartInfo is the pico8/cartInfo response and the data used by the budget lens.
 type CartInfo struct {
-	RootURI    uri.URI       `json:"rootUri"`
-	Tokens     int           `json:"tokens"`
-	TokenLimit int           `json:"tokenLimit"`
-	Chars      int           `json:"chars"`
-	CharLimit  int           `json:"charLimit"`
-	Files      []FileInfo    `json:"files,omitempty"`
-	Includes   []IncludeInfo `json:"includes,omitempty"`
-	Tabs       []TabInfo     `json:"tabs,omitempty"`
+	RootURI           uri.URI       `json:"rootUri"`
+	Tokens            int           `json:"tokens"`
+	TokenLimit        int           `json:"tokenLimit"`
+	Chars             int           `json:"chars"`
+	CharLimit         int           `json:"charLimit"`
+	Compressed        int           `json:"compressed"`
+	CompressedLimit   int           `json:"compressedLimit"`
+	CompressedWarning int           `json:"compressedWarning"`
+	CompressedStatus  string        `json:"compressedStatus"`
+	Files             []FileInfo    `json:"files,omitempty"`
+	Includes          []IncludeInfo `json:"includes,omitempty"`
+	Tabs              []TabInfo     `json:"tabs,omitempty"`
 }
 
 // FileInfo reports one source file's contribution to the assembled cart.
@@ -66,15 +79,28 @@ type TabInfo struct {
 
 func cartInfoFor(snap *cart.Snapshot) CartInfo {
 	if snap == nil || snap.Cart == nil {
-		return CartInfo{TokenLimit: TokenLimit, CharLimit: CharLimit}
+		return CartInfo{
+			TokenLimit:        TokenLimit,
+			CharLimit:         CharLimit,
+			CompressedLimit:   CompressedLimit,
+			CompressedWarning: CompressedWarning,
+			CompressedStatus:  BudgetStatusUnavailable,
+		}
 	}
 	c := snap.Cart
 	info := CartInfo{
-		RootURI:    c.RootURI,
-		Tokens:     c.Tokens,
-		TokenLimit: TokenLimit,
-		Chars:      c.Chars,
-		CharLimit:  CharLimit,
+		RootURI:           c.RootURI,
+		Tokens:            c.Tokens,
+		TokenLimit:        TokenLimit,
+		Chars:             c.Chars,
+		CharLimit:         CharLimit,
+		CompressedLimit:   CompressedLimit,
+		CompressedWarning: CompressedWarning,
+		CompressedStatus:  BudgetStatusUnavailable,
+	}
+	if size, ok := snap.CompressedSize(); ok {
+		info.Compressed = size
+		info.CompressedStatus = budgetStatus(size, CompressedWarning, CompressedLimit)
 	}
 	for _, file := range c.Files {
 		info.Files = append(info.Files, FileInfo{
@@ -181,7 +207,8 @@ func (s *Server) showCartInfo(ctx context.Context, params *protocol.ExecuteComma
 	message := cartInfoSummary(info)
 	if client := s.Client(); client != nil {
 		kind := protocol.MessageTypeInfo
-		if info.Tokens > info.TokenLimit || info.Chars > info.CharLimit {
+		if info.Tokens > info.TokenLimit || info.Chars > info.CharLimit ||
+			info.CompressedStatus == BudgetStatusWarning || info.CompressedStatus == BudgetStatusError {
 			kind = protocol.MessageTypeWarning
 		}
 		_ = client.ShowMessage(ctx, &protocol.ShowMessageParams{Type: kind, Message: message})
@@ -190,13 +217,37 @@ func (s *Server) showCartInfo(ctx context.Context, params *protocol.ExecuteComma
 }
 
 func cartInfoSummary(info CartInfo) string {
-	summary := fmt.Sprintf("%d / %d tokens · %d / %d chars",
-		info.Tokens, info.TokenLimit, info.Chars, info.CharLimit)
+	summary := fmt.Sprintf("%d / %d tokens · %d / %d chars · %s",
+		info.Tokens, info.TokenLimit, info.Chars, info.CharLimit, compressedSummary(info))
 	if largest := largestFile(info.Files, false); largest != nil && len(info.Files) > 1 {
 		summary += fmt.Sprintf("\nLargest file: %s (%d tokens, %d chars)",
 			filepath.Base(largest.URI.FsPath()), largest.Tokens, largest.Chars)
 	}
 	return summary
+}
+
+func budgetStatus(value, warning, limit int) string {
+	switch {
+	case value > limit:
+		return BudgetStatusError
+	case value >= warning:
+		return BudgetStatusWarning
+	default:
+		return BudgetStatusOK
+	}
+}
+
+func compressedSummary(info CartInfo) string {
+	switch info.CompressedStatus {
+	case BudgetStatusUnavailable:
+		return "compressed n/a"
+	case BudgetStatusError:
+		return fmt.Sprintf("%d / %d compressed (over limit)", info.Compressed, info.CompressedLimit)
+	case BudgetStatusWarning:
+		return fmt.Sprintf("%d / %d compressed (warning)", info.Compressed, info.CompressedLimit)
+	default:
+		return fmt.Sprintf("%d / %d compressed", info.Compressed, info.CompressedLimit)
+	}
 }
 
 func largestContributor(snap *cart.Snapshot, byTokens bool) *cart.File {
@@ -249,41 +300,70 @@ func cartLimitDiagnostics(snap *cart.Snapshot, settings config.Settings) []proto
 		return nil
 	}
 	rootRange := file.Index.Range(0, 0)
+
+	type budget struct {
+		count           int
+		warning         int
+		limit           int
+		code            string
+		unit            string
+		byTokens        bool
+		contributorUnit string
+		contributorNote string
+	}
+	budgets := []budget{
+		{snap.Cart.Tokens, TokenLimit * 9 / 10, TokenLimit, "token-limit", "tokens", true, "tokens", ""},
+		{snap.Cart.Chars, CharLimit * 9 / 10, CharLimit, "char-limit", "chars", false, "chars", ""},
+	}
+	if size, ok := snap.CompressedSize(); ok {
+		budgets = append(budgets, budget{
+			size, CompressedWarning, CompressedLimit, "compressed-size-limit",
+			"compressed bytes", false, "chars", "; compression is cart-wide",
+		})
+	}
+
 	var out []protocol.Diagnostic
-	add := func(count, limit int, code, unit string, byTokens bool) {
-		if count < limit*9/10 {
-			return
-		}
-		severity := protocol.DiagnosticSeverityWarning
-		if count > limit {
-			severity = protocol.DiagnosticSeverityError
+	for _, item := range budgets {
+		severity, ok := limitSeverity(item.count, item.warning, item.limit)
+		if !ok {
+			continue
 		}
 		diag := protocol.Diagnostic{
 			Range:    rootRange,
 			Severity: severity,
-			Code:     protocol.String(code),
+			Code:     protocol.String(item.code),
 			Source:   protocol.NewOptional(DiagnosticSource),
-			Message:  protocol.String(fmt.Sprintf("%d / %d %s", count, limit, unit)),
+			Message:  protocol.String(fmt.Sprintf("%d / %d %s", item.count, item.limit, item.unit)),
 		}
-		if contributor := largestContributor(snap, byTokens); contributor != nil {
+		if contributor := largestContributor(snap, item.byTokens); contributor != nil {
 			contributorRange := protocol.Range{}
 			if contributor.Index != nil {
 				contributorRange = contributor.Index.Range(0, 0)
 			}
 			contributorCount := snap.Cart.FileChars[contributor.ID]
-			if byTokens {
+			if item.byTokens {
 				contributorCount = snap.Cart.FileTokens[contributor.ID]
 			}
 			diag.RelatedInformation = []protocol.DiagnosticRelatedInformation{{
 				Location: protocol.Location{URI: contributor.URI, Range: contributorRange},
-				Message: fmt.Sprintf("largest contributor: %s (%d %s)",
-					filepath.Base(contributor.URI.FsPath()), contributorCount, unit),
+				Message: fmt.Sprintf("largest contributor: %s (%d %s%s)",
+					filepath.Base(contributor.URI.FsPath()), contributorCount, item.contributorUnit, item.contributorNote),
 			}}
 		}
 		out = append(out, diag)
 	}
-	add(snap.Cart.Tokens, TokenLimit, "token-limit", "tokens", true)
-	add(snap.Cart.Chars, CharLimit, "char-limit", "chars", false)
 	sort.SliceStable(out, func(i, j int) bool { return out[i].Code.(protocol.String) < out[j].Code.(protocol.String) })
 	return out
+}
+
+// limitSeverity applies the budget warning/error thresholds: the warning
+// threshold is inclusive, and the hard limit is an error only when exceeded.
+func limitSeverity(count, warning, limit int) (protocol.DiagnosticSeverity, bool) {
+	if count < warning {
+		return 0, false
+	}
+	if count > limit {
+		return protocol.DiagnosticSeverityError, true
+	}
+	return protocol.DiagnosticSeverityWarning, true
 }

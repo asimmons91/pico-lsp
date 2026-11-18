@@ -83,7 +83,9 @@ func TestCodeLensBudget(t *testing.T) {
 	if len(lenses) != 1 {
 		t.Fatalf("lenses = %+v", lenses)
 	}
-	want := fmt.Sprintf("%d / %d tokens · %d / %d chars", snap.Cart.Tokens, TokenLimit, snap.Cart.Chars, CharLimit)
+	compressed, _ := snap.CompressedSize()
+	want := fmt.Sprintf("%d / %d tokens · %d / %d chars · %d / %d compressed",
+		snap.Cart.Tokens, TokenLimit, snap.Cart.Chars, CharLimit, compressed, CompressedLimit)
 	if lenses[0].Command.Title != want {
 		t.Fatalf("lens = %q, want %q", lenses[0].Command.Title, want)
 	}

@@ -1,6 +1,6 @@
 # M13 — Compressed-size Budget
 
-**Status:** Planned  
+**Status:** Done — implemented for the v1.2.0 batch.  
 **Depends on:** M12  
 **Release target:** v1.2.0 (batched with M11, M12, M14)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -83,13 +83,37 @@ PICO-8-compatible compressor for the same source.
 
 ## Exit criteria
 
-- [ ] Assembled cart compressed size is reported consistently.
-- [ ] `pico8/cartInfo` and the code lens expose compressed size and status.
-- [ ] Warning/error thresholds match the documented limit and are tested.
-- [ ] Compressor output matches PICO-8/reference output on fixtures.
-- [ ] Failures degrade gracefully and performance stays within budget.
-- [ ] Documentation and diagnostic references are updated.
-- [ ] Existing token/character behavior and tests do not regress.
+- [x] Assembled cart compressed size is reported consistently.
+- [x] `pico8/cartInfo` and the code lens expose compressed size and status.
+- [x] Warning/error thresholds match the documented limit and are tested.
+- [x] Compressor output matches PICO-8/reference output on fixtures.
+- [x] Failures degrade gracefully and performance stays within budget.
+- [x] Documentation and diagnostic references are updated.
+- [x] Existing token/character behavior and tests do not regress.
+
+## Implementation notes
+
+- `internal/p8compress` is a Go port of Lexaloffle's MIT-licensed
+  `pxa_compress_snippets.c` (PICO-8 0.2.4c format, still current in 0.2.7). The
+  port is differential-tested byte-for-byte against the reference C compressor;
+  `testdata/p8compress/` records sizes, exact streams for small fixtures, and
+  expected sizes for the 51-cart corpus.
+- `internal/p8scii` owns the P8SCII table shared by the PNG decoder and the
+  compressor. UTF-8 source is encoded one byte per P8SCII glyph before
+  compression, and CRLF/CR line endings are normalized to LF.
+- `cart.Snapshot.CompressedSize` assembles the cart code from the flattened
+  program (after includes and tabs) and memoizes the result with `sync.Once`.
+  Compression is lazy so editing stays fast when neither budget UI is in use.
+- Compressed size is a property of the assembled stream, so it is reported
+  cart-wide. Per-file compressed contributions are not meaningful and are
+  deliberately omitted; budget diagnostics point at the largest source file by
+  characters as a hint.
+- Standalone `.lua` files have no compressed budget. Oversized code, compressor
+  work-limit exhaustion, and other unsupported inputs report
+  `compressedStatus: "unavailable"` and never publish a false limit error.
+- The diagnostic thresholds are 14054 bytes (90%) for a warning and anything
+  above 15616 bytes for an error. A value exactly at 15616 bytes is still a
+  warning, matching the milestone's "error when exceeded" contract.
 
 ## Risks and mitigations
 
