@@ -20,8 +20,8 @@ The following backlog items have been promoted and split into milestone specs:
 - [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 
-M7–M10 shipped in v1.1.0. M11–M14 are scheduled for v1.2.0. The items below are
-not part of that release.
+M7–M10 shipped in v1.1.0. M11–M14 are implemented for v1.2.0. The items below
+are not part of that release.
 
 ## Prioritization
 

@@ -69,19 +69,52 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 	if action := refactor.ExtractFunction(rctx, start, end); action != nil {
 		add(action)
 	}
-	if action := refactor.GenerateClass(rctx, start); action != nil {
+	if action := refactorAt(rctx, start, end, refactor.GenerateClass); action != nil {
 		add(action)
 	}
-	if action := refactor.GlobalToLocal(rctx, start); action != nil {
+	if action := refactorAtOccurrence(rctx, start, end, refactor.GlobalToLocal); action != nil {
 		add(action)
 	}
-	if action := refactor.ConvertShorthand(rctx, start); action != nil {
+	if action := refactorAt(rctx, start, end, refactor.ConvertShorthand); action != nil {
 		add(action)
 	}
-	if action := refactor.RemoveUnused(rctx, start); action != nil {
+	if action := refactorAtOccurrence(rctx, start, end, refactor.RemoveUnused); action != nil {
 		add(action)
 	}
 	return actions
+}
+
+// refactorAtOccurrence finds the first name occurrence inside a selection. It
+// handles selections that begin at line indentation or cover a whole line.
+func refactorAtOccurrence(ctx *refactor.Context, start, end int, fn func(*refactor.Context, int) *refactor.Action) *refactor.Action {
+	if action := fn(ctx, start); action != nil {
+		return action
+	}
+	for _, occ := range ctx.Result.Occurrences(ctx.FileID) {
+		if occ.Span.Start < start || occ.Span.End > end {
+			continue
+		}
+		if action := fn(ctx, occ.Span.Start); action != nil {
+			return action
+		}
+	}
+	if end > start {
+		return fn(ctx, end-1)
+	}
+	return nil
+}
+
+// refactorAt tries the selection start and, for whole-line selections over a
+// table literal, the last selected byte. Only class generation uses this: a
+// table value can begin in the middle of a declaration line.
+func refactorAt(ctx *refactor.Context, start, end int, fn func(*refactor.Context, int) *refactor.Action) *refactor.Action {
+	if action := fn(ctx, start); action != nil {
+		return action
+	}
+	if end > start {
+		return fn(ctx, end-1)
+	}
+	return nil
 }
 
 func (s *Server) missingFieldsAction(nav *navContext, rctx *refactor.Context, diag protocol.Diagnostic) *protocol.CodeAction {
