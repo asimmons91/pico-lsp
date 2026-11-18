@@ -179,6 +179,34 @@ func TestM14GlobalToLocalRefusesCrossFileUse(t *testing.T) {
 	}
 }
 
+func TestM14EditsUseOriginalCartTabCoordinates(t *testing.T) {
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nlocal first = 1\n-->8\nlocal second = {x = 1}\n"
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	pos := positionAt(t, text, "{x = 1", 1)
+	actions, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Range:        protocol.Range{Start: pos, End: pos},
+	})
+	if err != nil {
+		t.Fatalf("code action: %v", err)
+	}
+	class := findActionByKind(t, actions, "refactor.rewrite.class")
+	if class == nil {
+		t.Fatalf("missing class action in %+v", actions)
+	}
+	edit := class.Edit.Changes[root][0]
+	if edit.Range.Start.Line != 5 || edit.Range.Start.Character != 0 {
+		t.Fatalf("class range = %+v, want line 5", edit.Range)
+	}
+}
+
 func TestM14ShorthandConversion(t *testing.T) {
 	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nif x then\n  play()\nend\n"
 	dir := t.TempDir()

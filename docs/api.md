@@ -151,8 +151,8 @@ command re-validates the symbol and sends a standard `workspace/applyEdit`:
 
 The server refuses the command if the analysis is stale, the symbol is no longer
 an unused local, or the edit cannot be constructed. Code actions require the
-symbol to be a local or local function with no reads; declarations with impure
-initializers (such as calls) are not removable.
+symbol to be a local or local function with no reads. Write-only locals and
+declarations with impure initializers (such as calls) are not removable.
 
 ## Budget code lens
 

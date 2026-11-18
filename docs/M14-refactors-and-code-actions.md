@@ -111,6 +111,8 @@ the missing fields.
 - Remove-unused is the only action returned without an embedded edit. Its code
   action carries `pico8.removeUnused`; executing that command re-validates the
   symbol against fresh analysis and sends a standard `workspace/applyEdit`.
+  Removal is refused for write-only locals, impure initializers, and unresolved
+  same-name uses.
 - Extract-function targets a single expression or statement, refuses writes to
   captured locals, nested functions, varargs, labels/goto/break/return, and
   multi-value call contexts. Captured locals become parameters.

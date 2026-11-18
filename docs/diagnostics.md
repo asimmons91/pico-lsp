@@ -100,8 +100,8 @@ flagged table literal with type-appropriate placeholder values; open classes and
 `unused-local` diagnostics carry a `quickfix.pico-lsp.remove-unused` action.
 The action is also offered from the declaration itself when the diagnostic is
 disabled. It is executed through the `pico8.removeUnused` confirmation command
-and is refused for impure initializers or unresolved same-name uses. See
-[api.md](api.md) for all refactor kinds.
+and is refused for write-only locals, impure initializers, or unresolved
+same-name uses. See [api.md](api.md) for all refactor kinds.
 
 ## Suppression
 

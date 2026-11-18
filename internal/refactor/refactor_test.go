@@ -353,6 +353,14 @@ func TestRemoveUnused(t *testing.T) {
 	}
 }
 
+func TestRemoveUnusedRefusesWriteOnlyLocal(t *testing.T) {
+	text := "local unused\nunused = 1\n"
+	ctx := testContext(t, text)
+	if action := RemoveUnused(ctx, offsetOf(t, text, "unused")); action != nil {
+		t.Fatalf("remove unused changed a local write into a global write: %+v", action)
+	}
+}
+
 func TestRemoveUnusedRefusesImpureInitializer(t *testing.T) {
 	text := "local unused = make_thing()\n"
 	ctx := testContext(t, text)

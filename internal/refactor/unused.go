@@ -23,6 +23,14 @@ func RemoveUnused(ctx *Context, offset int) *Action {
 	if !ctx.Result.IsUnusedLocal(sym) {
 		return nil
 	}
+	for _, candidate := range ctx.Result.OccurrencesForSymbol(sym) {
+		if candidate.Decl {
+			continue
+		}
+		// A write-only local would become a global write if the declaration
+		// were removed, so removal is not behavior-preserving.
+		return nil
+	}
 	stmt := ctx.enclosingStatement(sym.DeclSpan.Start)
 	if stmt == nil {
 		return nil
