@@ -111,8 +111,11 @@ the missing fields.
 - Remove-unused is the only action returned without an embedded edit. Its code
   action carries `pico8.removeUnused`; executing that command re-validates the
   symbol against fresh analysis and sends a standard `workspace/applyEdit`.
-  Removal is refused for write-only locals, impure initializers, and unresolved
-  same-name uses.
+  Removal is refused for write-only locals, impure initializers, unresolved
+  same-name uses, and `---@meta` files. Attached doc blocks are removed with
+  the declaration only when they contain declaration-local tags; blocks with
+  `@class`, `@alias`, `@enum`, `@meta`, `@diagnostic`, or `@cast` are preserved
+  and block the action.
 - Extract-function targets a single expression or statement, refuses writes to
   captured locals, nested functions, varargs, labels/goto/break/return, and
   multi-value call contexts. Captured locals become parameters.
@@ -125,7 +128,9 @@ the missing fields.
   name suppresses the action.
 - Add-missing-fields only records fixes for `(exact)` classes. It inserts
   missing fields into the flagged table literal with a type-appropriate
-  placeholder and never edits open classes.
+  placeholder and never edits open classes. If any required field name cannot
+  be written as a Lua identifier, the action is refused rather than returning a
+  partial fix that leaves the diagnostic unresolved.
 - Shorthand conversion only accepts single-statement bodies, refuses comments
   and multi-line bodies, and caps generated lines at 120 columns. A next-line
   `else` remains attached to its outer standard `if`.

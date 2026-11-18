@@ -184,6 +184,13 @@ func (c *Context) parentBlock(stmt syntax.Stmt) *syntax.Block {
 	if stmt == nil {
 		return nil
 	}
+	if c.Snap != nil && c.Snap.Chunk != nil && c.Snap.Chunk.Block != nil {
+		for _, candidate := range c.Snap.Chunk.Block.Stmts {
+			if candidate == stmt {
+				return c.Snap.Chunk.Block
+			}
+		}
+	}
 	var best *syntax.Block
 	bestLen := int(^uint(0) >> 1)
 	for _, node := range c.nodes() {

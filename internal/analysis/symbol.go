@@ -280,6 +280,13 @@ func (r *Result) VisibleSymbolsAt(scope *Scope, fileID source.FileID, offset int
 	})
 }
 
+// IsMetaFile reports whether fileID contains a `---@meta` marker. Meta files
+// are API stubs: diagnostics and some refactors deliberately treat them
+// differently from normal cart code.
+func (r *Result) IsMetaFile(fileID source.FileID) bool {
+	return r != nil && r.meta[fileID]
+}
+
 // TypeNames returns the named types declared in the cart, keyed canonically.
 func (r *Result) TypeNames() map[string]types.Type {
 	if r == nil || len(r.typeNames) == 0 {
