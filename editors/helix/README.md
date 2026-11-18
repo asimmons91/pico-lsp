@@ -68,8 +68,9 @@ See [../../docs/configuration.md](../../docs/configuration.md) for every setting
    hx --health pico8
    ```
 
-   The configured language server should be listed without an error. A missing
-   tree-sitter grammar is expected in v1; the LSP still attaches.
+   The configured language server should be listed without an error. If you
+   have not installed the optional tree-sitter grammar, plain highlighting is
+   expected; the LSP still attaches.
 
 2. Open the test cart:
 
