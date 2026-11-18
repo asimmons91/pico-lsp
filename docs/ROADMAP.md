@@ -35,7 +35,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Area | Decision | Notes |
 |---|---|---|
 | v1 scope | Core LSP + type features only | Formatter and `.p8.png` support are post-v1. |
-| Editors | Neovim + Helix | VS Code and Zed clients are post-v1; the server remains editor-agnostic. |
+| Editors | Neovim + Helix | VS Code client is M15; Zed remains post-v1; the server remains editor-agnostic. |
 | Neovim helper | Helper plugin, optional at runtime | Auto-attaches to `.lua` files owned by a cart; avoids attaching to unrelated Lua buffers. |
 | Syntax highlighting | Vim syntax file + semantic tokens | Ship a small `.p8` syntax file for sections/dialect; semantic tokens cover Lua code. |
 | Project naming | `pico-lsp` + `pico8` | Binary/repo `pico-lsp`; primary language ID `pico8`; config section `pico8`; accept `pico-8` aliases. |
@@ -45,7 +45,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Includes | Faithful PICO-8 | Non-recursive includes. Nested includes produce a warning. |
 | Include ownership | Nearest ancestor cart | A `.lua` file belongs to the nearest ancestor `.p8` that includes it. |
 | Built-in API | PICO-8 0.2.7 only | Reserve `pico8.apiVersion` for future versions. |
-| Install channels | GitHub release binaries for v1 | Checksummed archives and `go install`; Homebrew tap and Mason package are post-v1. |
+| Install channels | GitHub release binaries for v1 | Checksummed archives and `go install`; M15 adds a VS Code VSIX asset. Homebrew tap, Mason package, and Marketplace/Open VSX publishing are post-v1. |
 | Distribution | Static Go binary | `go install` is documented for developers; release binaries are the primary user path. |
 | LSP library | `go.lsp.dev/protocol` + `go.lsp.dev/jsonrpc2` | Typed LSP 3.18 types with `UnimplementedServer`; pinned to v1.0.1. |
 | Position encoding | UTF-16 by default | Negotiate UTF-8 if the client supports it; UTF-16 must be correct first. |
@@ -72,10 +72,12 @@ These decisions were made before milestone specs were written. Changing one requ
 | M12 | PICO-8 Tree-sitter Grammar | Editor highlighting, indents, and text objects for `.p8` carts | M11 | Done |
 | M13 | Compressed-size Budget | PICO-8-compatible compressed code-size reporting and limits | M12 | Done |
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
+| M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Planned |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**
-in the order shown. Each milestone is independently mergeable; the release was
-cut after all four met their exit criteria.
+in the order shown. M15 is planned for **v1.3.0**; each milestone is
+independently mergeable, and the release is cut only after its exit criteria
+pass.
 
 Each milestone has a detailed spec:
 
@@ -94,6 +96,7 @@ Each milestone has a detailed spec:
 - [M12 — PICO-8 Tree-sitter Grammar](M12-tree-sitter-grammar.md)
 - [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
+- [M15 — VS Code Client](M15-vscode-client.md)
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -125,7 +128,7 @@ The v1 release is complete when a user can:
 
 - A formatter or formatter compatibility with `pico8-ls`.
 - Reading or writing `.p8.png` carts.
-- VS Code, Zed, or other editor-specific clients.
+- Zed or other editor-specific clients. The VS Code client is M15.
 - A full Lua standard library or `require` implementation.
 - Luau-style inline type syntax.
 - Advanced type features in v1.0: generic classes, overload resolution,
@@ -266,7 +269,7 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 batches use minor releases (`v1.1.0`, `v1.2.0`).
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
 - **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0. Later promoted features use minor releases unless they introduce a breaking change.

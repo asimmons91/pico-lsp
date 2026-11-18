@@ -4,8 +4,8 @@
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 This file is the prioritized backlog for work that is not part of the committed
-M7–M14 sequence. It is not a commitment to ship every item. Selected items move
-into their own milestone specs.
+milestone sequence. It is not a commitment to ship every item. Selected items
+move into their own milestone specs.
 
 ## Committed post-v1 work
 
@@ -19,16 +19,17 @@ The following backlog items have been promoted and split into milestone specs:
 - [M12 — PICO-8 Tree-sitter Grammar](M12-tree-sitter-grammar.md)
 - [M13 — Compressed-size Budget](M13-compressed-size-budget.md)
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
+- [M15 — VS Code Client](M15-vscode-client.md)
 
-M7–M10 shipped in v1.1.0. M11–M14 shipped in v1.2.0. The items below are not
-part of that release.
+M7–M10 shipped in v1.1.0. M11–M14 shipped in v1.2.0. M15 is planned for
+v1.3.0. The items below are not part of those releases.
 
 ## Prioritization
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
-| P2 | VS Code client | Reach mainstream editor users | Low |
+| P2 | VS Code Marketplace and Open VSX publishing | Makes the M15 client discoverable and one-click installable | Low |
 | P2 | Zed extension | Modern editor support | Medium |
 | P3 | API version selection | Support future PICO-8 API versions | Medium |
 
@@ -46,20 +47,24 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 2. VS Code client
+## 2. VS Code Marketplace and Open VSX publishing
 
-Make installation easy for VS Code users.
+Publish the M15 client to the VS Code Marketplace and Open VSX. M15 ships the
+extension as a GitHub release VSIX; this follow-up makes it discoverable and
+one-click installable.
 
 Requirements:
 
-- Thin TypeScript client using `vscode-languageclient`.
-- Bundle or download the platform binary.
-- Contribute `.p8` language support, syntax highlighting, cart-info commands,
-  configuration schema, and a status bar item using `pico8/cartInfo`.
-- Publish to the VS Code Marketplace and Open VSX.
-- Keep the server editor-agnostic; support a user-managed `pico8.serverPath`.
-- Test activation, server start, configuration, and core features on all target
+- Register and verify `asimmons91` as the publisher in both registries.
+- Keep Marketplace and Open VSX publishers independently retryable.
+- Publish from the release workflow using repository secrets, with a documented
+  manual fallback.
+- Include the extension README, icon, LICENSE, CHANGELOG, repository links,
+  categories, and keywords in both listings.
+- Publish only VSIXs that passed the M15 CI and release checks.
+- Test installation from both registries on all supported local desktop
   platforms.
+- Document install, upgrade, and uninstall paths for each registry.
 
 ## 3. Zed extension
 
@@ -87,7 +92,7 @@ Requirements:
 
 ## Cross-cutting requirements
 
-- No regressions in v1, v1.1, or v1.2 behavior or performance budgets.
+- No regressions in v1, v1.1, v1.2, or v1.3 behavior or performance budgets.
 - Every feature is additive or explicitly opt-in.
 - Update the roadmap, README, configuration docs, diagnostic reference, and
   changelog.
