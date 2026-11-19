@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.5.1 released; M17–M19 public-package specs ready
+**Status:** v1.5.1 released; M17–M19 public-package specs ready (Planned)
 
 **Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -75,9 +75,9 @@ These decisions were made before milestone specs were written. Changing one requ
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
 | M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Done |
-| M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Spec'd |
-| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Spec'd |
-| M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Spec'd |
+| M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Planned |
+| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Planned |
+| M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Planned |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -162,13 +162,15 @@ wire contract, defaults, or editor behavior.
 | Release | Milestone | Public package | Purpose | Blocks |
 | --- | --- | --- | --- | --- |
 | `v1.6.0` | M17 | `pkg/p8scii` | Canonical P8SCII charset, display widths, and encode/decode helpers | pico-editor M1 |
-| `v1.7.0` | M18 | `pkg/cart` | Cart parse/validate plus byte-preserving code splice/save | pico-editor M4 |
+| `v1.7.0` | M18 | `pkg/cart` | Cart parse/validate, byte-preserving code splice/save, and include ownership | pico-editor M4 |
 | `v1.8.0` | M19 | `pkg/lsp` + `pkg/glyphs` | In-process server entry point and glyph catalog for the picker | pico-editor M5 |
 
 Rules:
 
-- Each package is a thin public facade over existing `internal/` packages. Do
-  not fork behavior or duplicate the parser, P8SCII mapping, or LSP server.
+- Each package is a thin public facade, or an editor-shaped public model that
+  wraps existing internal behavior. The cart `Document` wraps the internal
+  parser; it does not duplicate it. Do not fork behavior or duplicate the
+  parser, P8SCII mapping, or LSP server.
 - Facades expose only what the editor needs. Keep the public API small, and
   cover it with tests and examples.
 - Tag `v1.6.0`, `v1.7.0`, and `v1.8.0` only after their package tests pass. A

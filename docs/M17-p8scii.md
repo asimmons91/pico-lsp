@@ -1,6 +1,7 @@
 # M17 — P8SCII Public Package
 
-**Status:** Spec'd — implementation not started  
+**Status:** Planned — spec ready, implementation not started
+
 **Depends on:** M16  
 **Release target:** v1.6.0  
 **Blocks:** pico-editor M1  
@@ -60,9 +61,12 @@ Confirmed before implementation:
 2. `pkg/p8scii/p8scii.go` with the public facade and godoc.
 3. Table tests for every byte, width class, and encode/decode round-trip.
 4. `pkg/p8scii/example_test.go` with runnable examples.
-5. An external consumer module under `testdata/publicapi` that compiles and
-   tests only against `pkg/p8scii`.
-6. `CHANGELOG.md` entry and `v1.6.0` release.
+5. An external consumer module at `testdata/publicapi/p8scii` with module path
+   `example.com/pico-lsp-publicapi-p8scii` and a local `replace` to the repo
+   root.
+6. CI updates: `gofmt -l cmd internal pkg testdata/publicapi`, the consumer
+   module test, and the `pkg/p8scii` fuzz target in the nightly list.
+7. `CHANGELOG.md` entry and `v1.6.0` release.
 
 ## Detailed requirements
 
@@ -92,6 +96,9 @@ Confirmed before implementation:
   draw them as cells.
 - The width table is a single source of truth. Do not derive width from Unicode
   properties, rune count, `runewidth`, or grapheme clusters.
+- pico-editor M1 consumes pixel widths and converts them to 4-pixel cells. The
+  editor owns cluster iteration and cursor snapping; `pkg/p8scii` supplies the
+  byte table and widths those routines use.
 
 ### 2. Public facade
 
@@ -117,15 +124,18 @@ func Glyphs() []Glyph
 ### 3. Tests
 
 - Every byte: `Lookup(b).Text == Decode([]byte{b})`,
-  `Lookup(b).Byte == b`, and width matches the class table.
+  `Lookup(b).Byte == b`, `Lookup(b).Printable` matches the control/printable
+  class, and width matches the class table.
 - Every printable byte: `Encode(Lookup(b).Text)` returns exactly `[]byte{b}`.
 - Control bytes: decode/encode round-trip where the current mapping supports
   it; document any exception rather than changing behavior.
 - `Glyphs()` returns 256 entries, is sorted by byte, and is a copy: mutating the
   result does not affect a later call.
 - External consumer module: imports only `pkg/p8scii`, calls every exported
-  function, and asserts a representative wide/narrow glyph. CI runs
-  `go test ./...` in that module.
+  function, and asserts a representative wide/narrow glyph. The module path is
+  `example.com/pico-lsp-publicapi-p8scii`, so it cannot import
+  `github.com/asimmons91/pico-lsp/internal/...`; CI runs `go test ./...` in that
+  directory.
 - Fuzz `Encode` followed by `Decode` for valid UTF-8 input: no panic, and the
   result is valid UTF-8. (Round-trip equality is not required for unknown
   characters because Encode preserves UTF-8 bytes.)
@@ -158,7 +168,11 @@ value.
 
 - `go test ./...` and `go test -race ./...` pass.
 - `golangci-lint run`, `gofmt`, and `go vet` pass.
-- The external consumer module builds with `GOFLAGS=-mod=readonly`.
+- `gofmt` covers `cmd`, `internal`, `pkg`, and `testdata/publicapi`.
+- The external consumer module builds with `GOFLAGS=-mod=readonly` and runs in
+  CI.
+- The `pkg/p8scii` fuzz target is added to the short CI fuzz list and the
+  nightly fuzz workflow.
 - No screenshots are required. Visual verification belongs to pico-editor M1.
 
 ## Exit criteria
@@ -166,9 +180,11 @@ value.
 - [ ] `internal/p8scii` exposes all 256 glyph entries and the width table.
 - [ ] `pkg/p8scii` exposes only the agreed public API and no internal types in
       exported signatures.
-- [ ] All 256 bytes pass metadata, width, and round-trip tests.
-- [ ] The external consumer module imports only `pkg/p8scii`.
-- [ ] `go test ./...`, `-race`, lint, vet, and gofmt pass.
+- [ ] All 256 bytes pass metadata, `Printable`, width, and round-trip tests.
+- [ ] The external consumer module imports only `pkg/p8scii`, uses an external
+      module path, and runs in CI.
+- [ ] `go test ./...`, `-race`, lint, vet, gofmt, and the consumer readonly
+      build pass.
 - [ ] `v1.6.0` is tagged and pico-editor M1 can pin it.
 - [ ] No existing LSP behavior or P8SCII mapping changed.
 

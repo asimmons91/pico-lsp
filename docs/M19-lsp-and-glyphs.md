@@ -1,6 +1,7 @@
 # M19 — LSP and Glyph Public Packages
 
-**Status:** Spec'd — implementation not started  
+**Status:** Planned — spec ready, implementation not started
+
 **Depends on:** M18  
 **Release target:** v1.8.0  
 **Blocks:** pico-editor M5  
@@ -33,6 +34,8 @@ Confirmed before implementation:
 | D5 | Glyph catalog | `pkg/glyphs` re-exports the catalog types and lookup/build functions. The LSP `pico8/glyphs` request remains the editor picker path. |
 | D6 | Compatibility | Stable semver from v1.8.0; additive changes only. |
 | D7 | Logging | The server logs only to the supplied logger. It never writes to stdout. A nil logger is silent. |
+| D8 | Editor configuration | pico-editor sends settings through `initializationOptions.pico8` and `workspace/configuration`; workspace folders go in the `initialize` params. No Go config types. |
+| D9 | Editor shutdown | pico-editor cancels the server context and closes the returned connection. There is no `Server.Shutdown` method. |
 
 ## Scope
 
@@ -64,8 +67,11 @@ Confirmed before implementation:
    functions.
 3. Godoc examples for the server and catalog.
 4. An in-memory LSP test using `net.Pipe`.
-5. An external consumer module under `testdata/publicapi`.
-6. `CHANGELOG.md` entry and `v1.8.0` release.
+5. An external consumer module at `testdata/publicapi/lsp` with module path
+   `example.com/pico-lsp-publicapi-lsp` and a local `replace` to the repo root.
+6. CI updates: `gofmt -l cmd internal pkg testdata/publicapi`, the consumer
+   module test, and the `pkg/lsp`/`pkg/glyphs` fuzz targets where applicable.
+7. `CHANGELOG.md` entry and `v1.8.0` release.
 
 ## Detailed requirements
 
@@ -90,6 +96,7 @@ func (s *Server) Serve(ctx context.Context, stream jsonrpc2.Stream) jsonrpc2.Con
 - `New` constructs the internal server with default configuration. The editor
   supplies configuration through the LSP `initialize` request and
   `workspace/configuration`; `pkg/lsp` exposes no internal config types.
+  Workspace folders are part of the `initialize` params, not `Options`.
 - `Serve` starts one connection. It returns the `jsonrpc2.Conn` so the caller
   can wait for `Done`, inspect `Err`, and close it. One `Server` serves one
   connection; create a new `Server` for another connection.
@@ -97,10 +104,15 @@ func (s *Server) Serve(ctx context.Context, stream jsonrpc2.Stream) jsonrpc2.Con
   disabled in-process.
 - The server's version in `ServerInfo` comes from `internal/version`.
 - The server never writes to stdout. All logging goes through `Options.Logger`.
-- Cancelling `ctx`, closing the connection, or `shutdown`/`exit` follows the
-  same lifecycle as the stdio server.
+- Cancelling `ctx` or closing the connection is the shutdown path. `shutdown`
+  and `exit` follow the same lifecycle as the stdio server: `exit` marks the
+  server exited, and the caller closes the connection. Do not promise that
+  `exit` closes `conn.Done()` by itself.
 - `pkg/lsp` must not expose `internal/lsp.Server`, `internal/config.Manager`, or
   internal request/response types in any signature.
+- pico-editor M5 sends its three public settings through
+  `initializationOptions.pico8` and answers `workspace/configuration`; it does
+  not pass a Go settings struct to `New`.
 
 ### 2. Public glyph catalog
 
@@ -138,11 +150,18 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 
 - In-memory server test:
   - create `net.Pipe`, `lsp.New`, and `Serve`;
-  - initialize with UTF-16 and a workspace folder;
+  - initialize with UTF-16, a workspace folder, and a non-default
+    `initializationOptions.pico8` setting;
+  - assert the advertised capabilities and `ServerInfo` version match the
+    stdio server;
   - open a `.p8` cart;
   - assert diagnostics and semantic tokens are delivered;
-  - send `shutdown` and `exit`;
-  - assert the connection closes without a panic or deadlock.
+  - send `shutdown`, then cancel the context and close the client side;
+  - assert the connection and server goroutine finish without a panic or
+    deadlock. Do not assert that `exit` alone closes `conn.Done()`.
+- Configuration test: a non-default setting from `initializationOptions` or
+  `workspace/configuration` changes behavior; invalid values fall back to
+  defaults with a log entry.
 - Logging test: a nil logger produces no output; a supplied logger receives
   records; nothing is written to stdout.
 - Concurrency test: run the server and client with `-race`, including
@@ -188,8 +207,12 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 
 - `go test ./...`, `go test -race ./...`, `go vet`, `gofmt`, and
   `golangci-lint run` pass.
+- `gofmt` covers `cmd`, `internal`, `pkg`, and `testdata/publicapi`.
 - The public server e2e test runs in CI.
-- The external consumer module builds with `GOFLAGS=-mod=readonly`.
+- The external consumer module builds with `GOFLAGS=-mod=readonly` and runs in
+  CI.
+- The `pkg/lsp` and `pkg/glyphs` fuzz targets, where applicable, are added to
+  the nightly fuzz list.
 
 ## Exit criteria
 
@@ -197,10 +220,11 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 - [ ] `pkg/glyphs` exposes the catalog types, constants, and functions without
       internal types in signatures.
 - [ ] An in-memory LSP client completes initialize, open, diagnostics,
-      semantic tokens, and shutdown.
+      semantic tokens, configuration, and shutdown.
+- [ ] Advertised capabilities and `ServerInfo` match the stdio server.
 - [ ] The server writes nothing to stdout and respects the supplied logger.
-- [ ] `go test -race` passes for the public server and catalog.
-- [ ] The external consumer module imports only public packages.
+- [ ] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
+- [ ] The external consumer module imports only public packages and runs in CI.
 - [ ] `v1.8.0` is tagged and pico-editor M5 can pin it.
 - [ ] No existing stdio server behavior or LSP capability changed.
 
