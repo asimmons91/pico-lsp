@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Public `pkg/p8scii` package (M17): the complete 256-byte P8SCII table with
+  canonical Unicode text, 1x pixel widths, printable classification, and
+  `Encode`, `Decode`, `Lookup`, `GlyphFor`, and `Glyphs` helpers for external
+  Go programs. Additive; LSP behavior and the P8SCII mapping are unchanged.
+
 ## [1.5.1] - 2026-11-19
 
 ### Changed

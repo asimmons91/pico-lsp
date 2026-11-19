@@ -45,7 +45,7 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          unformatted="$(gofmt -l cmd internal)"
+          unformatted="$(gofmt -l .)"
           if [ -n "$unformatted" ]; then
             echo "The following files need gofmt:" >&2
             echo "$unformatted" >&2
@@ -61,6 +61,11 @@ jobs:
       - name: Race test
         if: runner.os == 'Linux'
         run: go test -count=1 -race ./...
+
+      - name: Test public API consumer module
+        if: runner.os == 'Linux'
+        run: go test -count=1 ./...
+        working-directory: testdata/publicapi/p8scii
 
       - name: Coverage
         if: runner.os == 'Linux'
@@ -234,6 +239,9 @@ jobs:
 
       - name: Fuzz PNG decoder
         run: go test -run=^$ -fuzz=FuzzDecode -fuzztime=10s ./internal/p8png
+
+      - name: Fuzz P8SCII
+        run: go test -run=^$ -fuzz=FuzzEncodeDecode -fuzztime=10s ./pkg/p8scii
 
   release-snapshot:
     name: release snapshot
