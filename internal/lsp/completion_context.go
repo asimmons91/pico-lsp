@@ -106,6 +106,10 @@ func glyphPrefix(text string, offset int) (start int, prefix string, ok bool) {
 		start--
 	}
 	prefix = strings.ToLower(text[start:offset])
+	if strings.HasPrefix(prefix, "p8_") && strings.Contains(prefix, "-") {
+		// A hyphen after p8_ is subtraction, not part of a glyph trigger.
+		return 0, "", false
+	}
 	if strings.HasPrefix(prefix, "p8_") || strings.HasPrefix(prefix, "p8-") {
 		return start, prefix, true
 	}

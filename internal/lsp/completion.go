@@ -123,13 +123,7 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 				return nil, false
 			}
 			if !annotation {
-				items := s.glyphCompletions(nav, offset, prefixStart, prefix)
-				if len(items) == 0 && strings.HasPrefix(prefix, "p8_") && strings.Contains(prefix, "-") {
-					// A hyphen after a p8_ identifier is subtraction, not a
-					// glyph trigger. Fall through to normal completion.
-				} else {
-					return items, false
-				}
+				return s.glyphCompletions(nav, offset, prefixStart, prefix), false
 			}
 		}
 		// Include paths and annotations keep their normal completion paths.
