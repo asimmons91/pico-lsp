@@ -1,6 +1,6 @@
 # M17 — P8SCII Public Package
 
-**Status:** Planned — spec ready, implementation not started
+**Status:** In progress — implementation complete; v1.6.0 release pending
 
 **Depends on:** M16  
 **Release target:** v1.6.0  
@@ -186,18 +186,18 @@ value.
 
 ## Exit criteria
 
-- [ ] `internal/p8scii` exposes all 256 glyph entries and the width table.
-- [ ] `pkg/p8scii` exposes only the agreed public API and no internal types in
+- [x] `internal/p8scii` exposes all 256 glyph entries and the width table.
+- [x] `pkg/p8scii` exposes only the agreed public API and no internal types in
       exported signatures.
-- [ ] All 256 bytes pass metadata, `Printable`, width, and round-trip tests.
-- [ ] `GlyphFor` resolves every canonical `Glyph.Text`, accepts one trailing
+- [x] All 256 bytes pass metadata, `Printable`, width, and round-trip tests.
+- [x] `GlyphFor` resolves every canonical `Glyph.Text`, accepts one trailing
       `U+FE0F`, and rejects unknown text.
-- [ ] The external consumer module imports only `pkg/p8scii`, uses an external
+- [x] The external consumer module imports only `pkg/p8scii`, uses an external
       module path, and runs in CI.
-- [ ] `go test ./...`, `-race`, lint, vet, gofmt, and the consumer readonly
+- [x] `go test ./...`, `-race`, lint, vet, gofmt, and the consumer readonly
       build pass.
 - [ ] `v1.6.0` is tagged and pico-editor M1 can pin it.
-- [ ] No existing LSP behavior or P8SCII mapping changed.
+- [x] No existing LSP behavior or P8SCII mapping changed.
 
 ## Risks and mitigations
 

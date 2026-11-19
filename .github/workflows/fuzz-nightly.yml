@@ -49,3 +49,6 @@ jobs:
 
       - name: Fuzz PNG decoder
         run: go test -run=^$ -fuzz=FuzzDecode -fuzztime=60s ./internal/p8png
+
+      - name: Fuzz P8SCII
+        run: go test -run=^$ -fuzz=FuzzEncodeDecode -fuzztime=60s ./pkg/p8scii

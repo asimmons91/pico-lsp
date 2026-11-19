@@ -257,3 +257,26 @@ Clicking it runs `pico8.showCartInfo`. The lens appends `(warning)` at or above
 90% of the compressed-size limit and `(over limit)` above the limit; carts
 without a compressed budget show `compressed n/a`. Disable the lens with
 `pico8.limits.codeLens: false`.
+
+## Go public packages
+
+Go programs can import stable public facades without importing `internal/`
+packages. These packages are additive and do not change the LSP protocol.
+
+### `pkg/p8scii`
+
+`github.com/asimmons91/pico-lsp/pkg/p8scii` exposes PICO-8 0.2.7's 256-byte
+P8SCII charset for editors and other tools:
+
+```go
+glyphs := p8scii.Glyphs()           // all 256 entries, in byte order
+glyph := p8scii.Lookup(0x8b)        // Byte, Text, Width, Printable
+glyph, ok := p8scii.GlyphFor("😐️")  // canonical text, optional trailing U+FE0F
+code := p8scii.Encode("♥")          // []byte{0x87}
+text := p8scii.Decode([]byte{0x87}) // "♥"
+```
+
+`Text` is the canonical Unicode spelling. `Width` is the display width in
+pixels at 1×: `0` for control bytes `0x00`–`0x0f`, `4` for `0x10`–`0x7f`, and
+`8` for `0x80`–`0xff`. `Printable` is false only for control bytes. `Glyphs`
+returns a copy. Added in v1.6.0 and stable under semver.

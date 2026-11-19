@@ -38,7 +38,7 @@
 
 ## Implementation order
 
-- Follow M0 → M1 → M2 → M3 → M4 → M5 → M6. M7–M10 shipped together as v1.1.0; M11–M14 shipped together as v1.2.0. M15 shipped in v1.3.0; M16 shipped in v1.4.0; v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 shipped formatter and VS Code fixes. M17–M19 are specified public-package releases for pico-editor and ship in order as v1.6.0, v1.7.0, and v1.8.0. Remaining ideas stay in the post-v1 backlog.
+- Follow M0 → M1 → M2 → M3 → M4 → M5 → M6. M7–M10 shipped together as v1.1.0; M11–M14 shipped together as v1.2.0. M15 shipped in v1.3.0; M16 shipped in v1.4.0; v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 shipped formatter and VS Code fixes. M17 (the public `pkg/p8scii` facade) is implemented and pending the v1.6.0 tag. M18–M19 are specified public-package releases for pico-editor and ship in order as v1.7.0 and v1.8.0. Remaining ideas stay in the post-v1 backlog.
 - Follow the file paths in each spec (`cmd/pico-lsp`, `internal/...`, and `pkg/...` for M17–M19). M17–M19 also add consumer modules under `testdata/publicapi/`. Do not start a milestone before its dependency exits.
 - Use the hand-written PICO-8 lexer/parser (M1); do not substitute tree-sitter, `gopher-lua`, or `golua` for analysis. The M12 grammar under `editors/tree-sitter-pico8/` is editor highlighting only.
 - Carts are capped at roughly 64 KB and 8192 tokens. Full reparse and full analysis are intentional; do not build incremental parsing or a query system.
