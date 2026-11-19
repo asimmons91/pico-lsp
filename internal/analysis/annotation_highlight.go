@@ -413,14 +413,12 @@ func matchingAnnotationDelimiter(text string, start int, open, close byte) int {
 		switch text[i] {
 		case '"', '\'':
 			i = scanAnnotationString(text, i, len(text)) - 1
-		default:
-			if text[i] == open {
-				depth++
-			} else if text[i] == close {
-				depth--
-				if depth == 0 {
-					return i
-				}
+		case open:
+			depth++
+		case close:
+			depth--
+			if depth == 0 {
+				return i
 			}
 		}
 	}
@@ -598,7 +596,7 @@ func scanAnnotationIdentifier(text string, start, end int) int {
 			break
 		}
 		r, size := utf8.DecodeRuneInString(text[i:])
-		if r == utf8.RuneError || !(unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_') {
+		if r == utf8.RuneError || (!unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '_') {
 			break
 		}
 		i += size
