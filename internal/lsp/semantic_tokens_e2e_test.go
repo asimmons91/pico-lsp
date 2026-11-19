@@ -185,6 +185,112 @@ func TestSemanticTokenLegendIsStable(t *testing.T) {
 	}
 }
 
+func TestSemanticTokensHighlightLuaCATSAnnotations(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Ship
+---@field spd number
+---@field [public] hp number
+---@param dx? number horizontal delta
+---@return boolean ok
+---@return number, string
+---@alias Mode "left" | "right"
+---@cast speed +number
+---@operator call(x: number): string
+ship = {}
+
+function ship:update(dx)
+  self.spd = 1
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	tokens := semanticTokens(t, h, ctx, root)
+	encoding := protocol.PositionEncodingKindUTF16
+
+	tag := findSemanticTokenPart(t, tokens, text, encoding, "---@class Ship", 0, 3, len("@class"))
+	if tag.Kind != stKeyword {
+		t.Fatalf("@class kind = %d, want keyword", tag.Kind)
+	}
+	className := findSemanticTokenPart(t, tokens, text, encoding, "---@class Ship", 0, len("---@class "), len("Ship"))
+	if className.Kind != stClass || className.Mods&smDeclaration == 0 {
+		t.Fatalf("class name = %+v, want class + declaration", className)
+	}
+	field := findSemanticTokenPart(t, tokens, text, encoding, "---@field spd number", 0, len("---@field "), len("spd"))
+	if field.Kind != stProperty {
+		t.Fatalf("field name = %+v, want property", field)
+	}
+	fieldType := findSemanticTokenPart(t, tokens, text, encoding, "---@field spd number", 0, len("---@field spd "), len("number"))
+	if fieldType.Kind != stType {
+		t.Fatalf("field type = %+v, want type", fieldType)
+	}
+	scope := findSemanticTokenPart(t, tokens, text, encoding, "---@field [public] hp number", 0, len("---@field ["), len("public"))
+	if scope.Kind != stModifier {
+		t.Fatalf("field scope = %+v, want modifier", scope)
+	}
+	scopedField := findSemanticTokenPart(t, tokens, text, encoding, "---@field [public] hp number", 0, len("---@field [public] "), len("hp"))
+	if scopedField.Kind != stProperty {
+		t.Fatalf("scoped field = %+v, want property", scopedField)
+	}
+	secondReturn := findSemanticTokenPart(t, tokens, text, encoding, "---@return number, string", 0, len("---@return number, "), len("string"))
+	if secondReturn.Kind != stType {
+		t.Fatalf("second return type = %+v, want type", secondReturn)
+	}
+	param := findSemanticTokenPart(t, tokens, text, encoding, "---@param dx? number", 0, len("---@param "), len("dx?"))
+	if param.Kind != stParameter {
+		t.Fatalf("param name = %+v, want parameter", param)
+	}
+	paramType := findSemanticTokenPart(t, tokens, text, encoding, "---@param dx? number", 0, len("---@param dx? "), len("number"))
+	if paramType.Kind != stType {
+		t.Fatalf("param type = %+v, want type", paramType)
+	}
+	aliasName := findSemanticTokenPart(t, tokens, text, encoding, "---@alias Mode", 0, len("---@alias "), len("Mode"))
+	if aliasName.Kind != stType {
+		t.Fatalf("alias name = %+v, want type", aliasName)
+	}
+	aliasValue := findSemanticTokenPart(t, tokens, text, encoding, `---@alias Mode "left"`, 0, len(`---@alias Mode `), len(`"left"`))
+	if aliasValue.Kind != stString {
+		t.Fatalf("alias literal = %+v, want string", aliasValue)
+	}
+	castName := findSemanticTokenPart(t, tokens, text, encoding, "---@cast speed +number", 0, len("---@cast "), len("speed"))
+	if castName.Kind != stVariable {
+		t.Fatalf("cast target = %+v, want variable", castName)
+	}
+	callParam := findSemanticTokenPart(t, tokens, text, encoding, "---@operator call(x: number)", 0, len("---@operator call("), len("x"))
+	if callParam.Kind != stParameter {
+		t.Fatalf("call operator parameter = %+v, want parameter", callParam)
+	}
+	callParamType := findSemanticTokenPart(t, tokens, text, encoding, "---@operator call(x: number)", 0, len("---@operator call(x: "), len("number"))
+	if callParamType.Kind != stType {
+		t.Fatalf("call operator parameter type = %+v, want type", callParamType)
+	}
+	dashes := findSemanticTokenPart(t, tokens, text, encoding, "---@class Ship", 0, 0, len("---"))
+	if dashes.Kind != stComment {
+		t.Fatalf("annotation prefix = %+v, want comment", dashes)
+	}
+
+	for i := 1; i < len(tokens); i++ {
+		prev := tokens[i-1]
+		cur := tokens[i]
+		if cur.Line < prev.Line {
+			t.Fatalf("token line decreased: %+v then %+v", prev, cur)
+		}
+		if cur.Line == prev.Line && cur.Start < prev.Start+prev.Length {
+			t.Fatalf("overlapping tokens: %+v then %+v", prev, cur)
+		}
+		if cur.Length == 0 {
+			t.Fatalf("zero-length token: %+v", cur)
+		}
+	}
+}
+
 func TestEndToEndSemanticTokens(t *testing.T) {
 	dir := t.TempDir()
 	root := writeTemp(t, dir, "cart.p8", m3SemanticCart)
