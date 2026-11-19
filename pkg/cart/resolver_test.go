@@ -4,6 +4,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
@@ -323,10 +325,17 @@ func TestOwnerParityWithInternalResolver(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Owner(%q): %v", path, err)
 		}
-		if got != want {
+		if !samePath(got, want) {
 			t.Errorf("Owner(%q) = %q, internal resolver = %q", path, got, want)
 		}
 	}
+}
+
+func samePath(a, b string) bool {
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(filepath.Clean(a), filepath.Clean(b))
+	}
+	return a == b
 }
 
 func TestDiskSource(t *testing.T) {
