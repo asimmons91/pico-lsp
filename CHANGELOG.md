@@ -9,8 +9,8 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - A Neovim `ftplugin` for `pico8` buffers that sets `commentstring` and
-  `comments` for PICO-8's `--` comments, so `gcc`/`gc` and comment-aware
-  formatting work on carts.
+  `comments` for PICO-8's `--` and `//` line comments, so `gcc`/`gc` and
+  comment-aware formatting work on carts.
 
 ## [1.4.0] - 2026-11-18
 

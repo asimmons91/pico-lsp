@@ -193,12 +193,13 @@ highlights non-code `.p8` sections.
 
 ```vim
 setlocal commentstring=--\ %s
-setlocal comments=:---,:--
+setlocal comments=:---,:--,://
 ```
 
-This makes `gcc`/`gc` and comment-aware formatting use PICO-8's `--` comment
-token. Neovim configs normally enable ftplugins with `filetype plugin on`;
-LazyVim and most distributions do this by default. Add
+This makes `gcc`/`gc` use the `--` commentstring, while comment-aware
+formatting recognizes both PICO-8 line-comment leaders, `--` and `//`.
+Neovim configs normally enable ftplugins with `filetype plugin on`; LazyVim
+and most distributions do this by default. Add
 `vim.cmd("filetype plugin on")` if your config turns it off. Like the syntax
 file, the ftplugin requires adding `editors/nvim` to `runtimepath`.
 
