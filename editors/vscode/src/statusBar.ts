@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { LanguageClient } from 'vscode-languageclient/node';
-import { cartInfoSeverity, formatCartInfo, type CartInfo } from './statusFormat';
+import { cartInfoSeverity, formatCartInfo, formatCartTooltip, type CartInfo } from './statusFormat';
 import { isPico8Document } from './workspace';
 
 interface StatusBarDependencies {
@@ -112,7 +112,11 @@ export class CartStatusBar implements vscode.Disposable {
 
   private show(info: CartInfo): void {
     this.item.text = formatCartInfo(info);
-    this.item.tooltip = tooltip(info);
+    this.item.tooltip = new vscode.MarkdownString(
+      formatCartTooltip(info, (value) =>
+        vscode.workspace.asRelativePath(vscode.Uri.parse(value))
+      )
+    );
     const severity = cartInfoSeverity(info);
     this.item.backgroundColor =
       severity === 'error'
@@ -129,22 +133,4 @@ export class CartStatusBar implements vscode.Disposable {
     this.item.backgroundColor = undefined;
     this.isVisible = false;
   }
-}
-
-function tooltip(info: CartInfo): vscode.MarkdownString {
-  const markdown = new vscode.MarkdownString();
-  markdown.appendMarkdown(`**${formatCartInfo(info)}**\n\n`);
-  if (info.rootUri) {
-    markdown.appendMarkdown(`Cart: \`${vscode.Uri.parse(info.rootUri).fsPath}\`\n\n`);
-  }
-  const files = info.files ?? [];
-  if (files.length > 0) {
-    markdown.appendMarkdown('| File | Tokens | Chars |\n|---|---:|---:|\n');
-    for (const file of files) {
-      markdown.appendMarkdown(
-        `| \`${vscode.Uri.parse(file.uri).fsPath}\` | ${file.tokens} | ${file.chars} |\n`
-      );
-    }
-  }
-  return markdown;
 }

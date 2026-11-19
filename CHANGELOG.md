@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- VS Code: the cart budget tooltip now shows the cart and source-file paths
+  relative to the workspace instead of absolute filesystem paths.
+
 ### Fixed
 
 - The formatter now collapses extra trailing newlines in standalone Lua files

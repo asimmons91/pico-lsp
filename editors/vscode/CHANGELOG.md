@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+- Show cart and source-file paths relative to the workspace in the cart budget tooltip.
+
 ## 1.5.0
 
 - Show the PICO-8 logo as the file icon for `.p8` files when the active file

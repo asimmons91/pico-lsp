@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { cartInfoSeverity, formatCartInfo, type CartInfo } from '../../src/statusFormat';
+import {
+  cartInfoSeverity,
+  formatCartInfo,
+  formatCartTooltip,
+  type CartInfo
+} from '../../src/statusFormat';
 
 function info(overrides: Partial<CartInfo> = {}): CartInfo {
   return {
@@ -31,5 +36,25 @@ describe('cart status formatting', () => {
     expect(cartInfoSeverity(info({ compressedStatus: 'warning' }))).toBe('warning');
     expect(cartInfoSeverity(info({ tokens: 8193 }))).toBe('error');
     expect(cartInfoSeverity(info({ compressedStatus: 'error' }))).toBe('error');
+  });
+});
+
+describe('cart status tooltip', () => {
+  it('renders cart and file paths through the workspace resolver', () => {
+    const markdown = formatCartTooltip(
+      info({
+        rootUri: 'file:///workspace/cart.p8',
+        files: [
+          { uri: 'file:///workspace/lib.lua', tokens: 12, chars: 34, bytes: 56 },
+          { uri: 'file:///workspace/objects/ship.lua', tokens: 78, chars: 90, bytes: 12 }
+        ]
+      }),
+      (value) => value.replace('file:///workspace/', '')
+    );
+
+    expect(markdown).toContain('Cart: `cart.p8`');
+    expect(markdown).toContain('| `lib.lua` | 12 | 34 |');
+    expect(markdown).toContain('| `objects/ship.lua` | 78 | 90 |');
+    expect(markdown).not.toContain('/workspace');
   });
 });
