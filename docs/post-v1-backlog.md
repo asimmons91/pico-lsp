@@ -21,46 +21,25 @@ The following backlog items have been promoted and split into milestone specs:
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 - [M15 — VS Code Client](M15-vscode-client.md)
 - [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md)
+- [M17 — P8SCII Public Package](M17-p8scii.md)
+- [M18 — Cart Public Package](M18-cart.md)
+- [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
-The items below are not part of those releases.
-
-The [editor integration package
-schedule](ROADMAP.md#editor-integration-packages-post-v1) is also committed. It
-is a cross-repository release schedule rather than a pico-lsp milestone spec.
+M17–M19 are specified and not yet implemented. The items below are not part of
+those releases.
 
 ## Prioritization
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
-| P1 | Editor integration public packages | Unblocks pico-editor's in-process M1/M4/M5 integration | Medium |
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
 | P2 | VS Code Marketplace and Open VSX publishing | Makes the M15 client discoverable and one-click installable | Low |
 | P2 | Zed extension | Modern editor support | Medium |
 | P3 | API version selection | Support future PICO-8 API versions | Medium |
 
-## 1. Editor integration public packages
-
-Publish the public facades scheduled in
-[ROADMAP.md](ROADMAP.md#editor-integration-packages-post-v1) for pico-editor:
-
-- `v1.6.0` — `pkg/p8scii`: canonical charset, display widths, and
-  encode/decode helpers.
-- `v1.7.0` — `pkg/cart`: cart parse/validate plus byte-preserving code
-  splice/save.
-- `v1.8.0` — `pkg/lsp` and `pkg/glyphs`: in-process server entry point and
-  glyph catalog.
-
-Requirements:
-
-- Thin facades over the existing `internal/` packages; no behavior fork or
-  duplicated parser, P8SCII mapping, or LSP server.
-- Public API tests and examples for every exported type and function.
-- Tag only after package tests pass; no branch or pseudo-version pins.
-- Coordinate each release with pico-editor's M1, M4, and M5 start gates.
-
-## 2. Homebrew and Mason packaging
+## 1. Homebrew and Mason packaging
 
 Complete the two install channels deferred from M6.
 
@@ -74,7 +53,7 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 3. VS Code Marketplace and Open VSX publishing
+## 2. VS Code Marketplace and Open VSX publishing
 
 Publish the M15 client to the VS Code Marketplace and Open VSX. M15 ships the
 extension as a GitHub release VSIX; this follow-up makes it discoverable and
@@ -93,7 +72,7 @@ Requirements:
   platforms.
 - Document install, upgrade, and uninstall paths for each registry.
 
-## 4. Zed extension
+## 3. Zed extension
 
 Provide PICO-8 support in Zed.
 
@@ -105,7 +84,7 @@ Requirements:
 - Binary architecture detection and clear installation errors.
 - Document manual binary configuration.
 
-## 5. API version selection
+## 4. API version selection
 
 Support additional PICO-8 API versions.
 
