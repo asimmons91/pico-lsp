@@ -1,8 +1,8 @@
 # M16 — P8SCII Glyph Snippets and Input
 
-**Status:** Done — implemented for the post-v1.3.0 line.  
+**Status:** Done — shipped in v1.4.0.  
 **Depends on:** M15  
-**Release target:** TBD (post-v1.3.0)  
+**Release target:** v1.4.0  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
