@@ -31,7 +31,7 @@ Confirmed before implementation:
 | D2 | Parse boundary | `Parse` is pure: it never reads the filesystem, resolves `#include`, or flattens includes. `Code()` retains directive text. |
 | D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style. |
 | D4 | Missing code section | A cart without `__lua__` parses for inspection (`HasCode` false) but cannot be spliced; `ReplaceCode` returns a typed error. No section is created implicitly. |
-| D5 | Byte preservation | Only the `__lua__` body changes, except that a header without a line terminator gains the required newline. The BOM, header, section order, unknown sections, and every other non-code byte are preserved. |
+| D5 | Byte preservation | Only the `__lua__` body changes. The BOM, header, section order, unknown sections, and every non-code byte are preserved. An unterminated `__lua__` header is a save error, never rewritten. |
 | D6 | File writing | `ReplaceCode` returns bytes. Atomic writes and fsync stay in pico-editor's `fsutil`. |
 | D7 | Includes | `Includes()` exposes lexical include paths and tab selectors. `Resolver` owns filesystem-aware ownership resolution. |
 | D8 | Compatibility | Stable semver from v1.7.0; additive changes only. |
@@ -214,9 +214,8 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   section header when the code is non-empty. If the next section follows an
   empty body immediately after the header, do not invent a blank line.
 - If the `__lua__` header line itself has no trailing line terminator and the
-  new code is non-empty, insert `\n` after the header. This is the only
-  header-adjacent byte this method may add; all other header bytes stay
-  identical. Add a fixture for this case.
+  new code is non-empty, return `ErrUnterminatedHeader` and no bytes. Do not
+  insert a byte after the header or merge code into the header line.
 - Replacement handles:
   - an empty code body,
   - a body with no trailing newline before a following section,
@@ -273,6 +272,7 @@ func (r *Resolver) Invalidate()
   - oversized input,
   - duplicate `__lua__` section,
   - missing `__lua__` section for `ReplaceCode`,
+  - unterminated `__lua__` header for non-empty replacement,
   - invalid path.
 - `Parse` rejects malformed section markers with a typed error containing the
   line number.
@@ -287,7 +287,7 @@ func (r *Resolver) Invalidate()
   - CRLF code and CRLF non-code sections,
   - a lone CR inside a string or comment (P8SCII glyph 13),
   - empty body,
-  - header without a trailing newline and non-empty code,
+  - header without a trailing newline (save error for non-empty code),
   - no `__lua__` section,
   - duplicate `__lua__`,
   - leading `-->8` marker,
@@ -295,16 +295,15 @@ func (r *Resolver) Invalidate()
   - include directives with quotes, spaces, and `.p8` `:N` selectors,
   - a `.lua:1` include where the suffix is part of the filename,
   - a missing include file.
-- Splice tests assert every byte outside the code body is identical, except the
-  documented single newline inserted after a `__lua__` header that lacked a
-  terminator, and that only the expected region changes.
+- Splice tests assert every byte outside the code body is identical and that
+  only the expected body region changes.
 - Empty-body tests pin `HasCode() == true`, one tab 0 named `Tab 1` with
   `StartLine == EndLine == CodeStartLine()` and `MarkerLine == -1`, plus
   `CodeStartLine()`. The no-`__lua__` fixture pins `HasCode() == false`,
   `Tabs() == nil`, and `CodeStartLine() == 0`.
-- Header-without-newline test: an empty body after an unterminated `__lua__`
-  header plus non-empty `ReplaceCode` input inserts exactly one `\n` after the
-  header and then the code.
+- Unterminated-header test: an empty body after an unterminated `__lua__`
+  header plus non-empty `ReplaceCode` input returns `ErrUnterminatedHeader`
+  with no output bytes; empty replacement returns the original bytes.
 - Round-trip tests: `Parse`→`ReplaceCode(Code())` is byte-identical for the
   corpus, including CRLF carts, lone-CR data, and carts with no trailing
   newline.
@@ -331,7 +330,9 @@ func (r *Resolver) Invalidate()
 - Add runnable examples for parsing, splicing, tabs, includes, and ownership.
 - Add a short `pkg/cart` entry to `docs/api.md` or `README.md`.
 - Add `CHANGELOG.md` under `Unreleased`, then cut `v1.7.0` after the PR merges.
-- Release notes state that this is additive and does not change the LSP server.
+- Release notes state that the public API is additive. List the column-0 tab
+  scanner and lone-CR scanner corrections as LSP behavior fixes, with their
+  changelog entries.
 
 ## Interfaces and state
 
