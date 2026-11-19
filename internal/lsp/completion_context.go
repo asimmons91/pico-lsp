@@ -146,10 +146,10 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 			continue
 		}
 		if !isOnlySpace(n.file.Text[occ.Span.End:separator]) {
-			return nil
+			break
 		}
 		if occ.Symbol == nil {
-			return nil
+			break
 		}
 		if typ, ok := n.semantics.FlowType(occ.Span); ok && typ != nil && !types.IsAny(typ) {
 			receiver := *occ.Symbol
@@ -158,7 +158,41 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 		}
 		return resolveAlias(occ.Symbol)
 	}
+	// The parser drops statements that are not assignments or calls. While the
+	// user is typing `self.` on its own line, there is no occurrence for the
+	// receiver inside that statement. Resolve a simple identifier immediately
+	// before the separator from the enclosing lexical scope instead.
+	if name, ok := textReceiverName(n.file.Text, separator); ok {
+		if scope := n.semantics.ScopeAt(n.fileID, separator); scope != nil {
+			if sym := scope.Lookup(analysis.CanonicalName(name)); sym != nil {
+				return resolveAlias(sym)
+			}
+		}
+	}
 	return nil
+}
+
+// textReceiverName returns the identifier directly before a member separator,
+// rejecting dotted chains because the last field is not a scope name.
+func textReceiverName(text string, separator int) (string, bool) {
+	if separator <= 0 || separator > len(text) {
+		return "", false
+	}
+	i := separator
+	for i > 0 && (text[i-1] == ' ' || text[i-1] == '\t') {
+		i--
+	}
+	end := i
+	for i > 0 && isIdentifierByte(text[i-1]) {
+		i--
+	}
+	if i == end {
+		return "", false
+	}
+	if i > 0 && (text[i-1] == '.' || text[i-1] == ':') {
+		return "", false
+	}
+	return text[i:end], true
 }
 
 func isOnlySpace(text string) bool {

@@ -715,3 +715,45 @@ x = @
 		t.Fatalf("include completion after # = %v, missing #include", completionLabels(items))
 	}
 }
+
+func TestMemberCompletionInIncompleteStatement(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Ship
+---@field spd number
+ship = {}
+
+function ship:update()
+  self.
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	pos := positionAt(t, text, "self.", len("self."))
+	items := completionItems(t, h, ctx, root, pos)
+	for _, want := range []string{"spd", "update"} {
+		if findCompletion(items, want) == nil {
+			t.Fatalf("incomplete self. labels = %v, missing %q", completionLabels(items), want)
+		}
+	}
+
+	// Completion while typing a longer prefix still resolves the receiver.
+	typed := strings.Replace(text, "  self.\n", "  self.spd\n", 1)
+	dir2 := t.TempDir()
+	root2 := writeTemp(t, dir2, "cart.p8", typed)
+	h2 := newHarness(t, newTestClient())
+	h2.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h2, ctx, root2, typed)
+	pos = positionAt(t, typed, "self.spd", len("self."))
+	items = completionItems(t, h2, ctx, root2, pos)
+	if findCompletion(items, "spd") == nil {
+		t.Fatalf("incomplete self.spd labels = %v, missing spd", completionLabels(items))
+	}
+}
