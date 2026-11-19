@@ -38,7 +38,7 @@ These decisions were confirmed before the spec was written:
 - M15 supports local desktop VS Code only. Remote extension hosts and web
   extension hosts are out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
-- Node.js 24.21.0 is pinned in `mise.toml`; the extension declares VS Code
+- Node.js 26.13.1 is pinned in `mise.toml`; the extension declares VS Code
   `^1.95.0` and integration tests run against that minimum version.
 
 ## Scope
