@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.4.0
+
+- Add P8SCII glyph completion and the **PICO-8: Insert P8SCII Glyph** picker.
+- Add the `pico8.glyphs` setting for custom built-in and custom font-slot glyph entries.
+
 ## 1.3.0
 
 - Initial VS Code extension release.
