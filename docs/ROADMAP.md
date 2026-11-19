@@ -165,7 +165,7 @@ Rules:
 - Tag `v1.6.0`, `v1.7.0`, and `v1.8.0` only after their package tests pass. A
   milestone pin must reference a tag, never a branch or pseudo-version.
 - pico-editor must not import `internal/` packages; Go enforces this.
-- The editor pins each release before the corresponding milestone exits. Its
+- The editor pins each release before the corresponding milestone starts. Its
   schedule is recorded in
   [pico-editor's architecture document](https://github.com/asimmons91/pico-editor/blob/main/docs/ARCHITECTURE.md).
 
