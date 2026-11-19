@@ -125,6 +125,7 @@ func TestLuaLineEndings(t *testing.T) {
 		want string
 	}{
 		{name: "lone cr", in: "x=1\ry=2\r", want: "x = 1\ry = 2\r"},
+		{name: "extra lone cr", in: "x=1\r\r", want: "x = 1\r"},
 		{name: "no final newline", in: "x=1", want: "x = 1\n"},
 		{name: "no final newline disabled", in: "x=1", want: "x = 1"},
 	}
@@ -142,6 +143,17 @@ func TestLuaLineEndings(t *testing.T) {
 				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestP8PreservesExtraLuaFinalNewlines(t *testing.T) {
+	src := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n\n\n__gfx__\n0000\n"
+	got, err := P8(src, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "x = 1\n\n\n__gfx__") {
+		t.Fatalf("P8 changed trailing Lua newlines:\n%q", got)
 	}
 }
 
