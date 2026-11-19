@@ -1,9 +1,11 @@
 # Change Log
 
-## Unreleased
+## 1.5.0
 
 - Show the PICO-8 logo as the file icon for `.p8` files when the active file
   icon theme supports language default icons.
+- Bundle `pico-lsp` 1.5.0, which adds LuaCATS annotation semantic highlighting
+  and completes members while a receiver statement is still being typed.
 
 ## 1.4.0
 
