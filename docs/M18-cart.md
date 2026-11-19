@@ -31,7 +31,7 @@ Confirmed before implementation:
 | D2 | Parse boundary | `Parse` is pure: it never reads the filesystem, resolves `#include`, or flattens includes. `Code()` retains directive text. |
 | D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style. |
 | D4 | Missing code section | A cart without `__lua__` parses for inspection (`HasCode` false) but cannot be spliced; `ReplaceCode` returns a typed error. No section is created implicitly. |
-| D5 | Byte preservation | Only the `__lua__` body changes. The BOM, header, section order, unknown sections, and every non-code byte are preserved. |
+| D5 | Byte preservation | Only the `__lua__` body changes, except that a header without a line terminator gains the required newline. The BOM, header, section order, unknown sections, and every other non-code byte are preserved. |
 | D6 | File writing | `ReplaceCode` returns bytes. Atomic writes and fsync stay in pico-editor's `fsutil`. |
 | D7 | Includes | `Includes()` exposes lexical include paths and tab selectors. `Resolver` owns filesystem-aware ownership resolution. |
 | D8 | Compatibility | Stable semver from v1.7.0; additive changes only. |
@@ -77,8 +77,8 @@ Confirmed before implementation:
 6. `pkg/cart/example_test.go` with runnable examples.
 7. An external consumer module at `testdata/publicapi/cart` with module path
    `example.com/pico-lsp-publicapi-cart` and a local `replace` to the repo root.
-8. CI updates: `gofmt -l cmd internal pkg testdata/publicapi`, the consumer
-   module test, and the `pkg/cart` fuzz target in the nightly list.
+8. CI updates: `gofmt -l .`, the consumer module test, and the `pkg/cart` fuzz
+   target in the nightly list.
 9. `CHANGELOG.md` entry and `v1.7.0` release.
 
 ## Detailed requirements
@@ -104,9 +104,9 @@ type Section struct {
 }
 
 type Include struct {
-    Path         string // as written, without quotes
+    Path         string // unquoted path without a .p8 tab selector
     ResolvedPath string // cleaned lexical path relative to the cart
-    Tab          int    // zero-based selected tab, or -1 for all/none
+    Tab          int    // zero-based .p8 tab selector, or -1
     Line         int    // zero-based full-cart line of the directive
 }
 
@@ -138,8 +138,10 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   preserved exactly as stored. The BOM and header are not part of `Code()`.
 - `HasCode()` reports whether a `__lua__` section exists. A cart without one
   still parses; `Code()` is empty and `Tabs()` is nil.
-- `CodeStartLine()` returns the full-cart zero-based line of the first code
-  body line. It returns `0` when `HasCode()` is false.
+- `CodeStartLine()` returns the full-cart zero-based line where the code body
+  begins: the line after the `__lua__` header. It returns 0 when `HasCode()` is
+  false. For a header at EOF with no terminator, the virtual line after it is
+  returned.
 - `Sections()` returns sections in file order, including unknown sections.
   `Known` is true for `lua`, `gfx`, `gff`, `label`, `map`, `sfx`, and `music`.
 - Returned slices are copies. Mutating them does not affect the document.
@@ -149,30 +151,40 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
 - A tab marker is a line whose **column 0** starts with `-->8`. This matches
   pico-editor's locked cart-tab rule. Do not use first-non-space detection for
   the public model.
+- Align the internal LSP tab scanner (`buildTabs`) and include scan to the same
+  column-0 rule, so `pico8/cartInfo` and folding agree with `pkg/cart`. This is
+  a marker-recognition consistency fix, not a wire-contract change; record it
+  in the changelog and update the affected golden tests.
 - Tab 0 is the text before the first marker. Its `MarkerLine` is `-1` and its
   `StartLine` is `CodeStartLine()`.
 - A marker line belongs to the tab it introduces as `MarkerLine`; it is not
   content. The next tab's `StartLine` is `MarkerLine + 1`.
 - `EndLine` is exclusive and is the next marker line, or one past the last
   code line.
-- Empty tabs are valid: `StartLine == EndLine`, with `MarkerLine` set. Tab 0 is
-  still returned when the body starts with a marker; it has zero content lines.
-- `Name` is the trimmed text after `-->8`, or `Tab N` when empty.
+- Empty tabs are valid: `StartLine == EndLine`, with `MarkerLine` set for a
+  marker tab. Tab 0 is always returned when `HasCode()` is true; if the body
+  starts with a marker, tab 0 is empty (`StartLine == EndLine ==
+  CodeStartLine()`), `MarkerLine` is `-1`, and its name is `Tab 1`.
+- `Name` is the trimmed text after `-->8`, or `Tab N` when empty. N is the
+  one-based tab number (Tab 1 for the first tab).
 - Tab indices are zero-based.
-- The public and internal LSP tab models must agree. If the internal
-  first-non-space scanner differs, align the shared helper rather than
-  duplicating tab parsing in `pkg/cart`.
+- The public and internal LSP tab models must agree; the column-0 alignment
+  above is part of this milestone.
 
 ### 3. Include directives
 
 - `Includes()` scans the raw code body without reading included files. It
   recognizes `#include` directives outside strings and comments, using the same
   lexical scanner as `internal/cart`.
-- `Path` is unquoted. `ResolvedPath` is
+- `Path` is unquoted and excludes a `.p8`/`.p8.png` tab selector; for a `.lua`
+  include, the entire unquoted string is the path (a trailing `:N` is part of
+  the filename, matching PICO-8 and the LSP resolver). `Tab` is the selector
+  for `.p8`/`.p8.png` targets, or `-1` otherwise.
+- `ResolvedPath` is
   `filepath.Clean(filepath.Join(filepath.Dir(cartPath), path))` and is lexical
   only; it may not exist and is absolute when the cart path is absolute.
-- `Tab` parses a trailing `:N` selector as a zero-based tab, or `-1` when
-  absent. Quoted paths and paths with spaces are supported.
+- `Tab` uses zero-based numbering for `.p8`/`.p8.png` selectors. Quoted paths
+  and paths with spaces are supported.
 - `Line` is the zero-based full-cart directive line.
 - Commented-out directives and directives inside strings/comments are ignored.
 - A missing include file does not make `Parse` fail. It is not an IO operation;
@@ -187,11 +199,17 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
 - The output replaces only the existing `__lua__` body region. The header,
   BOM, section order, unknown sections, and all other bytes are preserved.
 - Newline style:
-  - Normalize the input's CRLF/CR/LF line endings to LF first.
+  - Only LF and CRLF are line terminators. A lone CR is P8SCII glyph 13 and is
+    preserved as data; never split, trim, or normalize it.
+  - Normalize the input's CRLF line endings to LF first, leaving lone CR bytes
+    untouched.
   - If the original code body contains CRLF, convert those LF endings to CRLF
     before splicing.
   - Otherwise write LF.
   - Preserve blank lines and do not trim caller-supplied text.
+- The public parser and tab scanner must use the same LF/CRLF-only rule. If the
+  internal scanner treats a lone CR as a line break, align it or use a
+  package-local scanner; record the correctness fix in the changelog.
 - Ensure the resulting code ends with at least one newline before the next
   section header when the code is non-empty. If the next section follows an
   empty body immediately after the header, do not invent a blank line.
@@ -236,6 +254,8 @@ func (r *Resolver) Invalidate()
 - Ownership uses `Document.Includes()` and the same lexical scanner as the LSP
   resolver. Tab selectors are honored when matching includes; they are not
   accepted as `Owner` inputs.
+- Selectors are stripped only for `.p8`/`.p8.png` targets, matching the
+  internal scanner and `docs/api.md`. Do not strip `:N` from `.lua` filenames.
 - Multiple ancestor carts: nearest directory wins; lexical path order breaks
   ties. Unreadable candidate carts are skipped.
 - `Owner` returns an error only for an invalid path (empty, relative, or not a
@@ -265,18 +285,29 @@ func (r *Resolver) Invalidate()
   - unknown sections,
   - BOM,
   - CRLF code and CRLF non-code sections,
+  - a lone CR inside a string or comment (P8SCII glyph 13),
   - empty body,
   - header without a trailing newline and non-empty code,
   - no `__lua__` section,
   - duplicate `__lua__`,
   - leading `-->8` marker,
   - consecutive markers (empty tabs),
-  - include directives with quotes, spaces, and `:N` selectors,
+  - include directives with quotes, spaces, and `.p8` `:N` selectors,
+  - a `.lua:1` include where the suffix is part of the filename,
   - a missing include file.
-- Splice tests assert every byte outside the code body is identical and that
-  only the expected region changes.
+- Splice tests assert every byte outside the code body is identical, except the
+  documented single newline inserted after a `__lua__` header that lacked a
+  terminator, and that only the expected region changes.
+- Empty-body tests pin `HasCode() == true`, one tab 0 named `Tab 1` with
+  `StartLine == EndLine == CodeStartLine()` and `MarkerLine == -1`, plus
+  `CodeStartLine()`. The no-`__lua__` fixture pins `HasCode() == false`,
+  `Tabs() == nil`, and `CodeStartLine() == 0`.
+- Header-without-newline test: an empty body after an unterminated `__lua__`
+  header plus non-empty `ReplaceCode` input inserts exactly one `\n` after the
+  header and then the code.
 - Round-trip tests: `Parse`→`ReplaceCode(Code())` is byte-identical for the
-  corpus, including CRLF carts and carts with no trailing newline.
+  corpus, including CRLF carts, lone-CR data, and carts with no trailing
+  newline.
 - Boundary tests: input without a trailing newline, extra blank lines, empty
   code, repeated replacement, and an error path with no partial output.
 - Copies: mutating `Tabs()`, `Sections()`, or `Includes()` results does not
@@ -320,7 +351,7 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 
 - `go test ./...`, `go test -race ./...`, `go vet ./...`, `gofmt -l .`, and
   `golangci-lint run` pass.
-- `gofmt` covers `cmd`, `internal`, `pkg`, and `testdata/publicapi`.
+- `gofmt` covers the whole repository (`gofmt -l .`).
 - The external consumer module runs in CI with `GOFLAGS=-mod=readonly`.
 - The `pkg/cart` fuzz target is added to the short CI fuzz list and the nightly
   fuzz workflow.
@@ -343,7 +374,8 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [ ] The external consumer module imports only `pkg/cart` and runs in CI.
 - [ ] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
 - [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
-- [ ] No LSP behavior changed and existing internal behavior is preserved.
+- [ ] No LSP wire-contract change; the column-0 marker and lone-CR scanner
+      fixes are recorded and covered by golden tests.
 
 ## Risks and mitigations
 

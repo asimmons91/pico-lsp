@@ -28,7 +28,7 @@ Confirmed before implementation:
 | ID | Decision | Choice |
 |---|---|---|
 | D1 | Relationship to internal code | Thin public facade. The canonical mapping and width table remain in `internal/p8scii`. |
-| D2 | Public surface | Glyph metadata, `Encode`, `Decode`, `Lookup`, and `Glyphs`. |
+| D2 | Public surface | Glyph metadata, `GlyphFor`, `Encode`, `Decode`, `Lookup`, and `Glyphs`. |
 | D3 | Width unit | Pixels at 1×: `4` for `0x10`–`0x7f`, `8` for `0x80`–`0xff`, `0` for control bytes. |
 | D4 | Printable classification | `0x10`–`0xff` are printable glyphs; `0x00`–`0x0f` are control bytes. |
 | D5 | Compatibility | Stable semver from v1.6.0; additive changes only. |
@@ -64,8 +64,8 @@ Confirmed before implementation:
 5. An external consumer module at `testdata/publicapi/p8scii` with module path
    `example.com/pico-lsp-publicapi-p8scii` and a local `replace` to the repo
    root.
-6. CI updates: `gofmt -l cmd internal pkg testdata/publicapi`, the consumer
-   module test, and the `pkg/p8scii` fuzz target in the nightly list.
+6. CI updates: `gofmt -l .`, the consumer module test, and the `pkg/p8scii`
+   fuzz target in the nightly list.
 7. `CHANGELOG.md` entry and `v1.6.0` release.
 
 ## Detailed requirements
@@ -110,8 +110,14 @@ type Glyph = internalp8scii.Glyph
 func Encode(text string) []byte
 func Decode(code []byte) string
 func Lookup(b byte) Glyph
+func GlyphFor(text string) (Glyph, bool)
 func Glyphs() []Glyph
 ```
+
+- `GlyphFor` resolves a canonical text cluster to its glyph. It first tries the
+  exact text, then retries once with one trailing `U+FE0F` removed. This maps
+  both `😐` and `😐️` to byte `0x8c` without duplicating VS16 logic in the editor.
+  Unknown text returns `(Glyph{}, false)`.
 
 - The public package may import `internal/p8scii`; external consumers cannot.
 - Exported functions and fields must not require callers to import internal
@@ -127,6 +133,9 @@ func Glyphs() []Glyph
   `Lookup(b).Byte == b`, `Lookup(b).Printable` matches the control/printable
   class, and width matches the class table.
 - Every printable byte: `Encode(Lookup(b).Text)` returns exactly `[]byte{b}`.
+- `GlyphFor` resolves every `Glyph.Text`, accepts a base glyph plus one trailing
+  `U+FE0F`, and rejects unknown text. In particular, both `😐` and `😐️` resolve
+  to `0x8c`.
 - Control bytes: decode/encode round-trip where the current mapping supports
   it; document any exception rather than changing behavior.
 - `Glyphs()` returns 256 entries, is sorted by byte, and is a copy: mutating the
@@ -168,7 +177,7 @@ value.
 
 - `go test ./...` and `go test -race ./...` pass.
 - `golangci-lint run`, `gofmt`, and `go vet` pass.
-- `gofmt` covers `cmd`, `internal`, `pkg`, and `testdata/publicapi`.
+- `gofmt` covers the whole repository (`gofmt -l .`).
 - The external consumer module builds with `GOFLAGS=-mod=readonly` and runs in
   CI.
 - The `pkg/p8scii` fuzz target is added to the short CI fuzz list and the
@@ -181,6 +190,8 @@ value.
 - [ ] `pkg/p8scii` exposes only the agreed public API and no internal types in
       exported signatures.
 - [ ] All 256 bytes pass metadata, `Printable`, width, and round-trip tests.
+- [ ] `GlyphFor` resolves every canonical `Glyph.Text`, accepts one trailing
+      `U+FE0F`, and rejects unknown text.
 - [ ] The external consumer module imports only `pkg/p8scii`, uses an external
       module path, and runs in CI.
 - [ ] `go test ./...`, `-race`, lint, vet, gofmt, and the consumer readonly

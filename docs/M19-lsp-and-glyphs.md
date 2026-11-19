@@ -69,8 +69,8 @@ Confirmed before implementation:
 4. An in-memory LSP test using `net.Pipe`.
 5. An external consumer module at `testdata/publicapi/lsp` with module path
    `example.com/pico-lsp-publicapi-lsp` and a local `replace` to the repo root.
-6. CI updates: `gofmt -l cmd internal pkg testdata/publicapi`, the consumer
-   module test, and the `pkg/lsp`/`pkg/glyphs` fuzz targets where applicable.
+6. CI updates: `gofmt -l .`, the consumer module test, and the `pkg/lsp`/
+   `pkg/glyphs` fuzz targets where applicable.
 7. `CHANGELOG.md` entry and `v1.8.0` release.
 
 ## Detailed requirements
@@ -207,7 +207,7 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 
 - `go test ./...`, `go test -race ./...`, `go vet`, `gofmt`, and
   `golangci-lint run` pass.
-- `gofmt` covers `cmd`, `internal`, `pkg`, and `testdata/publicapi`.
+- `gofmt` covers the whole repository (`gofmt -l .`).
 - The public server e2e test runs in CI.
 - The external consumer module builds with `GOFLAGS=-mod=readonly` and runs in
   CI.

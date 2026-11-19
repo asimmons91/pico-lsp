@@ -157,7 +157,9 @@ The v1 release is complete when a user can:
 pico-editor (`github.com/asimmons91/pico-editor`) consumes pico-lsp in-process.
 That integration requires stable public facades over the existing analysis
 code. These are additive post-v1 releases; they do not change the LSP server's
-wire contract, defaults, or editor behavior.
+wire contract or defaults. A marker-recognition fix that aligns the internal
+tab scanner with PICO-8's column-0 rule, and a lone-CR line-scanning correction
+that matches P8SCII, are allowed and must be recorded in the changelog.
 
 | Release | Milestone | Public package | Purpose | Blocks |
 | --- | --- | --- | --- | --- |

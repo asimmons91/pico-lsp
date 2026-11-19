@@ -81,7 +81,7 @@
 - `CGO_ENABLED=0 go build -o pico-lsp ./cmd/pico-lsp` verifies the static release build path.
 - `go test ./...` runs unit and in-memory LSP integration tests.
 - `go test -race ./...` is the required race-free gate.
-- `go vet ./...` and `gofmt -l cmd internal pkg testdata/publicapi` catch correctness and formatting issues.
+- `go vet ./...` and `gofmt -l .` catch correctness and formatting issues.
 - `golangci-lint run ./...` is the lint gate; `govulncheck ./...` is the vulnerability gate.
 - `goreleaser check` and `goreleaser release --snapshot --clean` validate release packaging.
 - `editors/nvim/tests/run.sh` runs the headless Neovim helper smoke test after building `pico-lsp`.
