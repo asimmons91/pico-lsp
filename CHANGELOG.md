@@ -12,6 +12,17 @@ All notable changes to this project are documented here. The format follows
   canonical Unicode text, 1x pixel widths, printable classification, and
   `Encode`, `Decode`, `Lookup`, `GlyphFor`, and `Glyphs` helpers for external
   Go programs. Additive; LSP behavior and the P8SCII mapping are unchanged.
+- Public `pkg/cart` package (M18): pure `.p8` parsing for code, tabs, sections,
+  and lexical includes; byte-preserving `ReplaceCode`; typed parse and splice
+  errors; and a cached, concurrency-safe `Resolver` for include ownership.
+
+### Fixed
+
+- PICO-8 tab markers are recognized only at column 0, matching PICO-8 and
+  pico-editor. `pico8/cartInfo` keeps its existing zero-based indexes and
+  inclusive tab end lines.
+- Cart line scanning now treats only LF and CRLF as line terminators. A lone CR
+  is preserved as P8SCII glyph 13 data instead of starting a new line.
 
 ## [1.5.1] - 2026-11-19
 

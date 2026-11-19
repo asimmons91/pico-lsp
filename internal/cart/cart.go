@@ -80,10 +80,12 @@ type Include struct {
 }
 
 // Tab is a code tab in a .p8 cart. The marker line remains a comment in the
-// flattened program.
+// flattened program. Index is zero-based, StartLine is the first content line,
+// EndLine is exclusive, and MarkerLine is -1 for the first tab.
 type Tab struct {
 	Index      int
 	Name       string
+	MarkerLine int
 	MarkerSpan source.Span
 	StartLine  int
 	EndLine    int
@@ -92,14 +94,16 @@ type Tab struct {
 
 // Section is a .p8 section. SpanVal covers the header through its content.
 type Section struct {
-	Name         string
-	Known        bool
-	StartLine    int
-	EndLine      int
-	HeaderSpan   source.Span
-	ContentStart int
-	ContentEnd   int
-	SpanVal      source.Span
+	Name             string
+	Known            bool
+	StartLine        int
+	EndLine          int // inclusive
+	ContentStartLine int
+	HeaderSpan       source.Span
+	ContentStart     int
+	ContentEnd       int
+	SpanVal          source.Span
+	HeaderTerminated bool
 }
 
 // Cart is the flattened cart and its source map.

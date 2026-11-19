@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.5.1 released; M17 in progress; M18–M19 specs ready (Planned)
+**Status:** v1.5.1 released; M17 merged (v1.6.0 pending); M18 in progress; M19 planned
 
 **Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -76,7 +76,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
 | M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Done |
 | M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | In progress |
-| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Planned |
+| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | In progress |
 | M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Planned |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.

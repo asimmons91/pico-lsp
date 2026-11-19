@@ -128,11 +128,21 @@ func cartInfoFor(snap *cart.Snapshot) CartInfo {
 		info.Includes = append(info.Includes, entry)
 	}
 	for _, tab := range c.Tabs {
+		// cartInfo keeps its historical inclusive end line and marker-line
+		// start for marker tabs; the internal model now matches pkg/cart.
+		start := tab.StartLine
+		if tab.MarkerLine >= 0 {
+			start = tab.MarkerLine
+		}
+		end := tab.EndLine - 1
+		if end < start {
+			end = start
+		}
 		info.Tabs = append(info.Tabs, TabInfo{
-			Index:     tab.Index - 1,
+			Index:     tab.Index,
 			Name:      tab.Name,
-			StartLine: tab.StartLine,
-			EndLine:   tab.EndLine,
+			StartLine: start,
+			EndLine:   end,
 		})
 	}
 	return info

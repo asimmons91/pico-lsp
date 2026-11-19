@@ -100,7 +100,15 @@ func (s *Server) foldingRanges(ctx context.Context, u uri.URI) []protocol.Foldin
 
 	if fileHasSuffix(file.URI, ".p8") {
 		for _, tab := range snap.Cart.Tabs {
-			addLines(uint32(tab.StartLine), uint32(tab.EndLine), protocol.FoldingRangeKindRegion)
+			start := tab.StartLine
+			if tab.MarkerLine >= 0 {
+				start = tab.MarkerLine
+			}
+			end := tab.EndLine - 1
+			if end < start {
+				continue
+			}
+			addLines(uint32(start), uint32(end), protocol.FoldingRangeKindRegion)
 		}
 		for _, section := range snap.Cart.Sections {
 			if section.Name == "lua" {

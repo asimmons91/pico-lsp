@@ -52,3 +52,6 @@ jobs:
 
       - name: Fuzz P8SCII
         run: go test -run=^$ -fuzz=FuzzEncodeDecode -fuzztime=60s ./pkg/p8scii
+
+      - name: Fuzz cart parser
+        run: go test -run=^$ -fuzz=FuzzParse -fuzztime=60s ./pkg/cart

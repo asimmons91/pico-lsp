@@ -472,8 +472,8 @@ func selectCartCode(text string, sections []Section, code []lineRef, tab int) ([
 	}
 	var markers []int
 	for i, line := range code {
-		left := strings.TrimLeft(lineContent(text, line), " \t")
-		if strings.HasPrefix(left, "-->8") {
+		content := lineContent(text, line)
+		if strings.HasPrefix(content, "-->8") {
 			markers = append(markers, i)
 		}
 	}

@@ -85,10 +85,10 @@ func TestLoadP8SectionsAndTabs(t *testing.T) {
 	if len(cart.Tabs) != 2 {
 		t.Fatalf("tabs = %+v, want 2", cart.Tabs)
 	}
-	if cart.Tabs[0].Name != "Tab 1" || cart.Tabs[0].StartLine != 3 || cart.Tabs[0].EndLine != 4 {
+	if cart.Tabs[0].Index != 0 || cart.Tabs[0].Name != "Tab 1" || cart.Tabs[0].MarkerLine != -1 || cart.Tabs[0].StartLine != 3 || cart.Tabs[0].EndLine != 5 {
 		t.Fatalf("tab 1 = %+v", cart.Tabs[0])
 	}
-	if cart.Tabs[1].Name != "second" || cart.Tabs[1].StartLine != 5 {
+	if cart.Tabs[1].Index != 1 || cart.Tabs[1].Name != "second" || cart.Tabs[1].MarkerLine != 5 || cart.Tabs[1].StartLine != 6 || cart.Tabs[1].EndLine != 8 {
 		t.Fatalf("tab 2 = %+v", cart.Tabs[1])
 	}
 
@@ -100,6 +100,18 @@ func TestLoadP8SectionsAndTabs(t *testing.T) {
 	}
 	if cart.Tokens == 0 || cart.Chars == 0 {
 		t.Fatalf("counts = %d/%d", cart.Tokens, cart.Chars)
+	}
+}
+
+func TestIndentedTabMarkerIsNotATab(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	p := newMapProvider()
+	snap := loadText(t, p, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n  -->8 indented\na=1\n")
+	if len(snap.Cart.Tabs) != 1 {
+		t.Fatalf("tabs = %+v, want one tab", snap.Cart.Tabs)
+	}
+	if tab := snap.Cart.Tabs[0]; tab.StartLine != 3 || tab.EndLine != 5 || tab.MarkerLine != -1 {
+		t.Fatalf("tab = %+v, want 3..5 with no marker", tab)
 	}
 }
 
@@ -493,6 +505,17 @@ func TestP8IncludeSelectedTab(t *testing.T) {
 	}
 }
 
+func TestP8IncludeIgnoresIndentedMarker(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	other := uri.File("/tmp/p8/other.p8")
+	p := newMapProvider()
+	p.files[other] = "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n  -->8 indented\nb=2\n__gfx__\n"
+	snap := loadText(t, p, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include other.p8:1\n")
+	if len(snap.Cart.Includes) != 1 || !snap.Cart.Includes[0].Unreadable {
+		t.Fatalf("includes = %+v, want tab 1 to be out of range", snap.Cart.Includes)
+	}
+}
+
 func TestP8IncludeTabOutOfRange(t *testing.T) {
 	root := uri.File("/tmp/p8/cart.p8")
 	other := uri.File("/tmp/p8/other.p8")
@@ -566,14 +589,23 @@ func TestCharCountLoneCRAndIncludeEnding(t *testing.T) {
 	root := uri.File("/tmp/p8/cart.p8")
 	p := newMapProvider()
 	cr := loadText(t, p, root, "pico-8 cartridge // pico-8.com\rversion 42\r__lua__\ra=1\r__gfx__\r")
-	if cr.Cart.Chars != 3 {
-		t.Fatalf("CR chars = %d, want 3", cr.Cart.Chars)
+	if len(cr.Cart.Sections) != 0 || len(cr.Cart.Tabs) != 0 {
+		t.Fatalf("CR-only input should be one line, got sections/tabs %+v/%+v", cr.Cart.Sections, cr.Cart.Tabs)
+	}
+	if cr.Cart.Chars != 0 {
+		t.Fatalf("CR chars = %d, want 0", cr.Cart.Chars)
+	}
+
+	p2 := newMapProvider()
+	lone := loadText(t, p2, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\ns=\"a\rb\"\n__gfx__\n")
+	if !strings.Contains(string(lone.Cart.Flat), "a\rb") {
+		t.Fatalf("flat = %q, want lone CR preserved inside the string", lone.Cart.Flat)
 	}
 
 	inc := uri.File("/tmp/p8/a.lua")
-	p2 := newMapProvider()
-	p2.files[inc] = "b=2\n"
-	incSnap := loadText(t, p2, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n#include \"a.lua\"\n__gfx__\n")
+	p3 := newMapProvider()
+	p3.files[inc] = "b=2\n"
+	incSnap := loadText(t, p3, root, "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n#include \"a.lua\"\n__gfx__\n")
 	if incSnap.Cart.Chars != 8 {
 		t.Fatalf("include chars = %d, want 8", incSnap.Cart.Chars)
 	}

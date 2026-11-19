@@ -1,6 +1,6 @@
 # M18 — Cart Public Package
 
-**Status:** Planned — spec ready, implementation not started
+**Status:** In progress — implementation complete; v1.7.0 release pending
 
 **Depends on:** M17  
 **Release target:** v1.7.0  
@@ -360,22 +360,22 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 
 ## Exit criteria
 
-- [ ] `pkg/cart.Document` parses `.p8` carts without exposing internal types.
-- [ ] `Parse` never reads the filesystem or flattens includes.
-- [ ] `Code()` preserves CRLF; `ReplaceCode` re-applies the original code
+- [x] `pkg/cart.Document` parses `.p8` carts without exposing internal types.
+- [x] `Parse` never reads the filesystem or flattens includes.
+- [x] `Code()` preserves CRLF; `ReplaceCode` re-applies the original code
       newline style and changes only the `__lua__` body.
-- [ ] BOM, unknown sections, section order, and blank lines are preserved.
-- [ ] Missing, empty, and duplicate `__lua__` cases match the spec.
-- [ ] `Tabs` follows column-0 markers, zero-based indices, full-cart lines,
+- [x] BOM, unknown sections, section order, and blank lines are preserved.
+- [x] Missing, empty, and duplicate `__lua__` cases match the spec.
+- [x] `Tabs` follows column-0 markers, zero-based indices, full-cart lines,
       exclusive ends, `MarkerLine`, and empty-tab behavior.
-- [ ] `Includes` handles quotes, spaces, and tab selectors without IO.
-- [ ] `Resolver.Owner` passes nearest-cart, include, cache, concurrency, and
+- [x] `Includes` handles quotes, spaces, and tab selectors without IO.
+- [x] `Resolver.Owner` passes nearest-cart, include, cache, concurrency, and
       standalone tests.
-- [ ] Typed errors are covered by `errors.Is`/`errors.As` tests.
-- [ ] The external consumer module imports only `pkg/cart` and runs in CI.
-- [ ] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
+- [x] Typed errors are covered by `errors.Is`/`errors.As` tests.
+- [x] The external consumer module imports only `pkg/cart` and runs in CI.
+- [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
 - [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
-- [ ] No LSP wire-contract change; the column-0 marker and lone-CR scanner
+- [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
       fixes are recorded and covered by golden tests.
 
 ## Risks and mitigations

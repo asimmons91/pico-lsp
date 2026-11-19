@@ -873,6 +873,12 @@ func TestM5CartInfoTabIndexesAreZeroBased(t *testing.T) {
 	if len(info.Tabs) != 2 || info.Tabs[0].Index != 0 || info.Tabs[1].Index != 1 {
 		t.Fatalf("tabs = %+v, want zero-based indexes", info.Tabs)
 	}
+	if info.Tabs[0].StartLine != 3 || info.Tabs[0].EndLine != 3 {
+		t.Fatalf("tab 0 = %+v, want inclusive 3..3", info.Tabs[0])
+	}
+	if info.Tabs[1].StartLine != 4 || info.Tabs[1].EndLine != 5 {
+		t.Fatalf("tab 1 = %+v, want marker line 4 through 5", info.Tabs[1])
+	}
 }
 
 func TestM5CreateIncludeActionInAnotherWorkspaceFolder(t *testing.T) {
