@@ -803,7 +803,7 @@ __lua__
 ---@class Weapon
 ---@field dmg number
 local ship = {}
-local spd = {}
+local spd = {dmg = 1}
 function f()
   ship.
   spd.
