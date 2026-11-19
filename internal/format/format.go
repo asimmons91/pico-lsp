@@ -489,7 +489,7 @@ func formatLua(src string, opts Options, allowIncludes bool) (string, error) {
 		}
 	}
 	result := out.String()
-	if opts.TrimFinalNewlines {
+	if opts.TrimFinalNewlines || opts.InsertFinalNewline {
 		result = trimExtraFinalNewlines(result)
 	}
 	if opts.InsertFinalNewline && result != "" && !hasFinalEOL(result) {

@@ -172,6 +172,17 @@ func TestLuaFinalNewlineOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if got != "x = 1\n" {
+		t.Fatalf("insertFinalNewline should keep one final newline = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.InsertFinalNewline = false
+	opts.TrimFinalNewlines = false
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got != "x = 1\n\n" {
 		t.Fatalf("preserved final newlines = %q", got)
 	}

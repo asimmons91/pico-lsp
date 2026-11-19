@@ -191,13 +191,14 @@ func TestEndToEndFormattingLuaSingleFinalNewline(t *testing.T) {
 		t.Fatalf("lua edit = %+v, want one final newline", edits)
 	}
 
-	// An explicit false preserves the client's choice to keep extra newlines.
+	// Disabling both final-newline options preserves the client's extra lines.
 	edits, err = h.server.Formatting(ctx, &protocol.DocumentFormattingParams{
 		TextDocument: protocol.TextDocumentIdentifier{URI: root},
 		Options: protocol.FormattingOptions{
-			TabSize:           2,
-			InsertSpaces:      true,
-			TrimFinalNewlines: boolPtr(false),
+			TabSize:            2,
+			InsertSpaces:       true,
+			InsertFinalNewline: boolPtr(false),
+			TrimFinalNewlines:  boolPtr(false),
 		},
 	})
 	if err != nil {
