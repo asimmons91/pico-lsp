@@ -51,6 +51,27 @@ func (n *navContext) offset(pos protocol.Position) (int, bool) {
 	return offset, true
 }
 
+// inCode reports whether offset belongs to a flattened Lua code segment for
+// the current file. A .p8 cart file also contains its non-code sections, so
+// callers that edit source text must use this instead of assuming every offset
+// in the file is code.
+func (n *navContext) inCode(offset int) bool {
+	if n == nil || n.snap == nil || n.snap.Cart == nil || n.file == nil {
+		return false
+	}
+	for _, segment := range n.snap.Cart.Segments {
+		if segment.FileID != n.fileID {
+			continue
+		}
+		start := segment.FileOffset
+		end := start + (segment.FlatEnd - segment.FlatStart)
+		if offset >= start && (offset < end || (offset == end && end == len(n.file.Text))) {
+			return true
+		}
+	}
+	return false
+}
+
 func (n *navContext) occurrenceAt(offset int) *analysis.Occurrence {
 	if n == nil || n.semantics == nil {
 		return nil

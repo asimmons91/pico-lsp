@@ -113,7 +113,7 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 		return nil, false
 	}
 	lineStart, linePrefix := nav.linePrefix(offset)
-	if prefixStart, prefix, ok := glyphPrefix(nav.file.Text, offset); ok {
+	if prefixStart, prefix, ok := glyphPrefix(nav.file.Text, offset); ok && nav.inCode(offset) {
 		// Glyph aliases are only valid in code and ordinary strings. Keep
 		// annotations and include paths on their existing completion paths.
 		annotation := nav.inComment(offset) &&
@@ -123,7 +123,13 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 				return nil, false
 			}
 			if !annotation {
-				return s.glyphCompletions(nav, offset, prefixStart, prefix), false
+				items := s.glyphCompletions(nav, offset, prefixStart, prefix)
+				if len(items) == 0 && strings.HasPrefix(prefix, "p8_") && strings.Contains(prefix, "-") {
+					// A hyphen after a p8_ identifier is subtraction, not a
+					// glyph trigger. Fall through to normal completion.
+				} else {
+					return items, false
+				}
 			}
 		}
 		// Include paths and annotations keep their normal completion paths.

@@ -153,7 +153,7 @@ func (s *Server) glyphsRequest(ctx context.Context, params protocol.LSPAny) (any
 		if !ok {
 			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "%s: invalid position", RequestGlyphs)
 		}
-		if nav.onIncludeLine(offset) {
+		if !nav.inCode(offset) || nav.onIncludeLine(offset) {
 			return GlyphsResult{Glyphs: []glyphs.Entry{}}, nil
 		}
 		inString := nav.inString(offset)
@@ -201,6 +201,9 @@ func (s *Server) insertGlyph(ctx context.Context, params *protocol.ExecuteComman
 	offset, ok := nav.offset(argument.Position)
 	if !ok {
 		return nil, fmt.Errorf("%s: invalid position", CommandInsertGlyph)
+	}
+	if !nav.inCode(offset) {
+		return nil, fmt.Errorf("%s: cannot insert a glyph outside Lua code or a string", CommandInsertGlyph)
 	}
 	if nav.onIncludeLine(offset) {
 		return nil, fmt.Errorf("%s: cannot insert a glyph in an include path", CommandInsertGlyph)
