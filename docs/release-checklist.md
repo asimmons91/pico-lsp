@@ -36,28 +36,28 @@ publishing are deferred to post-v1. The current release is **v1.5.0**.
 
 ## Tag and publish
 
-- [ ] Merge the release pull request into `main`.
-- [ ] Verify the merge commit is green in CI.
-- [ ] Create the annotated tag:
+- [x] Merge the release pull request into `main`.
+- [x] Verify the merge commit is green in CI.
+- [x] Create the annotated tag:
 
   ```sh
   git tag -a v1.5.0 -m "pico-lsp v1.5.0"
   git push origin v1.5.0
   ```
 
-- [ ] Watch the `Release` workflow complete.
-- [ ] Confirm the GitHub release contains Linux, macOS, and Windows archives for
+- [x] Watch the `Release` workflow complete.
+- [x] Confirm the GitHub release contains Linux, macOS, and Windows archives for
       amd64 and arm64 plus `checksums.txt`.
-- [ ] Download and run `pico-lsp --version` from at least one release archive.
-- [ ] Verify the checksum for the downloaded archive.
-- [ ] Confirm the release notes contain install commands and the Go version and
+- [x] Download and run `pico-lsp --version` from at least one release archive.
+- [x] Verify the checksum for the downloaded archive.
+- [x] Confirm the release notes contain install commands and the Go version and
       commit.
 
 ## Post-release
 
-- [ ] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.5.0`
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.5.0`
       builds for a developer.
-- [ ] Update any documentation that needs the released version.
+- [x] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, Marketplace/Open VSX,
       Zed, and API version selection as needed.
 
@@ -68,7 +68,7 @@ publishing are deferred to post-v1. The current release is **v1.5.0**.
 - [x] `editors/vscode/package.json` version matches the release tag.
 - [x] `npm ci`, lint, typecheck, unit tests, and integration tests pass.
 - [x] `pico-lsp-vscode-<version>.vsix` builds and contains no extension source.
-- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [x] The VSIX and `.vsix.sha256` are attached to the GitHub release.
 - [ ] The VSIX installs on Linux local desktop VS Code 1.95.
 - [ ] The VSIX installs on macOS and Windows local desktop VS Code.
 - [x] The downloader handles mock release assets, checksum failures, and
