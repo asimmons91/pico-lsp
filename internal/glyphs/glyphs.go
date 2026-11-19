@@ -344,7 +344,7 @@ func normalizeAliases(name string, aliases []string) ([]string, error) {
 	for _, raw := range aliases {
 		alias := asciiLower(strings.TrimSpace(raw))
 		if !validAlias(alias) {
-			return nil, fmt.Errorf("entry %q alias %q must start with p8_ or p8- and contain only ASCII letters, digits, _ or -", name, raw)
+			return nil, fmt.Errorf("entry %q alias %q must start with p8_ or p8- and contain only ASCII letters, digits, _ or - (p8_ aliases cannot contain -)", name, raw)
 		}
 		if _, ok := seen[alias]; ok {
 			continue
@@ -371,6 +371,9 @@ func validName(name string) bool {
 
 func validAlias(alias string) bool {
 	if strings.HasPrefix(alias, "p8_") {
+		if strings.Contains(alias[len("p8_"):], "-") {
+			return false
+		}
 		alias = alias[len("p8_"):]
 	} else if strings.HasPrefix(alias, "p8-") {
 		alias = alias[len("p8-"):]

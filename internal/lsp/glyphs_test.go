@@ -166,6 +166,53 @@ func TestGlyphPrefixDoesNotSuppressIncludeCompletion(t *testing.T) {
 	}
 }
 
+func TestGlyphCompletionNotOfferedInNonCodeSections(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nprint(1)\n__gfx__\np8_le\n__label__\np8_he\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	for _, needle := range []string{"p8_le", "p8_he"} {
+		pos := positionAt(t, text, needle, len(needle))
+		items := completionItems(t, h, ctx, root, pos)
+		if findGlyphCompletion(items, "p8_left") != nil || findGlyphCompletion(items, "p8_heart") != nil {
+			t.Fatalf("glyph completion in %q = %v", needle, completionLabels(items))
+		}
+	}
+
+	pos := positionAt(t, text, "p8_le", len("p8_le"))
+	if entries := requestGlyphsAt(t, h, ctx, root, pos); len(entries) != 0 {
+		t.Fatalf("non-code pico8/glyphs = %+v, want empty", entries)
+	}
+	if _, err := executeInsertGlyph(t, h, ctx, root, pos, "left", nil); err == nil {
+		t.Fatal("inserted a glyph in a non-code cart section")
+	}
+}
+
+func TestGlyphSubtractionFallsBackToNormalCompletion(t *testing.T) {
+	dir := t.TempDir()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\np8_x = 1\np8_x-\n"
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	pos := positionAt(t, text, "p8_x-", len("p8_x-"))
+	items := completionItems(t, h, ctx, root, pos)
+	if findCompletion(items, "p8_x") == nil {
+		t.Fatalf("subtraction completion = %v, missing normal p8_x item", completionLabels(items))
+	}
+	if findCompletion(items, "⬅️  p8_left") != nil {
+		t.Fatalf("subtraction completion returned a glyph item: %v", completionLabels(items))
+	}
+}
+
 func TestGlyphCompletionInIncludedLua(t *testing.T) {
 	dir := t.TempDir()
 	cartText := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include \"lib.lua\"\n"
@@ -353,6 +400,14 @@ func TestInsertGlyphCommandFallbackEdit(t *testing.T) {
 	if len(edits) != 1 || edits[0].NewText != "❎" {
 		t.Fatalf("fallback edits = %+v, want ❎", edits)
 	}
+}
+
+func requestGlyphsAt(t *testing.T, h *harness, ctx context.Context, u uri.URI, pos protocol.Position) []glyphs.Entry {
+	t.Helper()
+	return requestGlyphs(t, h, ctx, &glyphsParams{
+		TextDocument: &protocol.TextDocumentIdentifier{URI: u},
+		Position:     &pos,
+	})
 }
 
 func requestGlyphs(t *testing.T, h *harness, ctx context.Context, params *glyphsParams) []glyphs.Entry {

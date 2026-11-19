@@ -113,7 +113,7 @@ func (s *Server) completions(nav *navContext, offset int, trigger string) ([]pro
 		return nil, false
 	}
 	lineStart, linePrefix := nav.linePrefix(offset)
-	if prefixStart, prefix, ok := glyphPrefix(nav.file.Text, offset); ok {
+	if prefixStart, prefix, ok := glyphPrefix(nav.file.Text, offset); ok && nav.inCode(offset) {
 		// Glyph aliases are only valid in code and ordinary strings. Keep
 		// annotations and include paths on their existing completion paths.
 		annotation := nav.inComment(offset) &&

@@ -150,6 +150,7 @@ func TestNormalizeDefinitionRejectsAmbiguousFields(t *testing.T) {
 		{Name: "text_bad_context", Text: `\14`, Context: ContextBoth},
 		{Name: "text_not_escape", Text: `14`, Context: ContextString},
 		{Name: "bad_alias", Glyph: "♥", Aliases: []string{"heart"}},
+		{Name: "bad_underscore_alias", Glyph: "♥", Aliases: []string{"p8_left-extra"}},
 	}
 	for _, definition := range tests {
 		if _, err := NormalizeDefinition(definition); err == nil {
