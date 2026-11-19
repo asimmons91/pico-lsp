@@ -1,8 +1,9 @@
 # Change Log
 
-## Unreleased
+## 1.5.1
 
 - Show cart and source-file paths relative to the workspace in the cart budget tooltip.
+- Bundle `pico-lsp` 1.5.1, which normalizes Lua files to one trailing newline when formatting.
 
 ## 1.5.0
 

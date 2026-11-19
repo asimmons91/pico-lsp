@@ -23,7 +23,7 @@ The following backlog items have been promoted and split into milestone specs:
 - [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md)
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
-v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions.
+v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 The items below are not part of those releases.
 
 ## Prioritization
