@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Semantic highlighting for LuaCATS annotations in `---@` doc comments: tag,
+  class/enum/alias, field, parameter, generic, operator, type, string, and
+  number segments are now distinct semantic tokens instead of one whole-line
+  `comment` token. Works in any semantic-token client, including VS Code for
+  both `.p8` and cart-owned `.lua` files.
+
+### Fixed
+
+- Member completion now falls back to the enclosing lexical scope when the
+  receiver appears in a statement the parser dropped, such as a bare `self.`
+  while editing. Previously only receivers in valid statements completed.
+
 ## [1.4.0] - 2026-11-18
 
 ### Added

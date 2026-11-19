@@ -131,6 +131,12 @@ func semanticTokensData(nav *navContext) ([]uint32, bool) {
 		if comment.Span.FileID != nav.fileID || comment.Span.IsEmpty() {
 			continue
 		}
+		if comment.Kind == syntax.CommentDoc {
+			if annotation := annotationSemanticTokens(nav, comment); len(annotation) > 0 {
+				tokens = append(tokens, annotation...)
+				continue
+			}
+		}
 		tokens = append(tokens, spansToSemanticTokens(nav, comment.Span, stComment, 0)...)
 	}
 	for _, include := range nav.snap.Cart.Includes {
@@ -174,6 +180,74 @@ func semanticTokensData(nav *navContext) ([]uint32, bool) {
 		prevLine, prevStart, prevLength = token.line, token.start, token.length
 	}
 	return data, truncated
+}
+
+func annotationSemanticTokens(nav *navContext, comment syntax.Comment) []semanticToken {
+	segments := analysis.AnnotationSegments(comment)
+	if len(segments) == 0 {
+		return nil
+	}
+	out := make([]semanticToken, 0, len(segments)*2)
+	cursor := comment.Span.Start
+	for _, segment := range segments {
+		span := segment.Span
+		if span.Start < comment.Span.Start {
+			span.Start = comment.Span.Start
+		}
+		if span.End > comment.Span.End {
+			span.End = comment.Span.End
+		}
+		if span.Start < cursor || span.IsEmpty() {
+			continue
+		}
+		if span.Start > cursor {
+			out = append(out, spansToSemanticTokens(nav, source.Span{
+				FileID: comment.Span.FileID,
+				Start:  cursor,
+				End:    span.Start,
+			}, stComment, 0)...)
+		}
+		kind, mods := annotationSemanticKind(segment.Role)
+		out = append(out, spansToSemanticTokens(nav, span, kind, mods)...)
+		cursor = span.End
+	}
+	if cursor < comment.Span.End {
+		out = append(out, spansToSemanticTokens(nav, source.Span{
+			FileID: comment.Span.FileID,
+			Start:  cursor,
+			End:    comment.Span.End,
+		}, stComment, 0)...)
+	}
+	return out
+}
+
+func annotationSemanticKind(role analysis.AnnotationRole) (uint32, uint32) {
+	switch role {
+	case analysis.AnnotationTag:
+		return stKeyword, 0
+	case analysis.AnnotationClassName:
+		return stClass, smDeclaration
+	case analysis.AnnotationEnumName:
+		return stEnum, smDeclaration
+	case analysis.AnnotationTypeName:
+		return stType, smDeclaration
+	case analysis.AnnotationFieldName:
+		return stProperty, smDeclaration
+	case analysis.AnnotationParamName:
+		return stParameter, smDeclaration
+	case analysis.AnnotationGenericName:
+		return stTypeParameter, smDeclaration
+	case analysis.AnnotationOperatorName:
+		return stFunction, smDeclaration
+	case analysis.AnnotationType:
+		return stType, 0
+	case analysis.AnnotationString:
+		return stString, 0
+	case analysis.AnnotationNumber:
+		return stNumber, 0
+	default:
+		return stComment, 0
+	}
 }
 
 func semanticSymbolKind(sym *analysis.Symbol, declaration bool) (uint32, uint32) {

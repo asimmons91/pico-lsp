@@ -2,7 +2,7 @@
 
 **Status:** v1.4.0 released
 
-**Last updated:** 2026-11-18  
+**Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
