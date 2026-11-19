@@ -99,11 +99,11 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
-			name: "field scope",
+			name: "field index type",
 			text: "---@field [string] spd? number",
 			want: []AnnotationSegment{
 				{Span: annotationSpan(3, 9), Role: AnnotationTag},
-				{Span: annotationSpan(11, 17), Role: AnnotationScope},
+				{Span: annotationSpan(11, 17), Role: AnnotationType},
 				{Span: annotationSpan(19, 23), Role: AnnotationFieldName},
 				{Span: annotationSpan(24, 30), Role: AnnotationType},
 			},
@@ -258,6 +258,30 @@ func TestAnnotationSegments(t *testing.T) {
 				{Span: annotationSpan(13, 16), Role: AnnotationOperatorName},
 				{Span: annotationSpan(17, 20), Role: AnnotationType},
 				{Span: annotationSpan(23, 26), Role: AnnotationType},
+			},
+		},
+		{
+			name: "operator unnamed function operand",
+			text: "---@operator call(fun(): number): string",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 12), Role: AnnotationTag},
+				{Span: annotationSpan(13, 17), Role: AnnotationOperatorName},
+				{Span: annotationSpan(18, 21), Role: AnnotationType},
+				{Span: annotationSpan(25, 31), Role: AnnotationType},
+				{Span: annotationSpan(34, 40), Role: AnnotationType},
+			},
+		},
+		{
+			name: "operator unnamed function params",
+			text: "---@operator call(fun(x: number): string): boolean",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 12), Role: AnnotationTag},
+				{Span: annotationSpan(13, 17), Role: AnnotationOperatorName},
+				{Span: annotationSpan(18, 21), Role: AnnotationType},
+				{Span: annotationSpan(22, 23), Role: AnnotationType},
+				{Span: annotationSpan(25, 31), Role: AnnotationType},
+				{Span: annotationSpan(34, 40), Role: AnnotationType},
+				{Span: annotationSpan(43, 50), Role: AnnotationType},
 			},
 		},
 		{

@@ -136,7 +136,11 @@ func AnnotationSegments(comment syntax.Comment) []AnnotationSegment {
 				for scopeEnd > scopeStart && isAnnotationSpace(text[scopeEnd-1]) {
 					scopeEnd--
 				}
-				add(AnnotationScope, scopeStart, scopeEnd)
+				if isAnnotationFieldScope(text[scopeStart:scopeEnd]) {
+					add(AnnotationScope, scopeStart, scopeEnd)
+				} else {
+					addAnnotationTypes(add, text, scopeStart, scopeEnd)
+				}
 				nameStart = close + 1
 			}
 		}
@@ -355,14 +359,17 @@ func addCallOperatorParams(add func(AnnotationRole, int, int), text string, star
 		}
 		segmentEnd, colon := annotationCallSegment(text, i, end)
 		if colon >= 0 && colon < segmentEnd {
-			nameEnd := colon
-			for nameEnd > i && isAnnotationSpace(text[nameEnd-1]) {
-				nameEnd--
-			}
-			if nameEnd > i {
+			name := strings.TrimSpace(text[i:colon])
+			if isSimpleCallParamName(name) {
+				nameEnd := colon
+				for nameEnd > i && isAnnotationSpace(text[nameEnd-1]) {
+					nameEnd--
+				}
 				add(AnnotationParamName, i, nameEnd)
+				addAnnotationTypes(add, text, colon+1, segmentEnd)
+			} else {
+				addAnnotationTypes(add, text, i, segmentEnd)
 			}
-			addAnnotationTypes(add, text, colon+1, segmentEnd)
 		} else {
 			addAnnotationTypes(add, text, i, segmentEnd)
 		}
@@ -371,6 +378,29 @@ func addCallOperatorParams(add func(AnnotationRole, int, int), text string, star
 			i++
 		}
 	}
+}
+
+func isAnnotationFieldScope(text string) bool {
+	switch strings.ToLower(text) {
+	case "public", "private", "protected", "package":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSimpleCallParamName(name string) bool {
+	if name == "..." {
+		return true
+	}
+	name = strings.TrimSuffix(name, "?")
+	if name == "" {
+		return false
+	}
+	if !isAnnotationIdentifierStart(name, 0) {
+		return false
+	}
+	return scanAnnotationIdentifier(name, 0, len(name)) == len(name)
 }
 
 // annotationCallSegment finds the next top-level comma and colon in a call
