@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- The formatter now collapses extra trailing newlines in standalone Lua files
+  to exactly one when `insertFinalNewline` is enabled. `trimFinalNewlines` now
+  removes extra blank lines at EOF while keeping the final newline, matching the
+  editor setting's meaning.
+
 ## [1.5.0] - 2026-11-19
 
 ### Added

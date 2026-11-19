@@ -75,6 +75,10 @@ indented code with comments and annotations preserved. A shorthand
 - Keep comment-only lines and annotation blocks immediately above their target
   declarations.
 - Avoid changing string contents or long-string bodies.
+- Normalize the end of standalone Lua files to one final line ending when
+  `insertFinalNewline` is enabled. `trimFinalNewlines` removes extra blank
+  lines at EOF but keeps the final newline itself. `.p8` sections continue to
+  preserve their own final line terminator behavior.
 - Produce one statement per line unless the source uses shorthand.
 
 ## Implementation notes
@@ -92,7 +96,8 @@ indented code with comments and annotations preserved. A shorthand
 - Formatting must not mutate the cached cart snapshot. Verify that the token and
   comment streams are unchanged; refuse the edit if verification fails.
 - If a `FormattingOptions` field is absent, use stable defaults (`tabSize=2`,
-  `insertSpaces=true`, trim trailing whitespace, insert final newline).
+  `insertSpaces=true`, trim trailing whitespace, insert final newline, trim
+  extra final newlines to one).
 
 ## Testing
 
@@ -103,7 +108,8 @@ indented code with comments and annotations preserved. A shorthand
 - Section-preservation tests for every `.p8` section and tab marker.
 - Comment/annotation attachment tests, including blank lines between an
   annotation and its declaration.
-- Line-ending tests: LF, CRLF, lone CR, and files without a final newline.
+- Line-ending tests: LF, CRLF, lone CR, files without a final newline, and
+  extra trailing newlines collapsing to one.
 - Corpus test: every `testdata/carts/**/*.p8` formats without syntax changes and
   is idempotent.
 - Fuzz formatting: arbitrary parsed programs must either refuse or produce

@@ -62,6 +62,16 @@ func TestLuaFormatting(t *testing.T) {
 			want: "x = 1\n\n\ny = 2\n",
 		},
 		{
+			name: "extra final newlines",
+			in:   "x=1\n\n\n",
+			want: "x = 1\n",
+		},
+		{
+			name: "extra crlf final newlines",
+			in:   "x=1\r\n\r\n",
+			want: "x = 1\r\n",
+		},
+		{
 			name: "crlf preserved",
 			in:   "x=1\r\ny=2\r\n",
 			want: "x = 1\r\ny = 2\r\n",
@@ -152,8 +162,29 @@ func TestLuaFinalNewlineOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "x = 1" {
+	if got != "x = 1\n" {
 		t.Fatalf("trimmed final newlines = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.TrimFinalNewlines = false
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 1\n\n" {
+		t.Fatalf("preserved final newlines = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.InsertFinalNewline = false
+	opts.TrimFinalNewlines = true
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 1\n" {
+		t.Fatalf("trimmed without insertion = %q", got)
 	}
 }
 
@@ -199,7 +230,7 @@ func TestP8FormattingPreservesSections(t *testing.T) {
 
 func TestOptionsDefaults(t *testing.T) {
 	opts := DefaultOptions()
-	if opts.TabSize != 2 || !opts.InsertSpaces || opts.MaxBlankLines != 2 {
+	if opts.TabSize != 2 || !opts.InsertSpaces || !opts.InsertFinalNewline || !opts.TrimFinalNewlines || opts.MaxBlankLines != 2 {
 		t.Fatalf("defaults = %+v", opts)
 	}
 }
