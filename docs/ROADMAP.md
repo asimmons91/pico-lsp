@@ -143,6 +143,32 @@ The v1 release is complete when a user can:
 - Telemetry, cloud features, or network services.
 - Cart execution, emulation, sprite/map previews, or audio tooling.
 
+## Editor integration packages (post-v1)
+
+pico-editor (`github.com/asimmons91/pico-editor`) consumes pico-lsp in-process.
+That integration requires stable public facades over the existing analysis
+code. These are additive post-v1 releases; they do not change the LSP server's
+wire contract, defaults, or editor behavior.
+
+| Release | Public package | Purpose | Blocks |
+| --- | --- | --- | --- |
+| `v1.6.0` | `pkg/p8scii` | Canonical P8SCII charset, display widths, and encode/decode helpers | pico-editor M1 |
+| `v1.7.0` | `pkg/cart` | Cart parse/validate plus byte-preserving code splice/save | pico-editor M4 |
+| `v1.8.0` | `pkg/lsp` + `pkg/glyphs` | In-process server entry point and glyph catalog for the picker | pico-editor M5 |
+
+Rules:
+
+- Each package is a thin public facade over existing `internal/` packages. Do
+  not fork behavior or duplicate the parser, P8SCII mapping, or LSP server.
+- Facades expose only what the editor needs. Keep the public API small, and
+  cover it with tests and examples.
+- Tag `v1.6.0`, `v1.7.0`, and `v1.8.0` only after their package tests pass. A
+  milestone pin must reference a tag, never a branch or pseudo-version.
+- pico-editor must not import `internal/` packages; Go enforces this.
+- The editor pins each release before the corresponding milestone exits. Its
+  schedule is recorded in
+  [pico-editor's architecture document](https://github.com/asimmons91/pico-editor/blob/main/docs/ARCHITECTURE.md).
+
 ## Cross-cutting standards
 
 ### Diagnostics

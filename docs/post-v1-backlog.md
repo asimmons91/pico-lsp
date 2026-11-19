@@ -30,6 +30,7 @@ The items below are not part of those releases.
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
+| P1 | Editor integration public packages | Unblocks pico-editor's in-process M1/M4/M5 integration | Medium |
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
 | P2 | VS Code Marketplace and Open VSX publishing | Makes the M15 client discoverable and one-click installable | Low |
 | P2 | Zed extension | Modern editor support | Medium |
@@ -91,6 +92,26 @@ Requirements:
 - Keep 0.2.7 as the default for existing configurations.
 - Report unsupported versions with the existing fallback warning.
 - Document differences that affect diagnostics and completion.
+
+## 5. Editor integration public packages
+
+Publish the public facades scheduled in
+[ROADMAP.md](ROADMAP.md#editor-integration-packages-post-v1) for pico-editor:
+
+- `v1.6.0` — `pkg/p8scii`: canonical charset, display widths, and
+  encode/decode helpers.
+- `v1.7.0` — `pkg/cart`: cart parse/validate plus byte-preserving code
+  splice/save.
+- `v1.8.0` — `pkg/lsp` and `pkg/glyphs`: in-process server entry point and
+  glyph catalog.
+
+Requirements:
+
+- Thin facades over the existing `internal/` packages; no behavior fork or
+  duplicated parser, P8SCII mapping, or LSP server.
+- Public API tests and examples for every exported type and function.
+- Tag only after package tests pass; no branch or pseudo-version pins.
+- Coordinate each release with pico-editor's M1, M4, and M5 gates.
 
 ## Cross-cutting requirements
 
