@@ -101,7 +101,7 @@ the server itself is not code-signed.
 
 ## Development
 
-The repository pins Node.js 24.21.0 in `mise.toml`:
+The repository pins Node.js 26.13.1 in `mise.toml`:
 
 ```sh
 mise install
