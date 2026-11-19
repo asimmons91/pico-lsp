@@ -145,6 +145,14 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
+			name: "return description comma",
+			text: "---@return number the count, or zero",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 10), Role: AnnotationTag},
+				{Span: annotationSpan(11, 17), Role: AnnotationType},
+			},
+		},
+		{
 			name: "record type",
 			text: "---@type {x: number, name: string}",
 			want: []AnnotationSegment{

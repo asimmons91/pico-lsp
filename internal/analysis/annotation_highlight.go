@@ -290,16 +290,25 @@ func addClassAnnotationTypes(add func(AnnotationRole, int, int), text string, st
 }
 
 func addReturnAnnotationTypes(add func(AnnotationRole, int, int), text string, start int) {
-	for start < len(text) {
-		for start < len(text) && (isAnnotationSpace(text[start]) || text[start] == ',') {
-			start++
+	offset := start
+	for {
+		for offset < len(text) && isAnnotationSpace(text[offset]) {
+			offset++
 		}
-		if start >= len(text) {
+		typeStart := offset
+		typeEnd := annotationTypeEnd(text, typeStart, len(text))
+		if typeEnd <= typeStart {
 			return
 		}
-		end, _ := annotationCallSegment(text, start, len(text))
-		addAnnotationTypes(add, text, start, end)
-		start = end
+		addAnnotationTypeTokens(add, text, typeStart, typeEnd)
+		offset = typeEnd
+		for offset < len(text) && isAnnotationSpace(text[offset]) {
+			offset++
+		}
+		if offset >= len(text) || text[offset] != ',' {
+			return
+		}
+		offset++
 	}
 }
 
