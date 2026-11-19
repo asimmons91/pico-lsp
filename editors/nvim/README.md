@@ -193,7 +193,7 @@ highlights non-code `.p8` sections.
 
 ```vim
 setlocal commentstring=--\ %s
-setlocal comments=s1:--
+setlocal comments=:---,:--
 ```
 
 This makes `gcc`/`gc` and comment-aware formatting use PICO-8's `--` comment
