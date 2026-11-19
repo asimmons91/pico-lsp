@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.5.1 released
+**Status:** v1.5.1 released; M17–M19 public-package specs ready (Planned)
 
 **Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -75,6 +75,9 @@ These decisions were made before milestone specs were written. Changing one requ
 | M14 | Refactors and Code Actions | Conservative, previewable refactors for everyday PICO-8 edits | M13 | Done |
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
 | M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Done |
+| M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Planned |
+| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Planned |
+| M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Planned |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -82,6 +85,9 @@ shipped as **v1.5.0**: LuaCATS annotation semantic highlighting, VS Code
 PICO-8 file icons, a Neovim comment ftplugin, and incomplete-statement
 completion hardening. **v1.5.1** followed with formatter EOF normalization and
 workspace-relative cart paths in the VS Code status tooltip.
+
+M17–M19 are the public-package releases for pico-editor: p8scii in
+**v1.6.0**, cart in **v1.7.0**, and lsp plus glyphs in **v1.8.0**.
 
 Each milestone has a detailed spec:
 
@@ -102,6 +108,9 @@ Each milestone has a detailed spec:
 - [M14 — Refactors and Code Actions](M14-refactors-and-code-actions.md)
 - [M15 — VS Code Client](M15-vscode-client.md)
 - [M16 — P8SCII Glyph Snippets and Input](M16-p8scii-glyphs.md)
+- [M17 — P8SCII Public Package](M17-p8scii.md)
+- [M18 — Cart Public Package](M18-cart.md)
+- [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -148,18 +157,22 @@ The v1 release is complete when a user can:
 pico-editor (`github.com/asimmons91/pico-editor`) consumes pico-lsp in-process.
 That integration requires stable public facades over the existing analysis
 code. These are additive post-v1 releases; they do not change the LSP server's
-wire contract, defaults, or editor behavior.
+wire contract or defaults. A marker-recognition fix that aligns the internal
+tab scanner with PICO-8's column-0 rule, and a lone-CR line-scanning correction
+that matches P8SCII, are allowed and must be recorded in the changelog.
 
-| Release | Public package | Purpose | Blocks |
-| --- | --- | --- | --- |
-| `v1.6.0` | `pkg/p8scii` | Canonical P8SCII charset, display widths, and encode/decode helpers | pico-editor M1 |
-| `v1.7.0` | `pkg/cart` | Cart parse/validate plus byte-preserving code splice/save | pico-editor M4 |
-| `v1.8.0` | `pkg/lsp` + `pkg/glyphs` | In-process server entry point and glyph catalog for the picker | pico-editor M5 |
+| Release | Milestone | Public package | Purpose | Blocks |
+| --- | --- | --- | --- | --- |
+| `v1.6.0` | M17 | `pkg/p8scii` | Canonical P8SCII charset, display widths, and encode/decode helpers | pico-editor M1 |
+| `v1.7.0` | M18 | `pkg/cart` | Cart parse/validate, byte-preserving code splice/save, and include ownership | pico-editor M4 |
+| `v1.8.0` | M19 | `pkg/lsp` + `pkg/glyphs` | In-process server entry point and glyph catalog for the picker | pico-editor M5 |
 
 Rules:
 
-- Each package is a thin public facade over existing `internal/` packages. Do
-  not fork behavior or duplicate the parser, P8SCII mapping, or LSP server.
+- Each package is a thin public facade, or an editor-shaped public model that
+  wraps existing internal behavior. The cart `Document` wraps the internal
+  parser; it does not duplicate it. Do not fork behavior or duplicate the
+  parser, P8SCII mapping, or LSP server.
 - Facades expose only what the editor needs. Keep the public API small, and
   cover it with tests and examples.
 - Tag `v1.6.0`, `v1.7.0`, and `v1.8.0` only after their package tests pass. A
@@ -307,7 +320,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 ship individually as v1.6.0, v1.7.0, and v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
