@@ -15,6 +15,9 @@ All notable changes to this project are documented here. The format follows
   client, including VS Code for both `.p8` and cart-owned `.lua` files.
 - VS Code: the `.p8` language now supplies the PICO-8 logo as its default file
   icon when the active file icon theme supports language default icons.
+- A Neovim `ftplugin` for `pico8` buffers that sets `commentstring` and
+  `comments` for PICO-8's `--` and `//` line comments, so `gcc`/`gc` and
+  comment-aware formatting work on carts.
 
 ### Fixed
 

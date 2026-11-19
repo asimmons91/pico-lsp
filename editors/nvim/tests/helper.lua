@@ -6,6 +6,7 @@
 
 local root = vim.env.PICO_LSP_ROOT or vim.fn.getcwd()
 vim.opt.runtimepath:append(root .. "/editors/nvim")
+vim.cmd("filetype plugin on")
 
 local binary = vim.env.PICO_LSP_BIN or "pico-lsp"
 local tmp = vim.fn.tempname()
@@ -44,6 +45,39 @@ if not vim.wait(5000, function()
 end, 50) then
   fail("pico-lsp did not attach to the cart")
 end
+
+if vim.bo.commentstring ~= "-- %s" then
+  fail("ftplugin did not set commentstring")
+end
+if vim.bo.comments ~= ":---,:--,://" then
+  fail("ftplugin did not set comments")
+end
+
+local function check_wrap(leader, message)
+  local probe = vim.api.nvim_create_buf(false, true)
+  vim.bo[probe].filetype = "pico8"
+  vim.bo[probe].formatoptions = "tcq"
+  vim.bo[probe].textwidth = 30
+  vim.api.nvim_buf_set_lines(probe, 0, -1, false, {
+    leader .. " this is a long comment line that should wrap onto another comment line",
+  })
+  vim.api.nvim_buf_call(probe, function()
+    vim.cmd("normal! gqG")
+  end)
+  local wrapped = vim.api.nvim_buf_get_lines(probe, 0, -1, false)
+  if #wrapped < 2 then
+    fail("ftplugin comment formatting did not wrap the " .. leader .. " comment")
+  end
+  for _, line in ipairs(wrapped) do
+    if line:sub(1, #leader + 1) ~= leader .. " " then
+      fail("ftplugin comment formatting did not continue the " .. leader .. " prefix: " .. line)
+    end
+  end
+  vim.api.nvim_buf_delete(probe, { force = true })
+end
+
+check_wrap("--", "dash")
+check_wrap("//", "slash")
 
 vim.cmd.edit(vim.fn.fnameescape(included))
 if not vim.wait(5000, function()
