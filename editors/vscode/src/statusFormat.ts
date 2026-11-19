@@ -19,6 +19,27 @@ export function formatCartInfo(info: CartInfo): string {
   return `PICO-8 ${info.tokens}/${info.tokenLimit} tok · ${info.chars}/${info.charLimit} chr · ${compressed}`;
 }
 
+// formatCartTooltip renders the status-bar hover. relativePath is supplied by
+// the editor layer so the tooltip can use workspace-relative paths instead of
+// absolute filesystem paths.
+export function formatCartTooltip(
+  info: CartInfo,
+  relativePath: (uri: string) => string
+): string {
+  const lines: string[] = [`**${formatCartInfo(info)}**`, ''];
+  if (info.rootUri) {
+    lines.push(`Cart: \`${relativePath(info.rootUri)}\``, '');
+  }
+  const files = info.files ?? [];
+  if (files.length > 0) {
+    lines.push('| File | Tokens | Chars |', '|---|---:|---:|');
+    for (const file of files) {
+      lines.push(`| \`${relativePath(file.uri)}\` | ${file.tokens} | ${file.chars} |`);
+    }
+  }
+  return lines.join('\n');
+}
+
 export function cartInfoSeverity(info: CartInfo): CartSeverity {
   if (
     info.tokens > info.tokenLimit ||
