@@ -4,11 +4,11 @@ This directory contains:
 
 - the recommended `vim.lsp.config` setup for `.p8` carts;
 - an optional helper for attaching `pico-lsp` to cart-owned `.lua` buffers;
-- `ftdetect` and `syntax` files for PICO-8 carts;
+- `ftdetect`, `syntax`, and `ftplugin` files for PICO-8 carts;
 - a headless smoke test for the helper.
 
-The syntax and helper are optional. The server works with the base LSP config
-alone.
+The syntax, ftplugin, and helper are optional. The server works with the base
+LSP config alone.
 
 ## Install
 
@@ -186,6 +186,21 @@ If you prefer not to compile a parser, the included `syntax/pico8.vim` remains
 a fallback. Add the runtime path as above; `ftdetect` sets `filetype=pico8` for
 `.p8` files. LSP semantic tokens cover Lua code, while the syntax file also
 highlights non-code `.p8` sections.
+
+## Comment settings
+
+`ftplugin/pico8.vim` sets buffer-local comment options for carts:
+
+```vim
+setlocal commentstring=--\ %s
+setlocal comments=s1:--
+```
+
+This makes `gcc`/`gc` and comment-aware formatting use PICO-8's `--` comment
+token. Neovim configs normally enable ftplugins with `filetype plugin on`;
+LazyVim and most distributions do this by default. Add
+`vim.cmd("filetype plugin on")` if your config turns it off. Like the syntax
+file, the ftplugin requires adding `editors/nvim` to `runtimepath`.
 
 ## Keymaps and cart budget
 

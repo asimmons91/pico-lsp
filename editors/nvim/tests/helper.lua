@@ -6,6 +6,7 @@
 
 local root = vim.env.PICO_LSP_ROOT or vim.fn.getcwd()
 vim.opt.runtimepath:append(root .. "/editors/nvim")
+vim.cmd("filetype plugin on")
 
 local binary = vim.env.PICO_LSP_BIN or "pico-lsp"
 local tmp = vim.fn.tempname()
@@ -43,6 +44,13 @@ if not vim.wait(5000, function()
   return #vim.lsp.get_clients({ name = "pico_lsp" }) > 0
 end, 50) then
   fail("pico-lsp did not attach to the cart")
+end
+
+if vim.bo.commentstring ~= "-- %s" then
+  fail("ftplugin did not set commentstring")
+end
+if vim.bo.comments ~= "s1:--" then
+  fail("ftplugin did not set comments")
 end
 
 vim.cmd.edit(vim.fn.fnameescape(included))

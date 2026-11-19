@@ -113,8 +113,9 @@ runtime path and enable the helper plugin:
 require("pico_lsp").setup()
 ```
 
-Full setup, keymaps, the `pico8/cartInfo` statusline recipe, and the optional
-Vim syntax file are in [editors/nvim/README.md](editors/nvim/README.md).
+Full setup, keymaps, the `pico8/cartInfo` statusline recipe, the optional Vim
+syntax file, and PICO-8 comment settings are in
+[editors/nvim/README.md](editors/nvim/README.md).
 
 ## Helix
 
