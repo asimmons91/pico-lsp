@@ -109,21 +109,29 @@ func (p *parser) parseBlock(stop func(Token) bool) *Block {
 	defer func() { p.blockDepth-- }()
 
 	start := p.current().Span
+	end := start
 	block := &Block{}
 	for !p.eof() && (stop == nil || !stop(p.current())) {
 		before := p.pos
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Stmts = append(block.Stmts, stmt)
+			end = stmt.Span()
+		} else if p.pos > before {
+			// Keep recovered statements in the block extent so enclosing
+			// scopes still cover the cursor while the user is typing invalid
+			// code.
+			end = p.tokens[p.pos-1].Span
 		}
 		if p.pos == before {
 			p.errorAt(p.current(), "unexpected token")
+			end = p.current().Span
 			p.advance()
 		}
 	}
 	block.SpanVal = start
-	if len(block.Stmts) > 0 {
-		block.SpanVal = block.SpanVal.Merge(block.Stmts[len(block.Stmts)-1].Span())
+	if !end.IsEmpty() {
+		block.SpanVal = block.SpanVal.Merge(end)
 	}
 	return block
 }

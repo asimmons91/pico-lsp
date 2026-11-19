@@ -715,3 +715,204 @@ x = @
 		t.Fatalf("include completion after # = %v, missing #include", completionLabels(items))
 	}
 }
+
+func TestMemberCompletionInIncompleteStatement(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Ship
+---@field spd number
+ship = {}
+
+function ship:update()
+  self.
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	pos := positionAt(t, text, "self.", len("self."))
+	items := completionItems(t, h, ctx, root, pos)
+	for _, want := range []string{"spd", "update"} {
+		if findCompletion(items, want) == nil {
+			t.Fatalf("incomplete self. labels = %v, missing %q", completionLabels(items), want)
+		}
+	}
+
+	// Completion while typing a longer prefix still resolves the receiver.
+	typed := strings.Replace(text, "  self.\n", "  self.spd\n", 1)
+	dir2 := t.TempDir()
+	root2 := writeTemp(t, dir2, "cart.p8", typed)
+	h2 := newHarness(t, newTestClient())
+	h2.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h2, ctx, root2, typed)
+	pos = positionAt(t, typed, "self.spd", len("self."))
+	items = completionItems(t, h2, ctx, root2, pos)
+	if findCompletion(items, "spd") == nil {
+		t.Fatalf("incomplete self.spd labels = %v, missing spd", completionLabels(items))
+	}
+}
+
+func TestIncompleteReceiverScopeFallbacks(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Ship
+---@field spd number
+ship = {}
+
+function ship:update()
+  ship.
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	items := completionItems(t, h, ctx, root, positionAt(t, text, "ship.", len("ship.")))
+	if findCompletion(items, "spd") == nil {
+		t.Fatalf("globals fallback labels = %v, missing spd", completionLabels(items))
+	}
+
+	// A local declared later in the same scope is not visible yet and must not
+	// be used as the receiver.
+	later := strings.Replace(text, "  ship.\n", "  later.\n  local later = {}\n  later.x = 1\n", 1)
+	dir2 := t.TempDir()
+	root2 := writeTemp(t, dir2, "cart.p8", later)
+	h2 := newHarness(t, newTestClient())
+	h2.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h2, ctx, root2, later)
+	items = completionItems(t, h2, ctx, root2, positionAt(t, later, "later.", len("later.")))
+	if len(items) != 0 {
+		t.Fatalf("later-local fallback labels = %v, want empty", completionLabels(items))
+	}
+
+	// A receiver after whitespace or a newline is still part of a field chain.
+	chain := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Weapon
+---@field dmg number
+local ship = {}
+local spd = {dmg = 1}
+function f()
+  ship.
+  spd.
+end
+`
+	dir3 := t.TempDir()
+	root3 := writeTemp(t, dir3, "cart.p8", chain)
+	h3 := newHarness(t, newTestClient())
+	h3.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h3, ctx, root3, chain)
+	items = completionItems(t, h3, ctx, root3, positionAt(t, chain, "spd.", len("spd.")))
+	if len(items) != 0 {
+		t.Fatalf("wrapped-chain fallback labels = %v, want empty", completionLabels(items))
+	}
+
+	// A later local with the same name must not shadow the global yet.
+	shadowed := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Bird
+---@field fly number
+bird = {}
+---@class Fish
+---@field swim number
+function f()
+  bird.
+  ---@type Fish
+  local bird = {}
+end
+`
+	dir4 := t.TempDir()
+	root4 := writeTemp(t, dir4, "cart.p8", shadowed)
+	h4 := newHarness(t, newTestClient())
+	h4.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h4, ctx, root4, shadowed)
+	items = completionItems(t, h4, ctx, root4, positionAt(t, shadowed, "bird.", len("bird.")))
+	if findCompletion(items, "fly") == nil {
+		t.Fatalf("shadowed global labels = %v, missing fly", completionLabels(items))
+	}
+	if findCompletion(items, "swim") != nil {
+		t.Fatalf("shadowed global labels = %v, unexpectedly resolved later local", completionLabels(items))
+	}
+
+	// Non-ASCII identifiers are valid PICO-8 names and must be scanned whole.
+	unicode := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+local foo = {bar = 1}
+local ♥foo = {baz = 1}
+function f()
+  ♥foo.
+end
+`
+	dir5 := t.TempDir()
+	root5 := writeTemp(t, dir5, "cart.p8", unicode)
+	h5 := newHarness(t, newTestClient())
+	h5.initialize(t, &protocol.InitializeParams{})
+	openDoc(t, h5, ctx, root5, unicode)
+	items = completionItems(t, h5, ctx, root5, positionAt(t, unicode, "♥foo.", len("♥foo.")))
+	if findCompletion(items, "baz") == nil {
+		t.Fatalf("unicode receiver labels = %v, missing baz", completionLabels(items))
+	}
+	if findCompletion(items, "bar") != nil {
+		t.Fatalf("unicode receiver labels = %v, unexpectedly resolved ascii suffix", completionLabels(items))
+	}
+}
+
+func TestIncompleteReceiverBodyScope(t *testing.T) {
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+---@class Outer
+---@field outer number
+---@class Inner
+---@field inner number
+local foo = {}
+function f()
+  ---@type Outer
+  local foo = {}
+  if true then
+    ---@type Inner
+    local foo = {}
+    foo.
+  end
+end
+function g()
+  local bar = {}
+  bar.x = 1
+  bar.
+end
+`
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "cart.p8", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	items := completionItems(t, h, ctx, root, positionAt(t, text, "foo.", len("foo.")))
+	if findCompletion(items, "inner") == nil {
+		t.Fatalf("inner branch labels = %v, missing inner", completionLabels(items))
+	}
+	if findCompletion(items, "outer") != nil {
+		t.Fatalf("inner branch labels = %v, unexpectedly resolved outer scope", completionLabels(items))
+	}
+
+	items = completionItems(t, h, ctx, root, positionAt(t, text, "bar.", len("bar.")))
+	if findCompletion(items, "x") == nil {
+		t.Fatalf("function-local labels = %v, missing x", completionLabels(items))
+	}
+}

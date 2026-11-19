@@ -500,6 +500,26 @@ func TestParseSpanPrecision(t *testing.T) {
 	}
 }
 
+func TestBlockSpanIncludesRecoveredStatement(t *testing.T) {
+	text := "if true then\n  foo.\nend\n"
+	chunk, errs := parseText(t, text)
+	if len(errs) == 0 {
+		t.Fatal("expected a syntax error for foo.")
+	}
+	if chunk.Block == nil || len(chunk.Block.Stmts) != 1 {
+		t.Fatalf("statements = %+v", chunk.Block)
+	}
+	ifStmt, ok := chunk.Block.Stmts[0].(*IfStmt)
+	if !ok || len(ifStmt.Branches) != 1 {
+		t.Fatalf("statement = %T, want if with one branch", chunk.Block.Stmts[0])
+	}
+	body := ifStmt.Branches[0].Body
+	wantEnd := strings.Index(text, "foo.") + len("foo.")
+	if body == nil || body.Span().End != wantEnd {
+		t.Fatalf("body span = %+v, want end %d", body, wantEnd)
+	}
+}
+
 func TestParseMissingEndBeforeEnclosingTerminators(t *testing.T) {
 	chunk, errs := parseText(t, "if x then\n function f()\nelse\n g()\nend")
 	if len(errs) == 0 {

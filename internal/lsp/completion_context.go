@@ -146,10 +146,10 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 			continue
 		}
 		if !isOnlySpace(n.file.Text[occ.Span.End:separator]) {
-			return nil
+			break
 		}
 		if occ.Symbol == nil {
-			return nil
+			break
 		}
 		if typ, ok := n.semantics.FlowType(occ.Span); ok && typ != nil && !types.IsAny(typ) {
 			receiver := *occ.Symbol
@@ -158,7 +158,58 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 		}
 		return resolveAlias(occ.Symbol)
 	}
+	// The parser drops statements that are not assignments or calls. While the
+	// user is typing `self.` on its own line, there is no occurrence for the
+	// receiver inside that statement. Resolve a simple identifier immediately
+	// before the separator from the enclosing lexical scope instead.
+	if name, ok := textReceiverName(n.file.Text, separator); ok {
+		canonical := analysis.CanonicalName(name)
+		if scope := n.semantics.ScopeAt(n.fileID, separator); scope != nil {
+			for _, sym := range n.semantics.VisibleSymbolsAt(scope, n.fileID, separator) {
+				if sym != nil && sym.Canonical == canonical {
+					return resolveAlias(sym)
+				}
+			}
+		}
+		if n.semantics.Table != nil {
+			if sym := n.semantics.Table.Globals[canonical]; sym != nil {
+				return resolveAlias(sym)
+			}
+			if sym := n.semantics.Table.Builtins[canonical]; sym != nil {
+				return resolveAlias(sym)
+			}
+		}
+	}
 	return nil
+}
+
+// textReceiverName returns the identifier directly before a member separator,
+// rejecting dotted chains because the last field is not a scope name.
+func textReceiverName(text string, separator int) (string, bool) {
+	if separator <= 0 || separator > len(text) {
+		return "", false
+	}
+	end := separator
+	for end > 0 && (text[end-1] == ' ' || text[end-1] == '\t') {
+		end--
+	}
+	start := identifierPrefixStart(text, end)
+	if start == end {
+		return "", false
+	}
+	previous := start
+	for previous > 0 {
+		switch text[previous-1] {
+		case ' ', '\t', '\r', '\n':
+			previous--
+		default:
+			if text[previous-1] == '.' || text[previous-1] == ':' {
+				return "", false
+			}
+			return text[start:end], true
+		}
+	}
+	return text[start:end], true
 }
 
 func isOnlySpace(text string) bool {

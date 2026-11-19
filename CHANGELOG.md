@@ -8,9 +8,22 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Semantic highlighting for LuaCATS annotations in `---@` doc comments: tag,
+  class/enum/alias, field, field scope, parameter, generic, cast target,
+  operator, type, string, and number segments are now distinct semantic tokens
+  instead of one whole-line `comment` token. Works in any semantic-token
+  client, including VS Code for both `.p8` and cart-owned `.lua` files.
+- VS Code: the `.p8` language now supplies the PICO-8 logo as its default file
+  icon when the active file icon theme supports language default icons.
 - A Neovim `ftplugin` for `pico8` buffers that sets `commentstring` and
   `comments` for PICO-8's `--` and `//` line comments, so `gcc`/`gc` and
   comment-aware formatting work on carts.
+
+### Fixed
+
+- Member completion now falls back to the enclosing lexical scope when the
+  receiver appears in a statement the parser dropped, such as a bare `self.`
+  while editing. Previously only receivers in valid statements completed.
 
 ## [1.4.0] - 2026-11-18
 

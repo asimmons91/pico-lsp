@@ -28,8 +28,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   LSP 3.17 push/pull transport selection and related-file pull reports.
 - Document symbols, folding ranges, go-to-definition, references, highlights,
   rename, and workspace symbols.
-- Completion, hover, signature help, semantic tokens, and inlay hints for user
-  symbols and the PICO-8 0.2.7 API.
+- Completion, hover, signature help, semantic tokens (including LuaCATS
+  annotation highlighting), and inlay hints for user symbols and the PICO-8
+  0.2.7 API.
 - P8SCII glyph input: `p8_left`-style completion in code and strings, a
   searchable glyph picker, and custom font-slot entries through
   `pico8.glyphs`.
