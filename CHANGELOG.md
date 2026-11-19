@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-19
+
 ### Added
 
 - Semantic highlighting for LuaCATS annotations in `---@` doc comments: tag,
@@ -162,7 +164,8 @@ All notable changes to this project are documented here. The format follows
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.5.0
 [1.4.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.4.0
 [1.3.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.3.0
 [1.2.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.2.0
