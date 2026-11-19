@@ -9,10 +9,10 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Semantic highlighting for LuaCATS annotations in `---@` doc comments: tag,
-  class/enum/alias, field, parameter, generic, operator, type, string, and
-  number segments are now distinct semantic tokens instead of one whole-line
-  `comment` token. Works in any semantic-token client, including VS Code for
-  both `.p8` and cart-owned `.lua` files.
+  class/enum/alias, field, field scope, parameter, generic, cast target,
+  operator, type, string, and number segments are now distinct semantic tokens
+  instead of one whole-line `comment` token. Works in any semantic-token
+  client, including VS Code for both `.p8` and cart-owned `.lua` files.
 
 ### Fixed
 

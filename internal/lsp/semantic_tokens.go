@@ -239,6 +239,10 @@ func annotationSemanticKind(role analysis.AnnotationRole) (uint32, uint32) {
 		return stTypeParameter, smDeclaration
 	case analysis.AnnotationOperatorName:
 		return stFunction, smDeclaration
+	case analysis.AnnotationScope:
+		return stModifier, 0
+	case analysis.AnnotationVariableName:
+		return stVariable, 0
 	case analysis.AnnotationType:
 		return stType, 0
 	case analysis.AnnotationString:

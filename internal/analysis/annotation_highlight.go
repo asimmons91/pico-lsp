@@ -30,6 +30,10 @@ const (
 	AnnotationGenericName
 	// AnnotationOperatorName is the operator name in `@operator`.
 	AnnotationOperatorName
+	// AnnotationScope is a field scope such as `public` in `@field`.
+	AnnotationScope
+	// AnnotationVariableName is the cast target in `@cast`.
+	AnnotationVariableName
 	// AnnotationType is an identifier or keyword inside a type expression.
 	AnnotationType
 	// AnnotationString is a string literal inside a type expression.
@@ -125,7 +129,14 @@ func AnnotationSegments(comment syntax.Comment) []AnnotationSegment {
 		if nameStart < len(text) && text[nameStart] == '[' {
 			if close := strings.IndexByte(text[nameStart:], ']'); close >= 0 {
 				close += nameStart
-				addAnnotationTypes(add, text, nameStart+1, close)
+				scopeStart, scopeEnd := nameStart+1, close
+				for scopeStart < scopeEnd && isAnnotationSpace(text[scopeStart]) {
+					scopeStart++
+				}
+				for scopeEnd > scopeStart && isAnnotationSpace(text[scopeEnd-1]) {
+					scopeEnd--
+				}
+				add(AnnotationScope, scopeStart, scopeEnd)
 				nameStart = close + 1
 			}
 		}
@@ -140,8 +151,16 @@ func AnnotationSegments(comment syntax.Comment) []AnnotationSegment {
 			add(AnnotationParamName, nameStart, nameEnd)
 			addAnnotationTypes(add, text, nameEnd, len(text))
 		}
-	case "type", "return", "cast", "overload":
+	case "type", "overload":
 		addAnnotationTypes(add, text, rest, len(text))
+	case "return":
+		addReturnAnnotationTypes(add, text, rest)
+	case "cast":
+		nameStart, nameEnd := nextAnnotationWord(text, rest)
+		if nameStart < nameEnd {
+			add(AnnotationVariableName, nameStart, nameEnd)
+			addCastAnnotationTypes(add, text, nameEnd)
+		}
 	case "generic":
 		addGenericAnnotationTypes(add, text, rest, len(text))
 	case "operator":
@@ -154,9 +173,12 @@ func AnnotationSegments(comment syntax.Comment) []AnnotationSegment {
 				i++
 			}
 			if i < len(text) && text[i] == '(' {
-				if close := strings.IndexByte(text[i:], ')'); close >= 0 {
-					close += i
-					addAnnotationTypes(add, text, i+1, close)
+				if close := matchingAnnotationDelimiter(text, i, '(', ')'); close > i {
+					if strings.EqualFold(text[nameStart:opEnd], "call") {
+						addCallOperatorParams(add, text, i+1, close)
+					} else {
+						addAnnotationTypes(add, text, i+1, close)
+					}
 					i = close + 1
 				}
 			}
@@ -209,19 +231,13 @@ func nextAnnotationWord(text string, i int) (start, end int) {
 // annotationNameEnd trims declaration suffixes such as `?`, `:` and `<...>`
 // from a word so the name itself is highlighted independently.
 func annotationNameEnd(text string, start, end int) int {
-	i := start
-	for i < end {
-		c := text[i]
-		if isAnnotationNameStart(c) || c == '.' {
-			i++
-			continue
-		}
-		break
-	}
-	if i == start {
+	if start < 0 || start >= end || !isAnnotationIdentifierStart(text, start) {
 		return end
 	}
-	return i
+	if next := scanAnnotationIdentifier(text, start, end); next > start {
+		return next
+	}
+	return end
 }
 
 func addClassAnnotationTypes(add func(AnnotationRole, int, int), text string, start int) {
@@ -235,8 +251,7 @@ func addClassAnnotationTypes(add func(AnnotationRole, int, int), text string, st
 		}
 	}
 	if start < len(text) && text[start] == '<' {
-		if close := strings.IndexByte(text[start:], '>'); close >= 0 {
-			close += start
+		if close := matchingAnnotationDelimiter(text, start, '<', '>'); close > start {
 			addGenericAnnotationTypes(add, text, start+1, close)
 			start = close + 1
 		}
@@ -272,6 +287,135 @@ func addClassAnnotationTypes(add func(AnnotationRole, int, int), text string, st
 		}
 		return
 	}
+}
+
+func addReturnAnnotationTypes(add func(AnnotationRole, int, int), text string, start int) {
+	for start < len(text) {
+		for start < len(text) && (isAnnotationSpace(text[start]) || text[start] == ',') {
+			start++
+		}
+		if start >= len(text) {
+			return
+		}
+		end, _ := annotationCallSegment(text, start, len(text))
+		addAnnotationTypes(add, text, start, end)
+		start = end
+	}
+}
+
+func addCastAnnotationTypes(add func(AnnotationRole, int, int), text string, start int) {
+	i := start
+	for i < len(text) {
+		for i < len(text) && (isAnnotationSpace(text[i]) || text[i] == ',') {
+			i++
+		}
+		if i >= len(text) {
+			return
+		}
+		if text[i] == '+' || text[i] == '-' {
+			i++
+			for i < len(text) && isAnnotationSpace(text[i]) {
+				i++
+			}
+		}
+		typeEnd := annotationTypeEnd(text, i, len(text))
+		if typeEnd <= i {
+			return
+		}
+		addAnnotationTypeTokens(add, text, i, typeEnd)
+		i = typeEnd
+		for i < len(text) && isAnnotationSpace(text[i]) {
+			i++
+		}
+		if i < len(text) && text[i] == ',' {
+			i++
+			continue
+		}
+		return
+	}
+}
+
+func addCallOperatorParams(add func(AnnotationRole, int, int), text string, start, end int) {
+	i := start
+	for i < end {
+		for i < end && (isAnnotationSpace(text[i]) || text[i] == ',') {
+			i++
+		}
+		if i >= end {
+			return
+		}
+		segmentEnd, colon := annotationCallSegment(text, i, end)
+		if colon >= 0 && colon < segmentEnd {
+			nameEnd := colon
+			for nameEnd > i && isAnnotationSpace(text[nameEnd-1]) {
+				nameEnd--
+			}
+			if nameEnd > i {
+				add(AnnotationParamName, i, nameEnd)
+			}
+			addAnnotationTypes(add, text, colon+1, segmentEnd)
+		} else {
+			addAnnotationTypes(add, text, i, segmentEnd)
+		}
+		i = segmentEnd
+		if i < end && text[i] == ',' {
+			i++
+		}
+	}
+}
+
+// annotationCallSegment finds the next top-level comma and colon in a call
+// operator's parameter list. Nested type delimiters and string literals are
+// skipped.
+func annotationCallSegment(text string, start, end int) (segmentEnd, colon int) {
+	depth := 0
+	colon = -1
+	for i := start; i < end; i++ {
+		switch text[i] {
+		case '"', '\'':
+			i = scanAnnotationString(text, i, end) - 1
+		case '<', '(', '[', '{':
+			depth++
+		case '>', ')', ']', '}':
+			if depth > 0 {
+				depth--
+			}
+		case ',':
+			if depth == 0 {
+				return i, colon
+			}
+		case ':':
+			if depth == 0 && colon < 0 {
+				colon = i
+			}
+		}
+	}
+	return end, colon
+}
+
+// matchingAnnotationDelimiter returns the byte offset of the delimiter that
+// closes text[start]. String literals and nested delimiters are skipped.
+func matchingAnnotationDelimiter(text string, start int, open, close byte) int {
+	if start < 0 || start >= len(text) || text[start] != open {
+		return -1
+	}
+	depth := 0
+	for i := start; i < len(text); i++ {
+		switch text[i] {
+		case '"', '\'':
+			i = scanAnnotationString(text, i, len(text)) - 1
+		default:
+			if text[i] == open {
+				depth++
+			} else if text[i] == close {
+				depth--
+				if depth == 0 {
+					return i
+				}
+			}
+		}
+	}
+	return -1
 }
 
 func addAnnotationTypes(add func(AnnotationRole, int, int), text string, start, end int) {
@@ -355,7 +499,7 @@ func addGenericAnnotationTypes(add func(AnnotationRole, int, int), text string, 
 		for i < end && isAnnotationSpace(text[i]) {
 			i++
 		}
-		if i < end && text[i] == ':' {
+		if i < end && (text[i] == ':' || text[i] == '=') {
 			i++
 			typeStart := i
 			typeEnd := annotationTypeEnd(text, typeStart, end)

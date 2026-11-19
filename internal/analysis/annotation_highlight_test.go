@@ -51,6 +51,37 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
+			name: "class constrained generic",
+			text: "---@class Inventory<T: table<string, Item>>: Container",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 9), Role: AnnotationTag},
+				{Span: annotationSpan(10, 19), Role: AnnotationClassName},
+				{Span: annotationSpan(20, 21), Role: AnnotationGenericName},
+				{Span: annotationSpan(23, 28), Role: AnnotationType},
+				{Span: annotationSpan(29, 35), Role: AnnotationType},
+				{Span: annotationSpan(37, 41), Role: AnnotationType},
+				{Span: annotationSpan(45, 54), Role: AnnotationType},
+			},
+		},
+		{
+			name: "class unicode",
+			text: "---@class Café: Base",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 9), Role: AnnotationTag},
+				{Span: annotationSpan(10, 15), Role: AnnotationClassName},
+				{Span: annotationSpan(17, 21), Role: AnnotationType},
+			},
+		},
+		{
+			name: "class unicode colon",
+			text: "---@class Éditeur: Base",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 9), Role: AnnotationTag},
+				{Span: annotationSpan(10, 18), Role: AnnotationClassName},
+				{Span: annotationSpan(20, 24), Role: AnnotationType},
+			},
+		},
+		{
 			name: "class exact",
 			text: "---@class Ship (exact)",
 			want: []AnnotationSegment{
@@ -68,13 +99,23 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
-			name: "field index optional",
+			name: "field scope",
 			text: "---@field [string] spd? number",
 			want: []AnnotationSegment{
 				{Span: annotationSpan(3, 9), Role: AnnotationTag},
-				{Span: annotationSpan(11, 17), Role: AnnotationType},
+				{Span: annotationSpan(11, 17), Role: AnnotationScope},
 				{Span: annotationSpan(19, 23), Role: AnnotationFieldName},
 				{Span: annotationSpan(24, 30), Role: AnnotationType},
+			},
+		},
+		{
+			name: "field public scope",
+			text: "---@field [public] hp number",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 9), Role: AnnotationTag},
+				{Span: annotationSpan(11, 17), Role: AnnotationScope},
+				{Span: annotationSpan(19, 21), Role: AnnotationFieldName},
+				{Span: annotationSpan(22, 28), Role: AnnotationType},
 			},
 		},
 		{
@@ -92,6 +133,15 @@ func TestAnnotationSegments(t *testing.T) {
 			want: []AnnotationSegment{
 				{Span: annotationSpan(3, 10), Role: AnnotationTag},
 				{Span: annotationSpan(11, 18), Role: AnnotationType},
+			},
+		},
+		{
+			name: "return list",
+			text: "---@return number, string",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 10), Role: AnnotationTag},
+				{Span: annotationSpan(11, 17), Role: AnnotationType},
+				{Span: annotationSpan(19, 25), Role: AnnotationType},
 			},
 		},
 		{
@@ -116,6 +166,15 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
+			name: "alias unicode",
+			text: `---@alias Café "x"`,
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 9), Role: AnnotationTag},
+				{Span: annotationSpan(10, 15), Role: AnnotationTypeName},
+				{Span: annotationSpan(16, 19), Role: AnnotationString},
+			},
+		},
+		{
 			name: "enum",
 			text: "---@enum Direction",
 			want: []AnnotationSegment{
@@ -134,6 +193,56 @@ func TestAnnotationSegments(t *testing.T) {
 			},
 		},
 		{
+			name: "generic default",
+			text: "---@generic T = number",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 11), Role: AnnotationTag},
+				{Span: annotationSpan(12, 13), Role: AnnotationGenericName},
+				{Span: annotationSpan(16, 22), Role: AnnotationType},
+			},
+		},
+		{
+			name: "cast",
+			text: "---@cast v string",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 8), Role: AnnotationTag},
+				{Span: annotationSpan(9, 10), Role: AnnotationVariableName},
+				{Span: annotationSpan(11, 17), Role: AnnotationType},
+			},
+		},
+		{
+			name: "cast field target",
+			text: "---@cast t.x string",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 8), Role: AnnotationTag},
+				{Span: annotationSpan(9, 12), Role: AnnotationVariableName},
+				{Span: annotationSpan(13, 19), Role: AnnotationType},
+			},
+		},
+		{
+			name: "cast polarities",
+			text: "---@cast v +string, -nil",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 8), Role: AnnotationTag},
+				{Span: annotationSpan(9, 10), Role: AnnotationVariableName},
+				{Span: annotationSpan(12, 18), Role: AnnotationType},
+				{Span: annotationSpan(21, 24), Role: AnnotationType},
+			},
+		},
+		{
+			name: "operator call params",
+			text: "---@operator call(x: number, y: string): boolean",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 12), Role: AnnotationTag},
+				{Span: annotationSpan(13, 17), Role: AnnotationOperatorName},
+				{Span: annotationSpan(18, 19), Role: AnnotationParamName},
+				{Span: annotationSpan(21, 27), Role: AnnotationType},
+				{Span: annotationSpan(29, 30), Role: AnnotationParamName},
+				{Span: annotationSpan(32, 38), Role: AnnotationType},
+				{Span: annotationSpan(41, 48), Role: AnnotationType},
+			},
+		},
+		{
 			name: "operator",
 			text: "---@operator add(Vec): Vec",
 			want: []AnnotationSegment{
@@ -141,6 +250,17 @@ func TestAnnotationSegments(t *testing.T) {
 				{Span: annotationSpan(13, 16), Role: AnnotationOperatorName},
 				{Span: annotationSpan(17, 20), Role: AnnotationType},
 				{Span: annotationSpan(23, 26), Role: AnnotationType},
+			},
+		},
+		{
+			name: "operator function operand",
+			text: "---@operator add(fun(): number): string",
+			want: []AnnotationSegment{
+				{Span: annotationSpan(3, 12), Role: AnnotationTag},
+				{Span: annotationSpan(13, 16), Role: AnnotationOperatorName},
+				{Span: annotationSpan(17, 20), Role: AnnotationType},
+				{Span: annotationSpan(24, 30), Role: AnnotationType},
+				{Span: annotationSpan(33, 39), Role: AnnotationType},
 			},
 		},
 		{

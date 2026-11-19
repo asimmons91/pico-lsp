@@ -163,8 +163,19 @@ func (n *navContext) receiverBefore(separator int) *analysis.Symbol {
 	// receiver inside that statement. Resolve a simple identifier immediately
 	// before the separator from the enclosing lexical scope instead.
 	if name, ok := textReceiverName(n.file.Text, separator); ok {
+		canonical := analysis.CanonicalName(name)
 		if scope := n.semantics.ScopeAt(n.fileID, separator); scope != nil {
-			if sym := scope.Lookup(analysis.CanonicalName(name)); sym != nil {
+			for _, sym := range n.semantics.VisibleSymbolsAt(scope, n.fileID, separator) {
+				if sym != nil && sym.Canonical == canonical {
+					return resolveAlias(sym)
+				}
+			}
+		}
+		if n.semantics.Table != nil {
+			if sym := n.semantics.Table.Globals[canonical]; sym != nil {
+				return resolveAlias(sym)
+			}
+			if sym := n.semantics.Table.Builtins[canonical]; sym != nil {
 				return resolveAlias(sym)
 			}
 		}
@@ -178,21 +189,27 @@ func textReceiverName(text string, separator int) (string, bool) {
 	if separator <= 0 || separator > len(text) {
 		return "", false
 	}
-	i := separator
-	for i > 0 && (text[i-1] == ' ' || text[i-1] == '\t') {
-		i--
+	end := separator
+	for end > 0 && (text[end-1] == ' ' || text[end-1] == '\t') {
+		end--
 	}
-	end := i
-	for i > 0 && isIdentifierByte(text[i-1]) {
-		i--
-	}
-	if i == end {
+	start := identifierPrefixStart(text, end)
+	if start == end {
 		return "", false
 	}
-	if i > 0 && (text[i-1] == '.' || text[i-1] == ':') {
-		return "", false
+	previous := start
+	for previous > 0 {
+		switch text[previous-1] {
+		case ' ', '\t', '\r', '\n':
+			previous--
+		default:
+			if text[previous-1] == '.' || text[previous-1] == ':' {
+				return "", false
+			}
+			return text[start:end], true
+		}
 	}
-	return text[i:end], true
+	return text[start:end], true
 }
 
 func isOnlySpace(text string) bool {

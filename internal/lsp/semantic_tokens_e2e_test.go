@@ -191,9 +191,13 @@ version 42
 __lua__
 ---@class Ship
 ---@field spd number
+---@field [public] hp number
 ---@param dx? number horizontal delta
 ---@return boolean ok
+---@return number, string
 ---@alias Mode "left" | "right"
+---@cast speed +number
+---@operator call(x: number): string
 ship = {}
 
 function ship:update(dx)
@@ -227,6 +231,18 @@ end
 	if fieldType.Kind != stType {
 		t.Fatalf("field type = %+v, want type", fieldType)
 	}
+	scope := findSemanticTokenPart(t, tokens, text, encoding, "---@field [public] hp number", 0, len("---@field ["), len("public"))
+	if scope.Kind != stModifier {
+		t.Fatalf("field scope = %+v, want modifier", scope)
+	}
+	scopedField := findSemanticTokenPart(t, tokens, text, encoding, "---@field [public] hp number", 0, len("---@field [public] "), len("hp"))
+	if scopedField.Kind != stProperty {
+		t.Fatalf("scoped field = %+v, want property", scopedField)
+	}
+	secondReturn := findSemanticTokenPart(t, tokens, text, encoding, "---@return number, string", 0, len("---@return number, "), len("string"))
+	if secondReturn.Kind != stType {
+		t.Fatalf("second return type = %+v, want type", secondReturn)
+	}
 	param := findSemanticTokenPart(t, tokens, text, encoding, "---@param dx? number", 0, len("---@param "), len("dx?"))
 	if param.Kind != stParameter {
 		t.Fatalf("param name = %+v, want parameter", param)
@@ -242,6 +258,18 @@ end
 	aliasValue := findSemanticTokenPart(t, tokens, text, encoding, `---@alias Mode "left"`, 0, len(`---@alias Mode `), len(`"left"`))
 	if aliasValue.Kind != stString {
 		t.Fatalf("alias literal = %+v, want string", aliasValue)
+	}
+	castName := findSemanticTokenPart(t, tokens, text, encoding, "---@cast speed +number", 0, len("---@cast "), len("speed"))
+	if castName.Kind != stVariable {
+		t.Fatalf("cast target = %+v, want variable", castName)
+	}
+	callParam := findSemanticTokenPart(t, tokens, text, encoding, "---@operator call(x: number)", 0, len("---@operator call("), len("x"))
+	if callParam.Kind != stParameter {
+		t.Fatalf("call operator parameter = %+v, want parameter", callParam)
+	}
+	callParamType := findSemanticTokenPart(t, tokens, text, encoding, "---@operator call(x: number)", 0, len("---@operator call(x: "), len("number"))
+	if callParamType.Kind != stType {
+		t.Fatalf("call operator parameter type = %+v, want type", callParamType)
 	}
 	dashes := findSemanticTokenPart(t, tokens, text, encoding, "---@class Ship", 0, 0, len("---"))
 	if dashes.Kind != stComment {

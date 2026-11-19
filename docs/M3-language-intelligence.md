@@ -204,9 +204,11 @@ documentation
 - Deprecated symbols → `deprecated`.
 - Comments → `comment`. Post-v1, `---@` annotation lines are split: tags use
   `keyword`; declared names use `class`, `enum`, `type`, `property`,
-  `parameter`, or `typeParameter`; type expressions use `type`, `string`, and
-  `number`. The `---` prefix, whitespace, and trailing prose stay `comment`.
-  The v1 behavior packaged every annotation line as one `comment` token.
+  `parameter`, `typeParameter`, or `variable` for `@cast` targets; field
+  scopes use `modifier`; operator names use `function`; type expressions
+  (including each `@return` type) use `type`, `string`, and `number`. The
+  `---` prefix, whitespace, and trailing prose stay `comment`. The v1 behavior
+  packaged every annotation line as one `comment` token.
 - Strings, numbers → `string`, `number`.
 - Operators/punctuation → `operator` where useful.
 - Include paths → `string` with `documentation` modifier.
