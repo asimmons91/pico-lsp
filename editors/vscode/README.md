@@ -42,6 +42,9 @@ If the download fails behind a proxy, configure VS Code's `http.proxy` and
 ## Language support
 
 - `.p8` files use the contributed `pico8` language and TextMate grammar.
+- `.p8` files show the PICO-8 logo when the active file icon theme supports
+  language default icons. Icon themes that set `showLanguageModeIcons: false`
+  keep their own generic icon.
 - All `.lua` files in workspace folders that contain at least one `.p8` cart
   attach to the server. Other `.lua` files do not.
 - PICO-8 workspaces should disable LuaLS for their `.lua` files to avoid

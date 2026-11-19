@@ -1,5 +1,10 @@
 # Change Log
 
+## Unreleased
+
+- Show the PICO-8 logo as the file icon for `.p8` files when the active file
+  icon theme supports language default icons.
+
 ## 1.4.0
 
 - Add P8SCII glyph completion and the **PICO-8: Insert P8SCII Glyph** picker.

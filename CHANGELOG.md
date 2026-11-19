@@ -13,6 +13,8 @@ All notable changes to this project are documented here. The format follows
   operator, type, string, and number segments are now distinct semantic tokens
   instead of one whole-line `comment` token. Works in any semantic-token
   client, including VS Code for both `.p8` and cart-owned `.lua` files.
+- VS Code: the `.p8` language now supplies the PICO-8 logo as its default file
+  icon when the active file icon theme supports language default icons.
 
 ### Fixed
 

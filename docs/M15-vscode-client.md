@@ -170,6 +170,9 @@ When `pico8.attachLua` is `false`, attach only to `.p8` files.
     `$`).
 - Add `language-configuration.json` for comments, brackets, auto-closing pairs,
   and indentation.
+- Post-v1: provide the PICO-8 logo as the language default icon for `.p8`
+  files, with a third-party notice. Themes that set
+  `showLanguageModeIcons: false` keep their own icon.
 - Do not contribute the `lua` language. `.lua` files keep the editor's Lua
   language mode and receive LSP semantic tokens from `pico-lsp`.
 - `.p8.png` remains unassociated binary data in M15.
