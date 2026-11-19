@@ -224,3 +224,66 @@ func TestReplaceCodeRepeatedCalls(t *testing.T) {
 		t.Fatalf("first = %q", first)
 	}
 }
+
+func TestReplaceCodeClearsNonEmptyBody(t *testing.T) {
+	doc := parseFixture(t, "all_sections.p8")
+	out, err := doc.ReplaceCode("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(out, []byte("-- main")) || bytes.Contains(out, []byte("print(1)")) {
+		t.Fatalf("output still contains old code: %q", out)
+	}
+	if !bytes.Contains(out, []byte("__lua__\n__gfx__")) {
+		t.Fatalf("output = %q, want empty body before __gfx__", out)
+	}
+	reparsed, err := cart.Parse("game.p8", out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reparsed.Code() != "" {
+		t.Fatalf("reparsed Code() = %q, want empty", reparsed.Code())
+	}
+}
+
+func TestReplaceCodeNormalizesCallerCRLFIntoLF(t *testing.T) {
+	doc := parseFixture(t, "all_sections.p8")
+	out, err := doc.ReplaceCode("b=2\r\nc=3\r\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := bytes.Index(out, []byte("__lua__\n")) + len("__lua__\n")
+	end := start + bytes.Index(out[start:], []byte("__gfx__"))
+	if string(out[start:end]) != "b=2\nc=3\n" {
+		t.Fatalf("body = %q, want LF-only caller text", out[start:end])
+	}
+}
+
+func TestReplaceCodeKeepsCallerFinalNewline(t *testing.T) {
+	doc := parseFixture(t, "no_trailing_newline.p8")
+	out, err := doc.ReplaceCode("b=2\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.HasSuffix(out, []byte("__lua__\nb=2\n")) {
+		t.Fatalf("output = %q, want caller newline preserved", out)
+	}
+}
+
+func TestReplaceCodeKeepsTrailingLoneCR(t *testing.T) {
+	doc := parseFixture(t, "empty_body.p8")
+	out, err := doc.ReplaceCode("x=1\r")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(out, []byte("__lua__\nx=1\r\r\n__gfx__")) {
+		t.Fatalf("output = %q, want data CR plus CRLF terminator", out)
+	}
+	reparsed, err := cart.Parse("game.p8", out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(reparsed.Code(), "x=1\r\r\n") {
+		t.Fatalf("reparsed Code() = %q, want trailing CR data preserved", reparsed.Code())
+	}
+}

@@ -81,15 +81,20 @@ type Include struct {
 
 // Tab is a code tab in a .p8 cart. The marker line remains a comment in the
 // flattened program. Index is zero-based, StartLine is the first content line,
-// EndLine is exclusive, and MarkerLine is -1 for the first tab.
+// EndLine is exclusive, and MarkerLine is -1 for the first tab. ContentStart,
+// ContentEnd, and MarkerOffset are byte offsets used to convert lines into the
+// LSP coordinate space; the loader aligns the line fields after building tabs.
 type Tab struct {
-	Index      int
-	Name       string
-	MarkerLine int
-	MarkerSpan source.Span
-	StartLine  int
-	EndLine    int
-	SpanVal    source.Span
+	Index        int
+	Name         string
+	MarkerLine   int
+	MarkerOffset int
+	ContentStart int
+	ContentEnd   int
+	MarkerSpan   source.Span
+	StartLine    int
+	EndLine      int
+	SpanVal      source.Span
 }
 
 // Section is a .p8 section. SpanVal covers the header through its content.

@@ -56,6 +56,7 @@ func (l *Loader) Load(rootURI uri.URI) (*Snapshot, error) {
 		cart.Sections = sections
 		cart.Version = version
 		cart.Tabs = buildTabs(text, sections, codeLines)
+		alignLinesToLSP(cart, root.Index, text)
 		code = codeLines
 		trimFinalTerminator = luaFollowedBySection(sections)
 	} else {
@@ -152,6 +153,10 @@ func buildTabs(text string, sections []Section, code []lineRef) []Tab {
 	}
 	codeStartLine := lua.ContentStartLine
 	codeEndLine := codeStartLine + countCodeLines(codeText)
+	lastEnd := lua.ContentStart
+	if len(code) > 0 {
+		lastEnd = contentEnd(text, code[len(code)-1])
+	}
 
 	type marker struct {
 		line int
@@ -176,9 +181,11 @@ func buildTabs(text string, sections []Section, code []lineRef) []Tab {
 	}
 
 	tab0End := codeEndLine
-	tab0SpanEnd := lua.SpanVal.End
+	tab0ContentEnd := lua.SpanVal.End
+	tab0SpanEnd := lastEnd
 	if len(markers) > 0 {
 		tab0End = markers[0].line
+		tab0ContentEnd = markers[0].ref.start
 		tab0SpanEnd = markers[0].ref.start
 	}
 	if tab0End < codeStartLine {
@@ -194,19 +201,24 @@ func buildTabs(text string, sections []Section, code []lineRef) []Tab {
 
 	tabs := make([]Tab, 0, len(markers)+1)
 	tabs = append(tabs, Tab{
-		Index:      0,
-		Name:       "Tab 1",
-		MarkerLine: -1,
-		StartLine:  codeStartLine,
-		EndLine:    tab0End,
-		SpanVal:    tab0Span,
+		Index:        0,
+		Name:         "Tab 1",
+		MarkerLine:   -1,
+		MarkerOffset: -1,
+		ContentStart: lua.ContentStart,
+		ContentEnd:   tab0ContentEnd,
+		StartLine:    codeStartLine,
+		EndLine:      tab0End,
+		SpanVal:      tab0Span,
 	})
 	for i, m := range markers {
 		start := m.line + 1
 		end := codeEndLine
-		spanEnd := lua.SpanVal.End
+		contentEndOffset := lua.SpanVal.End
+		spanEnd := lastEnd
 		if i+1 < len(markers) {
 			end = markers[i+1].line
+			contentEndOffset = markers[i+1].ref.start
 			spanEnd = markers[i+1].ref.start
 		}
 		if end < start {
@@ -217,13 +229,16 @@ func buildTabs(text string, sections []Section, code []lineRef) []Tab {
 			name = fmt.Sprintf("Tab %d", i+2)
 		}
 		tabs = append(tabs, Tab{
-			Index:      i + 1,
-			Name:       name,
-			MarkerLine: m.line,
-			MarkerSpan: source.Span{FileID: 0, Start: m.ref.start, End: contentEnd(text, m.ref)},
-			StartLine:  start,
-			EndLine:    end,
-			SpanVal:    source.Span{FileID: 0, Start: m.ref.start, End: spanEnd},
+			Index:        i + 1,
+			Name:         name,
+			MarkerLine:   m.line,
+			MarkerOffset: m.ref.start,
+			ContentStart: m.ref.end,
+			ContentEnd:   contentEndOffset,
+			MarkerSpan:   source.Span{FileID: 0, Start: m.ref.start, End: contentEnd(text, m.ref)},
+			StartLine:    start,
+			EndLine:      end,
+			SpanVal:      source.Span{FileID: 0, Start: m.ref.start, End: spanEnd},
 		})
 	}
 	return tabs

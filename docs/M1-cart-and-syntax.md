@@ -91,7 +91,8 @@ The lexer/parser must handle the following. Each item needs a dedicated test.
 
 ### Code tabs
 
-- Lines beginning with `-->8` (after optional whitespace) start a new code tab.
+- Lines that begin with `-->8` at column 0 start a new code tab. An indented
+  `-->8` is ordinary code, matching PICO-8 and pico-editor.
 - Tabs are concatenated in order for analysis and token counting.
 - For outline purposes, expose each tab as a namespace symbol. If the marker includes a name, use it; otherwise synthesize `Tab 1`, `Tab 2`, etc. Verify PICO-8's exact tab-name convention against real carts and update if needed.
 - `-->8` remains a comment for the parser; it must not produce a syntax error.

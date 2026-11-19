@@ -115,6 +115,48 @@ func TestIndentedTabMarkerIsNotATab(t *testing.T) {
 	}
 }
 
+func TestTabSymbolSpansEndAtCodeContent(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	p := newMapProvider()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n-->8 second\nb=2\n__gfx__\n0000\n"
+	snap := loadText(t, p, root, text)
+	if len(snap.Cart.Tabs) != 2 {
+		t.Fatalf("tabs = %+v", snap.Cart.Tabs)
+	}
+	aStart := strings.Index(text, "a=1")
+	bStart := strings.Index(text, "b=2")
+	if got := snap.Cart.Tabs[0].SpanVal; got.Start != aStart || got.End != strings.Index(text, "-->8") {
+		t.Fatalf("tab 0 span = %+v, want %d..marker", got, aStart)
+	}
+	if got := snap.Cart.Tabs[1].SpanVal; got.Start != strings.Index(text, "-->8") || got.End != bStart+3 {
+		t.Fatalf("tab 1 span = %+v, want marker start..%d", got, bStart+3)
+	}
+
+	p2 := newMapProvider()
+	noMarker := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n__gfx__\n0000\n"
+	snap2 := loadText(t, p2, root, noMarker)
+	aStart = strings.Index(noMarker, "a=1")
+	if got := snap2.Cart.Tabs[0].SpanVal; got.Start != aStart || got.End != aStart+3 {
+		t.Fatalf("no-marker tab span = %+v, want %d..%d", got, aStart, aStart+3)
+	}
+}
+
+func TestTabLinesUseLSPCoordinatesForLoneCR(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	p := newMapProvider()
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\ns=\"a\rb\"\n-->8 second\nx=1\n__gfx__\n0000\n"
+	snap := loadText(t, p, root, text)
+	if len(snap.Cart.Tabs) != 2 {
+		t.Fatalf("tabs = %+v", snap.Cart.Tabs)
+	}
+	if tab := snap.Cart.Tabs[0]; tab.StartLine != 3 || tab.EndLine != 5 || tab.MarkerLine != -1 {
+		t.Fatalf("tab 0 = %+v, want LSP lines 3..5", tab)
+	}
+	if tab := snap.Cart.Tabs[1]; tab.StartLine != 6 || tab.EndLine != 7 || tab.MarkerLine != 5 {
+		t.Fatalf("tab 1 = %+v, want LSP lines 6..7 with marker 5", tab)
+	}
+}
+
 func TestLoadStandaloneLua(t *testing.T) {
 	root := uri.File("/tmp/p8/main.lua")
 	p := newMapProvider()

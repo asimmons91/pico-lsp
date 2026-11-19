@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
@@ -127,17 +128,9 @@ func cartInfoFor(snap *cart.Snapshot) CartInfo {
 		}
 		info.Includes = append(info.Includes, entry)
 	}
+	luaIndex, lua := luaSection(c.Sections)
 	for _, tab := range c.Tabs {
-		// cartInfo keeps its historical inclusive end line and marker-line
-		// start for marker tabs; the internal model now matches pkg/cart.
-		start := tab.StartLine
-		if tab.MarkerLine >= 0 {
-			start = tab.MarkerLine
-		}
-		end := tab.EndLine - 1
-		if end < start {
-			end = start
-		}
+		start, end := cartInfoTabLines(c, tab, luaIndex, lua)
 		info.Tabs = append(info.Tabs, TabInfo{
 			Index:     tab.Index,
 			Name:      tab.Name,
@@ -146,6 +139,41 @@ func cartInfoFor(snap *cart.Snapshot) CartInfo {
 		})
 	}
 	return info
+}
+
+func luaSection(sections []cart.Section) (int, *cart.Section) {
+	for i := range sections {
+		if sections[i].Name == "lua" {
+			return i, &sections[i]
+		}
+	}
+	return -1, nil
+}
+
+// cartInfoTabLines keeps cartInfo's historical inclusive end line and
+// marker-line start after the internal tab model moved to exclusive ends.
+func cartInfoTabLines(c *cart.Cart, tab cart.Tab, luaIndex int, lua *cart.Section) (int, int) {
+	start := tab.StartLine
+	if tab.MarkerLine >= 0 {
+		start = tab.MarkerLine
+	}
+	end := tab.EndLine - 1
+	if end < start {
+		end = start
+	}
+	if lua == nil {
+		return start, end
+	}
+	if tab.Index == 0 && len(c.Tabs) == 1 && tab.StartLine == tab.EndLine && luaIndex+1 < len(c.Sections) {
+		return lua.StartLine, lua.StartLine
+	}
+	if tab.Index == len(c.Tabs)-1 && luaIndex == len(c.Sections)-1 && len(c.Files) > 0 && strings.HasSuffix(c.Files[0].Text, "\n") {
+		end = tab.EndLine
+		if end < start {
+			end = start
+		}
+	}
+	return start, end
 }
 
 func (s *Server) cartInfoRequest(ctx context.Context, params protocol.LSPAny) (any, error) {

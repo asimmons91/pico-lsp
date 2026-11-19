@@ -292,12 +292,12 @@ doc.Tabs()                              // zero-based index, exclusive EndLine
 doc.Sections()                          // known and unknown sections
 doc.Includes()                          // lexical #include directives
 out, err := doc.ReplaceCode(code)       // only the __lua__ body changes
-owner, err := cart.NewResolver(nil).Owner("lib.lua")
+owner, err := cart.NewResolver(nil).Owner("/work/game/lib.lua")
 ```
 
 `Parse` accepts `.p8` only and rejects `.p8.png`, binary input, and input over
 1 MiB. `ReplaceCode` preserves the BOM, header, sections, and every non-code
 byte; it mirrors the original code body's CRLF style and leaves a lone CR
-(P8SCII glyph 13) as data. `Resolver` finds the nearest ancestor cart that
-includes a `.lua` file and is safe for concurrent use. Added in v1.7.0 and
-stable under semver.
+(P8SCII glyph 13) as data. `Owner` requires an absolute `.p8` or `.lua` path;
+it finds the nearest ancestor cart that includes the `.lua` file and is safe
+for concurrent use. Added in v1.7.0 and stable under semver.

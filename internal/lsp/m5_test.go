@@ -876,8 +876,8 @@ func TestM5CartInfoTabIndexesAreZeroBased(t *testing.T) {
 	if info.Tabs[0].StartLine != 3 || info.Tabs[0].EndLine != 3 {
 		t.Fatalf("tab 0 = %+v, want inclusive 3..3", info.Tabs[0])
 	}
-	if info.Tabs[1].StartLine != 4 || info.Tabs[1].EndLine != 5 {
-		t.Fatalf("tab 1 = %+v, want marker line 4 through 5", info.Tabs[1])
+	if info.Tabs[1].StartLine != 4 || info.Tabs[1].EndLine != 6 {
+		t.Fatalf("tab 1 = %+v, want marker line 4 through virtual EOF line 6", info.Tabs[1])
 	}
 }
 

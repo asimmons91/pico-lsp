@@ -31,7 +31,13 @@ func (d *Document) ReplaceCode(code string) ([]byte, error) {
 		normalized = strings.ReplaceAll(normalized, "\n", newline)
 	}
 	if d.codeEnd < len(d.data) && normalized != "" && !strings.HasSuffix(normalized, "\n") {
-		normalized += newline
+		if strings.HasSuffix(normalized, "\r") {
+			// Keep the caller's trailing CR as glyph-13 data. A lone LF would
+			// pair with it and turn it into a CRLF line terminator.
+			normalized += "\r\n"
+		} else {
+			normalized += newline
+		}
 	}
 
 	out := make([]byte, 0, len(d.data)-len(d.code)+len(normalized))
