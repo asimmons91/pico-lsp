@@ -27,6 +27,7 @@ func DefaultOptions() Options {
 		InsertSpaces:           true,
 		TrimTrailingWhitespace: true,
 		InsertFinalNewline:     true,
+		TrimFinalNewlines:      true,
 		MaxBlankLines:          2,
 	}
 }
@@ -488,17 +489,11 @@ func formatLua(src string, opts Options, allowIncludes bool) (string, error) {
 		}
 	}
 	result := out.String()
-	if opts.InsertFinalNewline && result != "" && !strings.HasSuffix(result, "\n") && !strings.HasSuffix(result, "\r") {
-		result += dominantEOL(lines)
+	if opts.TrimFinalNewlines || opts.InsertFinalNewline {
+		result = trimExtraFinalNewlines(result)
 	}
-	if opts.TrimFinalNewlines {
-		for strings.HasSuffix(result, "\r\n") || strings.HasSuffix(result, "\n") || strings.HasSuffix(result, "\r") {
-			if strings.HasSuffix(result, "\r\n") {
-				result = result[:len(result)-2]
-			} else {
-				result = result[:len(result)-1]
-			}
-		}
+	if opts.InsertFinalNewline && result != "" && !hasFinalEOL(result) {
+		result += dominantEOL(lines)
 	}
 	if result == "" {
 		return result, nil
@@ -569,6 +564,37 @@ func dominantEOL(lines []sourceLine) string {
 		}
 	}
 	return "\n"
+}
+
+// trimExtraFinalNewlines collapses a trailing run of line terminators to one.
+// It keeps the final newline itself; use InsertFinalNewline to add one when the
+// formatted text has none.
+func trimExtraFinalNewlines(s string) string {
+	end := len(s)
+	start := end
+	for start > 0 {
+		if start >= 2 && s[start-2] == '\r' && s[start-1] == '\n' {
+			start -= 2
+			continue
+		}
+		if s[start-1] == '\n' || s[start-1] == '\r' {
+			start--
+			continue
+		}
+		break
+	}
+	if start == end {
+		return s
+	}
+	keep := start + 1
+	if start+1 < end && s[start] == '\r' && s[start+1] == '\n' {
+		keep = start + 2
+	}
+	return s[:start] + s[start:keep]
+}
+
+func hasFinalEOL(s string) bool {
+	return strings.HasSuffix(s, "\n") || strings.HasSuffix(s, "\r")
 }
 
 func renderLine(tokens []syntax.Token, comments []syntax.Comment, opts Options) string {

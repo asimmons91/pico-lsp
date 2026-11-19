@@ -169,3 +169,42 @@ func TestFormattingRefusesPNG(t *testing.T) {
 		t.Fatalf("format png error = %v, want RequestFailed", err)
 	}
 }
+
+func TestEndToEndFormattingLuaSingleFinalNewline(t *testing.T) {
+	text := "x=1\n\n\n"
+	dir := t.TempDir()
+	root := writeTemp(t, dir, "lib.lua", text)
+	h := newHarness(t, newTestClient())
+	h.initialize(t, &protocol.InitializeParams{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	edits, err := h.server.Formatting(ctx, &protocol.DocumentFormattingParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Options:      protocol.FormattingOptions{TabSize: 2, InsertSpaces: true},
+	})
+	if err != nil {
+		t.Fatalf("format lua: %v", err)
+	}
+	if len(edits) != 1 || edits[0].NewText != "x = 1\n" {
+		t.Fatalf("lua edit = %+v, want one final newline", edits)
+	}
+
+	// Disabling both final-newline options preserves the client's extra lines.
+	edits, err = h.server.Formatting(ctx, &protocol.DocumentFormattingParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: root},
+		Options: protocol.FormattingOptions{
+			TabSize:            2,
+			InsertSpaces:       true,
+			InsertFinalNewline: boolPtr(false),
+			TrimFinalNewlines:  boolPtr(false),
+		},
+	})
+	if err != nil {
+		t.Fatalf("format lua with preserved newlines: %v", err)
+	}
+	if len(edits) != 1 || edits[0].NewText != "x = 1\n\n\n" {
+		t.Fatalf("lua preserved edit = %+v", edits)
+	}
+}

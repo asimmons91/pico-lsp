@@ -62,6 +62,16 @@ func TestLuaFormatting(t *testing.T) {
 			want: "x = 1\n\n\ny = 2\n",
 		},
 		{
+			name: "extra final newlines",
+			in:   "x=1\n\n\n",
+			want: "x = 1\n",
+		},
+		{
+			name: "extra crlf final newlines",
+			in:   "x=1\r\n\r\n",
+			want: "x = 1\r\n",
+		},
+		{
 			name: "crlf preserved",
 			in:   "x=1\r\ny=2\r\n",
 			want: "x = 1\r\ny = 2\r\n",
@@ -115,6 +125,7 @@ func TestLuaLineEndings(t *testing.T) {
 		want string
 	}{
 		{name: "lone cr", in: "x=1\ry=2\r", want: "x = 1\ry = 2\r"},
+		{name: "extra lone cr", in: "x=1\r\r", want: "x = 1\r"},
 		{name: "no final newline", in: "x=1", want: "x = 1\n"},
 		{name: "no final newline disabled", in: "x=1", want: "x = 1"},
 	}
@@ -135,6 +146,17 @@ func TestLuaLineEndings(t *testing.T) {
 	}
 }
 
+func TestP8PreservesExtraLuaFinalNewlines(t *testing.T) {
+	src := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx=1\n\n\n__gfx__\n0000\n"
+	got, err := P8(src, DefaultOptions())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(got, "x = 1\n\n\n__gfx__") {
+		t.Fatalf("P8 changed trailing Lua newlines:\n%q", got)
+	}
+}
+
 func TestLuaFinalNewlineOptions(t *testing.T) {
 	opts := DefaultOptions()
 	opts.InsertFinalNewline = false
@@ -152,8 +174,40 @@ func TestLuaFinalNewlineOptions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != "x = 1" {
+	if got != "x = 1\n" {
 		t.Fatalf("trimmed final newlines = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.TrimFinalNewlines = false
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 1\n" {
+		t.Fatalf("insertFinalNewline should keep one final newline = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.InsertFinalNewline = false
+	opts.TrimFinalNewlines = false
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 1\n\n" {
+		t.Fatalf("preserved final newlines = %q", got)
+	}
+
+	opts = DefaultOptions()
+	opts.InsertFinalNewline = false
+	opts.TrimFinalNewlines = true
+	got, err = Lua("x=1\n\n", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "x = 1\n" {
+		t.Fatalf("trimmed without insertion = %q", got)
 	}
 }
 
@@ -199,7 +253,7 @@ func TestP8FormattingPreservesSections(t *testing.T) {
 
 func TestOptionsDefaults(t *testing.T) {
 	opts := DefaultOptions()
-	if opts.TabSize != 2 || !opts.InsertSpaces || opts.MaxBlankLines != 2 {
+	if opts.TabSize != 2 || !opts.InsertSpaces || !opts.InsertFinalNewline || !opts.TrimFinalNewlines || opts.MaxBlankLines != 2 {
 		t.Fatalf("defaults = %+v", opts)
 	}
 }
