@@ -1,6 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.6.0 released; M17–M19 shipped together in v1.6.0
+**Status:** v1.6.0 released; M17–M19 shipped together in v1.6.0. v1.7.0
+expands the glyph catalog to every printable P8SCII byte for pico-editor M6.
 
 **Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -166,6 +167,7 @@ that matches P8SCII, are allowed and must be recorded in the changelog.
 | Release | Milestone | Public package | Purpose | Blocks |
 | --- | --- | --- | --- | --- |
 | `v1.6.0` | M17–M19 | `pkg/p8scii`, `pkg/cart`, `pkg/lsp`, `pkg/glyphs` | Canonical P8SCII data, cart parsing and ownership, in-process server, and glyph catalog | pico-editor M1, M4, M5 |
+| `v1.7.0` | post-M19 | `pkg/glyphs` | Catalog every printable P8SCII byte, including ASCII, puny letters, and kana, for the glyph picker | pico-editor M6 |
 
 Rules:
 
@@ -177,7 +179,8 @@ Rules:
   cover it with tests and examples.
 - Tag `v1.6.0` only after the p8scii, cart, LSP, and glyph package tests pass.
   A milestone pin must reference a tag, never a branch or pseudo-version. The
-  separately planned v1.7.0 and v1.8.0 tags were folded into v1.6.0.
+  separately planned v1.7.0 and v1.8.0 tags were folded into v1.6.0; v1.7.0 is
+  the additive catalog-coverage release required by pico-editor M6.
 - pico-editor must not import `internal/` packages; Go enforces this.
 - The editor pins each release before the corresponding milestone starts. Its
   schedule is recorded in

@@ -341,7 +341,7 @@ semver.
 used by `pico8/glyphs` and glyph completion:
 
 ```go
-entries := glyphs.Builtins()                    // 55 built-in entries, a copy
+entries := glyphs.Builtins()                    // 250 built-in entries, a copy
 heart, heartOK := glyphs.FindByName(entries, "p8_heart")
 left, leftOK := glyphs.FindByByte(entries, 0x8b)
 

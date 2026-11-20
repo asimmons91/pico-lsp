@@ -34,7 +34,7 @@ Confirmed before implementation:
 | D1 | Meaning of “custom” | Built-in glyph aliases, byte-based custom font slots, and string-only control-code snippets. |
 | D2 | Completion trigger | `p8_` primary, `p8-` compatibility, and a searchable picker. |
 | D3 | Where custom definitions live | `pico8.glyphs` in user/workspace settings first. A per-cart definitions file is deferred. |
-| D4 | Catalog breadth | Curated typeable symbols plus custom entries. Named kana aliases are deferred; kana can be added as custom entries. |
+| D4 | Catalog breadth | Every printable P8SCII byte (`0x10`–`0xff`) is cataloged, including ASCII, puny-font letters, Hiragana, and Katakana, plus custom entries. |
 | D5 | Editor scope | Server surface, VS Code Quick Pick, and the optional Neovim helper command. Helix gets completion. |
 | D6 | Name conflicts | Custom names and aliases override built-ins with a logged warning. |
 | D7 | Static editor snippet files | None; the server catalog is the source of truth. |
@@ -63,7 +63,8 @@ Confirmed before implementation:
 - Changing P8SCII byte-to-glyph mapping or PICO-8 version support.
 - General-purpose Unicode snippet expansion unrelated to P8SCII.
 - Per-cart glyph definition files; M16 reads definitions from settings only.
-- Named kana aliases; kana remain available through custom entries.
+- Per-glyph aliases for every ASCII and kana entry. The primary `p8_<name>`
+  trigger is always available.
 - New source syntax for glyph aliases; aliases are completion-only and must not
   change the language.
 - Automatic replacement without accepting a completion item or invoking the
@@ -92,10 +93,12 @@ Confirmed before implementation:
   check is on bytes, not runes, so base-codepoint-plus-`U+FE0F` glyphs such as
   `⬅️` pass. Accepted text is canonicalized back through
   `p8scii.Decode(byte)` before insertion.
-- The built-in catalog covers the typeable symbol ranges
-  (`0x10`–`0x1f`, `0x7f`–`0x99`, `0xfe`–`0xff`). ASCII characters are excluded.
-  Named kana aliases are deferred; kana characters can be added through custom
-  entries.
+- The built-in catalog covers every printable byte `0x10`–`0xff`:
+  - `0x10`–`0x1f`, `0x7f`–`0x99`, and `0xfe`–`0xff` keep their curated symbol
+    names and aliases;
+  - `0x20`–`0x7e` receive ASCII names (`space`, `punct_*`, `digit_*`,
+    `letter_*`, and `puny_*` for the puny-font uppercase slots);
+  - `0x9a`–`0xfd` receive `hiragana_*` and `katakana_*` names.
 - Control codes `0x00`–`0x0f` are marked as string-only and insert their source
   escape spelling (for example `\14`), not a raw control byte.
 - The initial control-code set is `\*`, `\#`, `\-`, `\|`, `\+`, `\^`, `\a`,
@@ -344,7 +347,7 @@ The schema for this milestone:
 No scope decisions remain for M16. These items are intentionally deferred:
 
 - A per-cart glyph definition file that travels with the cart.
-- Named kana aliases and other catalog expansions.
+- Additional per-glyph aliases and other catalog expansions.
 - The full P8SCII control-code set and arbitrary `\0xxx` escape entries.
 - A native Helix picker beyond standard completion.
 - Generated static editor-snippet fallbacks if a client cannot use completion.

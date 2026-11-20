@@ -9,8 +9,9 @@ import (
 
 func TestBuiltinsAreValid(t *testing.T) {
 	entries := Builtins()
-	if len(entries) != len(builtinSpecs)+len(controlSpecs) {
-		t.Fatalf("Builtins() returned %d entries, want %d", len(entries), len(builtinSpecs)+len(controlSpecs))
+	want := len(builtinSpecs) + len(asciiSpecs) + len(kanaSpecs) + len(controlSpecs)
+	if len(entries) != want {
+		t.Fatalf("Builtins() returned %d entries, want %d", len(entries), want)
 	}
 	names := make(map[string]struct{}, len(entries))
 	triggers := make(map[string]struct{})
@@ -40,6 +41,58 @@ func TestBuiltinsAreValid(t *testing.T) {
 				t.Errorf("duplicate built-in trigger %q", trigger)
 			}
 			triggers[trigger] = struct{}{}
+		}
+	}
+}
+
+func TestBuiltinsCoverEveryPrintableByte(t *testing.T) {
+	entries := Builtins()
+	seen := make(map[byte]int, 240)
+	for _, entry := range entries {
+		if entry.Context != ContextBoth {
+			continue
+		}
+		seen[entry.Byte]++
+	}
+	for b := 0x10; b <= 0xff; b++ {
+		if seen[byte(b)] != 1 {
+			t.Errorf("printable byte 0x%02x has %d catalog entries, want 1", b, seen[byte(b)])
+		}
+	}
+}
+
+func TestLookupASCIIAndKanaBuiltins(t *testing.T) {
+	entries := Builtins()
+	cases := []struct {
+		name string
+		byte byte
+		text string
+	}{
+		{"space", 0x20, " "},
+		{"punct_exclam", 0x21, "!"},
+		{"digit_0", 0x30, "0"},
+		{"puny_a", 0x41, "A"},
+		{"letter_a", 0x61, "a"},
+		{"punct_asciitilde", 0x7e, "~"},
+		{"hiragana_a", 0x9a, "あ"},
+		{"hiragana_small_tsu", 0xc8, "っ"},
+		{"katakana_a", 0xcc, "ア"},
+		{"katakana_small_yo", 0xfd, "ョ"},
+	}
+	for _, tc := range cases {
+		entry, ok := FindByName(entries, tc.name)
+		if !ok {
+			t.Errorf("FindByName(%q) returned false", tc.name)
+			continue
+		}
+		if entry.Byte != tc.byte || entry.Text != tc.text {
+			t.Errorf("%s = byte 0x%02x text %q, want 0x%02x %q", tc.name, entry.Byte, entry.Text, tc.byte, tc.text)
+		}
+		if entry.Category == "" || entry.Description == "" {
+			t.Errorf("%s has incomplete metadata: %+v", tc.name, entry)
+		}
+		if got, ok := FindByName(entries, "p8_"+tc.name); !ok || got.Name != tc.name {
+			t.Errorf("p8_%s = %+v, %v; want %s", tc.name, got, ok, tc.name)
 		}
 	}
 }
