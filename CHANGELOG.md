@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-19
+
 ### Added
 
 - Public `pkg/p8scii` package (M17): the complete 256-byte P8SCII table with
@@ -207,7 +209,8 @@ unchanged.
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.6.0
 [1.5.1]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.5.1
 [1.5.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.5.0
 [1.4.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.4.0

@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.6.0
+
+- Bundle `pico-lsp` 1.6.0 with the public `pkg/p8scii`, `pkg/cart`,
+  `pkg/lsp`, and `pkg/glyphs` Go packages.
+- Recognize PICO-8 tab markers only at column 0.
+- Preserve lone CRs as P8SCII data instead of starting a new line.
+
 ## 1.5.1
 
 - Show cart and source-file paths relative to the workspace in the cart budget tooltip.

@@ -303,7 +303,7 @@ byte; it uses the original code body's CRLF style and leaves a data CR (P8SCII
 glyph 13) as data, forcing a CRLF terminator when the CR is adjacent to one.
 `Owner` requires an absolute `.p8` or `.lua` path; it finds the nearest
 ancestor cart that includes the `.lua` file and is safe for concurrent use.
-Added in v1.7.0 and stable under semver.
+Added in v1.6.0 and stable under semver.
 
 ### `pkg/lsp`
 
@@ -332,7 +332,7 @@ settings types. The caller supplies the transport, workspace folders in the
 `initialize` params, and the lifecycle: cancel the context or close the
 returned connection. `Serve` never writes to stdout, and a nil logger discards
 all records. The in-process server advertises the same capabilities and
-`ServerInfo` version as the stdio binary. Added in v1.8.0 and stable under
+`ServerInfo` version as the stdio binary. Added in v1.6.0 and stable under
 semver.
 
 ### `pkg/glyphs`
@@ -355,4 +355,4 @@ entries, warnings := glyphs.Build([]glyphs.Definition{
 are part of the public contract. `Builtins` returns a copy and `Build` keeps
 the server's merge, override, and warning behavior. `pico8/glyphs` remains the
 canonical picker path for LSP clients; both read the same catalog. Added in
-v1.8.0 and stable under semver.
+v1.6.0 and stable under semver.

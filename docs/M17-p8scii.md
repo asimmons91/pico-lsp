@@ -1,6 +1,6 @@
 # M17 — P8SCII Public Package
 
-**Status:** Merged — v1.6.0 release pending
+**Status:** Done — shipped in v1.6.0
 
 **Depends on:** M16  
 **Release target:** v1.6.0  
@@ -196,7 +196,7 @@ value.
       module path, and runs in CI.
 - [x] `go test ./...`, `-race`, lint, vet, gofmt, and the consumer readonly
       build pass.
-- [ ] `v1.6.0` is tagged and pico-editor M1 can pin it.
+- [x] `v1.6.0` is tagged and pico-editor M1 can pin it.
 - [x] No existing LSP behavior or P8SCII mapping changed.
 
 ## Risks and mitigations
