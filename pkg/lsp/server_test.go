@@ -287,7 +287,7 @@ func TestInMemoryServerRoundTrip(t *testing.T) {
 func TestWorkspaceConfiguration(t *testing.T) {
 	t.Run("applies a setting", func(t *testing.T) {
 		dir := t.TempDir()
-		text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx = 1\n"
+		text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx = 1\nprintt(x)\n"
 		cartURI, _ := writeCart(t, dir, "game.p8", text)
 		client := newTestClient()
 		client.configValues = []protocol.LSPAny{protocol.LSPAny(`{"limits":{"codeLens":false}}`)}
@@ -299,12 +299,13 @@ func TestWorkspaceConfiguration(t *testing.T) {
 		h.waitConfigCall()
 
 		openCart(t, h, cartURI, text)
+		h.waitDiagnostics(cartURI)
 		h.waitCodeLens(cartURI, 0)
 	})
 
 	t.Run("invalid values fall back with a log entry", func(t *testing.T) {
 		dir := t.TempDir()
-		text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx = 1\n"
+		text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\nx = 1\nprintt(x)\n"
 		cartURI, _ := writeCart(t, dir, "game.p8", text)
 		client := newTestClient()
 		client.configValues = []protocol.LSPAny{protocol.LSPAny(`{"limits":{"codeLens":"invalid"}}`)}
@@ -320,6 +321,7 @@ func TestWorkspaceConfiguration(t *testing.T) {
 		waitForLog(t, logs, "configuration pull failed")
 
 		openCart(t, h, cartURI, text)
+		h.waitDiagnostics(cartURI)
 		h.waitCodeLens(cartURI, 1)
 	})
 }
