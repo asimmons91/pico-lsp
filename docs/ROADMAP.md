@@ -3,7 +3,7 @@
 **Status:** v1.6.0 released; M17–M19 shipped together in v1.6.0. v1.7.0
 expands the glyph catalog to every printable P8SCII byte for pico-editor M6.
 
-**Last updated:** 2026-11-19
+**Last updated:** 2026-11-20
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
