@@ -62,10 +62,15 @@ jobs:
         if: runner.os == 'Linux'
         run: go test -count=1 -race ./...
 
-      - name: Test public API consumer module
+      - name: Test p8scii public API consumer module
         if: runner.os == 'Linux'
         run: go test -count=1 ./...
         working-directory: testdata/publicapi/p8scii
+
+      - name: Test cart public API consumer module
+        if: runner.os == 'Linux'
+        run: go test -count=1 ./...
+        working-directory: testdata/publicapi/cart
 
       - name: Coverage
         if: runner.os == 'Linux'
@@ -242,6 +247,9 @@ jobs:
 
       - name: Fuzz P8SCII
         run: go test -run=^$ -fuzz=FuzzEncodeDecode -fuzztime=10s ./pkg/p8scii
+
+      - name: Fuzz cart parser
+        run: go test -run=^$ -fuzz=FuzzParse -fuzztime=10s ./pkg/cart
 
   release-snapshot:
     name: release snapshot

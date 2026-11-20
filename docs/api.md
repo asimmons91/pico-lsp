@@ -280,3 +280,25 @@ text := p8scii.Decode([]byte{0x87}) // "♥"
 pixels at 1×: `0` for control bytes `0x00`–`0x0f`, `4` for `0x10`–`0x7f`, and
 `8` for `0x80`–`0xff`. `Printable` is false only for control bytes. `Glyphs`
 returns a copy. Added in v1.6.0 and stable under semver.
+
+### `pkg/cart`
+
+`github.com/asimmons91/pico-lsp/pkg/cart` parses and splices text `.p8` carts:
+
+```go
+doc, err := cart.Parse("game.p8", data) // pure: no filesystem access
+doc.Code()                              // exact __lua__ body
+doc.Tabs()                              // zero-based index, exclusive EndLine
+doc.Sections()                          // known and unknown sections
+doc.Includes()                          // lexical #include directives
+out, err := doc.ReplaceCode(code)       // only the __lua__ body changes
+owner, err := cart.NewResolver(nil).Owner("/work/game/lib.lua")
+```
+
+`Parse` accepts `.p8` only and rejects `.p8.png`, binary input, and input over
+1 MiB. `ReplaceCode` preserves the BOM, header, sections, and every non-code
+byte; it uses the original code body's CRLF style and leaves a data CR (P8SCII
+glyph 13) as data, forcing a CRLF terminator when the CR is adjacent to one.
+`Owner` requires an absolute `.p8` or `.lua` path; it finds the nearest
+ancestor cart that includes the `.lua` file and is safe for concurrent use.
+Added in v1.7.0 and stable under semver.

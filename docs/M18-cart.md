@@ -1,6 +1,6 @@
 # M18 — Cart Public Package
 
-**Status:** Planned — spec ready, implementation not started
+**Status:** In progress — implementation complete; v1.7.0 release pending
 
 **Depends on:** M17  
 **Release target:** v1.7.0  
@@ -29,7 +29,7 @@ Confirmed before implementation:
 |---|---|---|
 | D1 | Public model | A new cart-only `Document` API. Internal `cart.Cart`, `Snapshot`, and source-map types are not exposed. |
 | D2 | Parse boundary | `Parse` is pure: it never reads the filesystem, resolves `#include`, or flattens includes. `Code()` retains directive text. |
-| D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style. |
+| D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style; a data CR adjacent to a required terminator forces CRLF (see §4). |
 | D4 | Missing code section | A cart without `__lua__` parses for inspection (`HasCode` false) but cannot be spliced; `ReplaceCode` returns a typed error. No section is created implicitly. |
 | D5 | Byte preservation | Only the `__lua__` body changes. The BOM, header, section order, unknown sections, and every non-code byte are preserved. An unterminated `__lua__` header is a save error, never rewritten. |
 | D6 | File writing | `ReplaceCode` returns bytes. Atomic writes and fsync stay in pico-editor's `fsutil`. |
@@ -152,9 +152,9 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   pico-editor's locked cart-tab rule. Do not use first-non-space detection for
   the public model.
 - Align the internal LSP tab scanner (`buildTabs`) and include scan to the same
-  column-0 rule, so `pico8/cartInfo` and folding agree with `pkg/cart`. This is
-  a marker-recognition consistency fix, not a wire-contract change; record it
-  in the changelog and update the affected golden tests.
+  column-0 rule, so `pico8/cartInfo` and folding use the same tab boundaries as
+  `pkg/cart`. This is a marker-recognition consistency fix, not a wire-contract
+  change; record it in the changelog and update the affected golden tests.
 - Tab 0 is the text before the first marker. Its `MarkerLine` is `-1` and its
   `StartLine` is `CodeStartLine()`.
 - A marker line belongs to the tab it introduces as `MarkerLine`; it is not
@@ -168,8 +168,20 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
 - `Name` is the trimmed text after `-->8`, or `Tab N` when empty. N is the
   one-based tab number (Tab 1 for the first tab).
 - Tab indices are zero-based.
-- The public and internal LSP tab models must agree; the column-0 alignment
-  above is part of this milestone.
+- Line coordinates: `pkg/cart` reports P8SCII lines (only LF and CRLF are
+  terminators). The LSP loader converts tab and section lines through
+  `source.LineIndex` because LSP clients treat a lone CR as a line break. The
+  two coordinate spaces agree for carts without a lone CR; this is an explicit
+  exception to model parity below.
+- `pico8/cartInfo` keeps its historical line values: an empty code body
+  followed by another section reports the `__lua__` header line, and the last
+  tab at EOF includes the virtual line after a trailing terminator. Tab folding
+  likewise keeps that historical virtual EOF line. These compatibility values
+  can differ from `pkg/cart` by one line in those cases; the public `Tab.EndLine`
+  remains exclusive.
+- The public and internal LSP tab models must use the same column-0 rule and
+  tab boundaries; line coordinates and cartInfo compatibility follow the notes
+  above.
 
 ### 3. Include directives
 
@@ -202,7 +214,10 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   - Only LF and CRLF are line terminators. A lone CR is P8SCII glyph 13 and is
     preserved as data; never split, trim, or normalize it.
   - Normalize the input's CRLF line endings to LF first, leaving lone CR bytes
-    untouched.
+    untouched. A data CR immediately before a CRLF is kept distinct by using a
+    CRLF terminator; the resulting body then counts as CRLF-styled for later
+    replacements. This is the one case where preserving a data CR forces CRLF
+    in an LF cart.
   - If the original code body contains CRLF, convert those LF endings to CRLF
     before splicing.
   - Otherwise write LF.
@@ -360,32 +375,35 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 
 ## Exit criteria
 
-- [ ] `pkg/cart.Document` parses `.p8` carts without exposing internal types.
-- [ ] `Parse` never reads the filesystem or flattens includes.
-- [ ] `Code()` preserves CRLF; `ReplaceCode` re-applies the original code
-      newline style and changes only the `__lua__` body.
-- [ ] BOM, unknown sections, section order, and blank lines are preserved.
-- [ ] Missing, empty, and duplicate `__lua__` cases match the spec.
-- [ ] `Tabs` follows column-0 markers, zero-based indices, full-cart lines,
+- [x] `pkg/cart.Document` parses `.p8` carts without exposing internal types.
+- [x] `Parse` never reads the filesystem or flattens includes.
+- [x] `Code()` preserves CRLF; `ReplaceCode` re-applies the original code
+      newline style, except for the documented data-CR CRLF exception, and
+      changes only the `__lua__` body.
+- [x] BOM, unknown sections, section order, and blank lines are preserved.
+- [x] Missing, empty, and duplicate `__lua__` cases match the spec.
+- [x] `Tabs` follows column-0 markers, zero-based indices, full-cart lines,
       exclusive ends, `MarkerLine`, and empty-tab behavior.
-- [ ] `Includes` handles quotes, spaces, and tab selectors without IO.
-- [ ] `Resolver.Owner` passes nearest-cart, include, cache, concurrency, and
+- [x] `Includes` handles quotes, spaces, and tab selectors without IO.
+- [x] `Resolver.Owner` passes nearest-cart, include, cache, concurrency, and
       standalone tests.
-- [ ] Typed errors are covered by `errors.Is`/`errors.As` tests.
-- [ ] The external consumer module imports only `pkg/cart` and runs in CI.
-- [ ] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
+- [x] Typed errors are covered by `errors.Is`/`errors.As` tests.
+- [x] The external consumer module imports only `pkg/cart` and runs in CI.
+- [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
 - [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
-- [ ] No LSP wire-contract change; the column-0 marker and lone-CR scanner
-      fixes are recorded and covered by golden tests.
+- [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
+      fixes are recorded and covered by golden tests, with the documented
+      cartInfo/folding historical virtual EOF values and LSP line-coordinate
+      exception.
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
 | Save corrupts non-code sections | Golden byte-diff tests on real carts; only the Lua body is replaced. |
-| CRLF normalization surprises users | `Code()` preserves the original style; `ReplaceCode` restores it; round-trip tests include CRLF carts. |
+| CRLF normalization surprises users | `Code()` preserves the original style; `ReplaceCode` restores it, except when a data CR forces CRLF to stay data; round-trip tests include CRLF carts. |
 | Public API leaks internal types | New `Document` model, consumer module, and an exported-signature review. |
 | Parse accidentally resolves includes | Pure parse contract, missing-include fixture, and no loader/Provider dependency in `pkg/cart`. |
 | Include ownership drifts from the LSP resolver | Shared include scanner and public-vs-internal parity tests. |
-| Tab model diverges from LSP | Column-0 shared helper, full-cart line tests, and parity fixtures. |
+| Tab model diverges from LSP | Shared column-0 helper, LSP line-conversion tests, historical cartInfo fixtures, and public-vs-internal parity tests. |
 | Resolver races | Mutex-protected cache plus concurrent `Owner`/`Invalidate` race tests. |

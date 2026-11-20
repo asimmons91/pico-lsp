@@ -1,6 +1,6 @@
 # M17 — P8SCII Public Package
 
-**Status:** In progress — implementation complete; v1.6.0 release pending
+**Status:** Merged — v1.6.0 release pending
 
 **Depends on:** M16  
 **Release target:** v1.6.0  

@@ -104,7 +104,7 @@ func (s *Server) documentSymbols(ctx context.Context, u uri.URI) protocol.Docume
 	place := func(node *outlineNode) {
 		line := lineOf(file, node.span.Start)
 		for i := range tabByLine {
-			if line >= tabByLine[i].start && line <= tabByLine[i].end {
+			if line >= tabByLine[i].start && line < tabByLine[i].end {
 				tabByLine[i].node.children = append(tabByLine[i].node.children, node)
 				return
 			}

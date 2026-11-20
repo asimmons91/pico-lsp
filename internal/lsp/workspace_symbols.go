@@ -249,7 +249,11 @@ func workspaceContainer(snap *cart.Snapshot, root uri.URI, span source.Span) str
 		}
 	}
 	for _, tab := range snap.Cart.Tabs {
-		if line >= tab.StartLine && line <= tab.EndLine {
+		start := tab.StartLine
+		if tab.MarkerLine >= 0 {
+			start = tab.MarkerLine
+		}
+		if line >= start && line < tab.EndLine {
 			return base + " / " + tab.Name
 		}
 	}
