@@ -1,6 +1,6 @@
 # M18 — Cart Public Package
 
-**Status:** In progress — implementation complete; v1.7.0 release pending
+**Status:** Done — implementation complete; v1.7.0 release pending the manual release pass after M19
 
 **Depends on:** M17  
 **Release target:** v1.7.0  
@@ -344,7 +344,8 @@ func (r *Resolver) Invalidate()
   conventions, and include lexical rules.
 - Add runnable examples for parsing, splicing, tabs, includes, and ownership.
 - Add a short `pkg/cart` entry to `docs/api.md` or `README.md`.
-- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.7.0` after the PR merges.
+- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.7.0` in the manual
+  release pass after M18 and M19.
 - Release notes state that the public API is additive. List the column-0 tab
   scanner and lone-CR scanner corrections as LSP behavior fixes, with their
   changelog entries.
@@ -390,7 +391,8 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [x] Typed errors are covered by `errors.Is`/`errors.As` tests.
 - [x] The external consumer module imports only `pkg/cart` and runs in CI.
 - [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
-- [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
+- [ ] `v1.7.0` is tagged and pico-editor M4 can pin it (deferred to the manual
+      release pass after M18 and M19).
 - [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
       fixes are recorded and covered by golden tests, with the documented
       cartInfo/folding historical virtual EOF values and LSP line-coordinate

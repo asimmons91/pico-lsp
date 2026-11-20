@@ -1,6 +1,6 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.5.1 released; M17 merged (v1.6.0 pending); M18 in progress; M19 planned
+**Status:** v1.5.1 released; M17 merged (v1.6.0 pending); M18 done (v1.7.0 deferred to the manual pass after M19); M19 planned
 
 **Last updated:** 2026-11-19
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -76,7 +76,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M15 | VS Code Client | Installable VS Code extension with managed server downloads and cart budgets | M14 | Done |
 | M16 | P8SCII Glyph Snippets and Input | ASCII-triggered glyph completion, custom font slot entries, and a searchable picker | M15 | Done |
 | M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Merged (v1.6.0 pending) |
-| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | In progress |
+| M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Done (v1.7.0 pending) |
 | M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Planned |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
@@ -87,7 +87,8 @@ completion hardening. **v1.5.1** followed with formatter EOF normalization and
 workspace-relative cart paths in the VS Code status tooltip.
 
 M17–M19 are the public-package releases for pico-editor: p8scii in
-**v1.6.0**, cart in **v1.7.0**, and lsp plus glyphs in **v1.8.0**.
+**v1.6.0**, cart in **v1.7.0**, and lsp plus glyphs in **v1.8.0**. The
+**v1.7.0** tag is deferred to the manual release pass after M18 and M19.
 
 Each milestone has a detailed spec:
 
@@ -176,7 +177,8 @@ Rules:
 - Facades expose only what the editor needs. Keep the public API small, and
   cover it with tests and examples.
 - Tag `v1.6.0`, `v1.7.0`, and `v1.8.0` only after their package tests pass. A
-  milestone pin must reference a tag, never a branch or pseudo-version.
+  milestone pin must reference a tag, never a branch or pseudo-version. The
+  `v1.7.0` tag is cut in the manual release pass after M19.
 - pico-editor must not import `internal/` packages; Go enforces this.
 - The editor pins each release before the corresponding milestone starts. Its
   schedule is recorded in
@@ -320,11 +322,11 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 ship individually as v1.6.0, v1.7.0, and v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 ship individually as v1.6.0, v1.7.0, and v1.8.0, with the v1.7.0 tag cut in the manual release pass after M19. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
 - Milestone specs are the source of truth for scope, interfaces, and acceptance criteria.
-- Mark a milestone **In progress** when implementation starts and **Done** only when its exit criteria pass.
+- Mark a milestone **In progress** when implementation starts and **Done** when its implementation exit criteria pass. A deferred release tag remains an open checklist item in the milestone spec.
 - Any change to a locked decision updates this roadmap and every affected spec in the same change.
 - New ideas go to the [post-v1 backlog](post-v1-backlog.md) or a promoted milestone spec; they do not expand v1 scope without an explicit decision.
