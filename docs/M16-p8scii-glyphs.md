@@ -1,8 +1,9 @@
 # M16 — P8SCII Glyph Snippets and Input
 
-**Status:** Done — shipped in v1.4.0.  
+**Status:** Done — shipped in v1.4.0; the catalog was expanded to every
+printable P8SCII byte in v1.7.0.  
 **Depends on:** M15  
-**Release target:** v1.4.0  
+**Release target:** v1.4.0; v1.7.0 catalog expansion.  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -45,7 +46,8 @@ Confirmed before implementation:
 ### In scope
 
 - A server-owned P8SCII glyph catalog derived from `internal/p8scii`.
-- Stable names, aliases, categories, and descriptions for the curated glyph set.
+- Stable names, aliases, categories, and descriptions for every printable
+  P8SCII byte, plus the curated custom-font slots.
 - pico8-ls-compatible aliases such as `p8-left`, `p8-x-key`, and `p8-jelpi`
   where they map cleanly.
 - User-defined glyph entries in `pico8.glyphs`, with a name and either a P8SCII
