@@ -1,9 +1,9 @@
 # M19 — LSP and Glyph Public Packages
 
-**Status:** Done — implementation complete; v1.8.0 release pending
+**Status:** Done — shipped in v1.6.0
 
 **Depends on:** M18  
-**Release target:** v1.8.0  
+**Release target:** v1.6.0  
 **Blocks:** pico-editor M5  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
@@ -32,7 +32,7 @@ Confirmed before implementation:
 | D3 | Configuration | LSP-native only. Configuration arrives through `initializationOptions` and `workspace/configuration`; no public config types. |
 | D4 | Lifecycle | The returned `jsonrpc2.Conn` plus the caller's context are the lifecycle API. No exit-signal helpers. |
 | D5 | Glyph catalog | `pkg/glyphs` re-exports the catalog types and lookup/build functions. The LSP `pico8/glyphs` request remains the editor picker path. |
-| D6 | Compatibility | Stable semver from v1.8.0; additive changes only. |
+| D6 | Compatibility | Stable semver from v1.6.0; additive changes only. |
 | D7 | Logging | The server logs only to the supplied logger. It never writes to stdout. A nil logger is silent. |
 | D8 | Editor configuration | pico-editor sends settings through `initializationOptions.pico8` and `workspace/configuration`; workspace folders go in the `initialize` params. No Go config types. |
 | D9 | Editor shutdown | pico-editor cancels the server context and closes the returned connection. There is no `Server.Shutdown` method. |
@@ -46,7 +46,7 @@ Confirmed before implementation:
 - Godoc and runnable examples for both packages.
 - An in-memory end-to-end test of the public server.
 - An external consumer module that imports only `pkg/lsp` and `pkg/glyphs`.
-- The v1.8.0 changelog entry, tag, and release notes.
+- The v1.6.0 changelog entry, tag, and release notes.
 
 ### Out of scope
 
@@ -71,7 +71,7 @@ Confirmed before implementation:
    `example.com/pico-lsp-publicapi-lsp` and a local `replace` to the repo root.
 6. CI updates: `gofmt -l .`, the consumer module test, and the `pkg/lsp`/
    `pkg/glyphs` fuzz targets where applicable.
-7. `CHANGELOG.md` entry and `v1.8.0` release.
+7. `CHANGELOG.md` entry and `v1.6.0` release.
 
 ## Detailed requirements
 
@@ -181,7 +181,8 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 - Add a short in-process example to `docs/api.md` or `README.md`.
 - Document that `pico8/cartInfo` and `pico8/glyphs` remain protocol requests,
   not Go APIs.
-- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.8.0` after the PR merges.
+- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.6.0` after the release PR
+  merges.
 - Release notes state that this is additive and does not change the stdio
   server or its capabilities.
 
@@ -225,7 +226,7 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 - [x] The server writes nothing to stdout and respects the supplied logger.
 - [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
 - [x] The external consumer module imports only public packages and runs in CI.
-- [ ] `v1.8.0` is tagged and pico-editor M5 can pin it.
+- [x] `v1.6.0` is tagged and pico-editor M5 can pin it.
 - [x] No existing stdio server behavior or LSP capability changed.
 
 ## Risks and mitigations

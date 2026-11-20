@@ -1,9 +1,9 @@
 # M18 — Cart Public Package
 
-**Status:** Done — implementation complete; v1.7.0 release pending the manual release pass after M19
+**Status:** Done — shipped in v1.6.0
 
 **Depends on:** M17  
-**Release target:** v1.7.0  
+**Release target:** v1.6.0  
 **Blocks:** pico-editor M4  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
@@ -34,7 +34,7 @@ Confirmed before implementation:
 | D5 | Byte preservation | Only the `__lua__` body changes. The BOM, header, section order, unknown sections, and every non-code byte are preserved. An unterminated `__lua__` header is a save error, never rewritten. |
 | D6 | File writing | `ReplaceCode` returns bytes. Atomic writes and fsync stay in pico-editor's `fsutil`. |
 | D7 | Includes | `Includes()` exposes lexical include paths and tab selectors. `Resolver` owns filesystem-aware ownership resolution. |
-| D8 | Compatibility | Stable semver from v1.7.0; additive changes only. |
+| D8 | Compatibility | Stable semver from v1.6.0; additive changes only. |
 | D9 | Read-only `.p8.png` | Out of scope; `Parse` returns a typed unsupported-format error. |
 
 ## Scope
@@ -52,7 +52,7 @@ Confirmed before implementation:
   empty tabs.
 - An external consumer module that imports only `pkg/cart`.
 - CI wiring for the consumer module, formatting, and new fuzz target.
-- The v1.7.0 changelog entry, tag, and release notes.
+- The v1.6.0 changelog entry, tag, and release notes.
 
 ### Out of scope
 
@@ -79,7 +79,7 @@ Confirmed before implementation:
    `example.com/pico-lsp-publicapi-cart` and a local `replace` to the repo root.
 8. CI updates: `gofmt -l .`, the consumer module test, and the `pkg/cart` fuzz
    target in the nightly list.
-9. `CHANGELOG.md` entry and `v1.7.0` release.
+9. `CHANGELOG.md` entry and `v1.6.0` release.
 
 ## Detailed requirements
 
@@ -344,8 +344,8 @@ func (r *Resolver) Invalidate()
   conventions, and include lexical rules.
 - Add runnable examples for parsing, splicing, tabs, includes, and ownership.
 - Add a short `pkg/cart` entry to `docs/api.md` or `README.md`.
-- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.7.0` in the manual
-  release pass after M18 and M19.
+- Add `CHANGELOG.md` under `Unreleased`, then cut `v1.6.0` after the release
+  PR merges.
 - Release notes state that the public API is additive. List the column-0 tab
   scanner and lone-CR scanner corrections as LSP behavior fixes, with their
   changelog entries.
@@ -362,7 +362,7 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - Splice failures preserve the original bytes.
 - Resolver IO failures are best-effort: unreadable carts are skipped; only
   invalid input paths return errors.
-- No `.p8.png` support in v1.7.0; callers must handle the typed error.
+- No `.p8.png` support in v1.6.0; callers must handle the typed error.
 
 ## Testing and CI
 
@@ -391,8 +391,7 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [x] Typed errors are covered by `errors.Is`/`errors.As` tests.
 - [x] The external consumer module imports only `pkg/cart` and runs in CI.
 - [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
-- [ ] `v1.7.0` is tagged and pico-editor M4 can pin it (deferred to the manual
-      release pass after M18 and M19).
+- [x] `v1.6.0` is tagged and pico-editor M4 can pin it.
 - [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
       fixes are recorded and covered by golden tests, with the documented
       cartInfo/folding historical virtual EOF values and LSP line-coordinate
