@@ -7,7 +7,8 @@
 // a string, or both.
 //
 // The package is a thin, stable facade over the server's canonical catalog. It
-// is additive from v1.8.0 and does not change the LSP server.
+// was added in v1.6.0; v1.7.0 expands the built-in catalog to every printable
+// P8SCII byte without changing the LSP server's wire contract.
 package glyphs
 
 import internalglyphs "github.com/asimmons91/pico-lsp/internal/glyphs"

@@ -85,7 +85,7 @@ Confirmed before implementation:
   - canonical Unicode `text`;
   - P8SCII `byte` (`0`–`255`);
   - optional aliases;
-  - category (`button`, `symbol`, `kana`, `control`, `custom`);
+  - category (`button`, `symbol`, `ascii`, `puny`, `kana`, `control`, `custom`);
   - human-readable description.
 - Canonical text is produced with `p8scii.Decode([]byte{byte})`; never by
   hand-writing multi-rune glyph spellings.
