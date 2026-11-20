@@ -1,7 +1,7 @@
 # Release checklist
 
 This checklist covers the v1.x GitHub-only release process. Homebrew and Mason
-publishing are deferred to post-v1. The current release is **v1.6.0**.
+publishing are deferred to post-v1. The current release is **v1.7.0**.
 
 ## Pre-release
 
@@ -27,9 +27,9 @@ publishing are deferred to post-v1. The current release is **v1.6.0**.
       unrelated Lua buffers.
 - [x] Helix opens `testdata/smoke.p8` and attaches; run the manual feature matrix
       before publishing if Helix behavior changed. The v1.1.0 release re-ran the
-      automated and Neovim checks; v1.6.0 only adds public Go packages and cart
-      scanner fixes, so the manual Helix matrix from v1.0.0 remains the last
-      manual run.
+      automated and Neovim checks; v1.7.0 only expands the public glyph catalog
+      and docs and does not change the LSP wire contract, so the manual Helix
+      matrix from v1.0.0 remains the last manual run.
 - [x] No stdout writes occur outside LSP framing.
 - [x] No telemetry or network calls are added.
 
@@ -40,8 +40,8 @@ publishing are deferred to post-v1. The current release is **v1.6.0**.
 - [x] Create the annotated tag:
 
   ```sh
-  git tag -a v1.6.0 -m "pico-lsp v1.6.0"
-  git push origin v1.6.0
+  git tag -a v1.7.0 -m "pico-lsp v1.7.0"
+  git push origin v1.7.0
   ```
 
 - [x] Watch the `Release` workflow complete.
@@ -54,7 +54,7 @@ publishing are deferred to post-v1. The current release is **v1.6.0**.
 
 ## Post-release
 
-- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.6.0`
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.7.0`
       builds for a developer.
 - [x] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, Marketplace/Open VSX,
@@ -72,7 +72,7 @@ publishing are deferred to post-v1. The current release is **v1.6.0**.
 - [ ] The VSIX installs on macOS and Windows local desktop VS Code.
 - [x] The downloader handles mock release assets, checksum failures, and
       offline `pico8.serverPath` use.
-- [ ] Live first-run download from the public v1.6.0 release is verified in a
+- [ ] Live first-run download from the public v1.7.0 release is verified in a
       real VS Code window.
 - [x] Restart is covered by the integration suite.
 
