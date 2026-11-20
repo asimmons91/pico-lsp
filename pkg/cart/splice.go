@@ -20,7 +20,7 @@ func (d *Document) ReplaceCode(code string) ([]byte, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNoCodeSection, d.path)
 	}
 
-	normalized := strings.ReplaceAll(code, "\r\n", "\n")
+	normalized := normalizeCallerNewlines(code)
 	if d.headerUnterminated && normalized != "" {
 		return nil, fmt.Errorf("%w: %s", ErrUnterminatedHeader, d.path)
 	}
@@ -28,7 +28,7 @@ func (d *Document) ReplaceCode(code string) ([]byte, error) {
 	newline := "\n"
 	if d.codeUsesCRLF {
 		newline = "\r\n"
-		normalized = strings.ReplaceAll(normalized, "\n", newline)
+		normalized = convertLFToCRLF(normalized)
 	}
 	if d.codeEnd < len(d.data) && normalized != "" && !strings.HasSuffix(normalized, "\n") {
 		if strings.HasSuffix(normalized, "\r") {
@@ -45,4 +45,39 @@ func (d *Document) ReplaceCode(code string) ([]byte, error) {
 	out = append(out, normalized...)
 	out = append(out, d.data[d.codeEnd:]...)
 	return out, nil
+}
+
+// normalizeCallerNewlines converts CRLF to LF while keeping a data CR that
+// immediately precedes a CRLF distinct from the terminator. The LF after such a
+// CR is restored to CRLF so reparsing still sees the CR as glyph-13 data.
+func normalizeCallerNewlines(code string) string {
+	var b strings.Builder
+	b.Grow(len(code))
+	for i := 0; i < len(code); i++ {
+		if code[i] == '\r' && i+1 < len(code) && code[i+1] == '\n' {
+			b.WriteByte('\n')
+			i++
+			continue
+		}
+		b.WriteByte(code[i])
+	}
+	normalized := b.String()
+	if strings.Contains(normalized, "\r\n") {
+		normalized = strings.ReplaceAll(normalized, "\r\n", "\r\r\n")
+	}
+	return normalized
+}
+
+// convertLFToCRLF converts bare LFs without doubling an existing data-CR CRLF.
+func convertLFToCRLF(code string) string {
+	var b strings.Builder
+	b.Grow(len(code))
+	for i := 0; i < len(code); i++ {
+		if code[i] == '\n' && (i == 0 || code[i-1] != '\r') {
+			b.WriteString("\r\n")
+			continue
+		}
+		b.WriteByte(code[i])
+	}
+	return b.String()
 }

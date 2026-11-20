@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"sort"
+	"strings"
 
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
@@ -99,6 +100,7 @@ func (s *Server) foldingRanges(ctx context.Context, u uri.URI) []protocol.Foldin
 	}
 
 	if fileHasSuffix(file.URI, ".p8") {
+		luaIndex, lua := luaSection(snap.Cart.Sections)
 		for _, tab := range snap.Cart.Tabs {
 			start := tab.StartLine
 			if tab.MarkerLine >= 0 {
@@ -107,6 +109,11 @@ func (s *Server) foldingRanges(ctx context.Context, u uri.URI) []protocol.Foldin
 			end := tab.EndLine - 1
 			if end < start {
 				continue
+			}
+			if lua != nil && fileID == 0 && tab.Index == len(snap.Cart.Tabs)-1 && luaIndex == len(snap.Cart.Sections)-1 &&
+				(strings.HasSuffix(file.Text, "\n") || strings.HasSuffix(file.Text, "\r")) {
+				// Preserve the historical virtual EOF line for the last tab.
+				end = tab.EndLine
 			}
 			addLines(uint32(start), uint32(end), protocol.FoldingRangeKindRegion)
 		}

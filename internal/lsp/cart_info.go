@@ -167,7 +167,8 @@ func cartInfoTabLines(c *cart.Cart, tab cart.Tab, luaIndex int, lua *cart.Sectio
 	if tab.Index == 0 && len(c.Tabs) == 1 && tab.StartLine == tab.EndLine && luaIndex+1 < len(c.Sections) {
 		return lua.StartLine, lua.StartLine
 	}
-	if tab.Index == len(c.Tabs)-1 && luaIndex == len(c.Sections)-1 && len(c.Files) > 0 && strings.HasSuffix(c.Files[0].Text, "\n") {
+	if tab.Index == len(c.Tabs)-1 && luaIndex == len(c.Sections)-1 && len(c.Files) > 0 &&
+		(strings.HasSuffix(c.Files[0].Text, "\n") || strings.HasSuffix(c.Files[0].Text, "\r")) {
 		end = tab.EndLine
 		if end < start {
 			end = start

@@ -48,6 +48,9 @@ func TestM18LoneCRTabLinesUseLSPPositions(t *testing.T) {
 	if !hasFold(folds, 3, 4) || !hasFold(folds, 5, 6) {
 		t.Fatalf("folds = %+v, want tab folds 3..4 and 5..6", folds)
 	}
+	if !hasFold(folds, 7, 9) {
+		t.Fatalf("folds = %+v, want gfx section fold 7..9", folds)
+	}
 
 	result, err := h.server.DocumentSymbol(ctx, &protocol.DocumentSymbolParams{
 		TextDocument: protocol.TextDocumentIdentifier{URI: root},
@@ -89,6 +92,11 @@ func TestM18CartInfoPreservesHistoricalTabLines(t *testing.T) {
 				{Index: 1, Name: "Tab 2", StartLine: 4, EndLine: 6},
 			},
 		},
+		{
+			name: "last tab at lone CR EOF",
+			text: "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\r",
+			want: []TabInfo{{Index: 0, Name: "Tab 1", StartLine: 3, EndLine: 4}},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -119,4 +127,46 @@ func hasFold(folds []protocol.FoldingRange, start, end uint32) bool {
 		}
 	}
 	return false
+}
+
+func TestM18TabFoldPreservesEOFLine(t *testing.T) {
+	tests := []struct {
+		name  string
+		text  string
+		start uint32
+		end   uint32
+	}{
+		{
+			name:  "lua last with newline",
+			text:  "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\n",
+			start: 3,
+			end:   4,
+		},
+		{
+			name:  "lua last with lone CR",
+			text:  "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\na=1\r",
+			start: 3,
+			end:   4,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			root := writeTemp(t, t.TempDir(), "cart.p8", tc.text)
+			h := newHarness(t, newTestClient())
+			h.initialize(t, &protocol.InitializeParams{})
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			openDoc(t, h, ctx, root, tc.text)
+
+			folds, err := h.server.FoldingRanges(ctx, &protocol.FoldingRangeParams{
+				TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			})
+			if err != nil {
+				t.Fatalf("foldingRanges: %v", err)
+			}
+			if !hasFold(folds, tc.start, tc.end) {
+				t.Fatalf("folds = %+v, want %d..%d", folds, tc.start, tc.end)
+			}
+		})
+	}
 }

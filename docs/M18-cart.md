@@ -152,9 +152,9 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   pico-editor's locked cart-tab rule. Do not use first-non-space detection for
   the public model.
 - Align the internal LSP tab scanner (`buildTabs`) and include scan to the same
-  column-0 rule, so `pico8/cartInfo` and folding agree with `pkg/cart`. This is
-  a marker-recognition consistency fix, not a wire-contract change; record it
-  in the changelog and update the affected golden tests.
+  column-0 rule, so `pico8/cartInfo` and folding use the same tab boundaries as
+  `pkg/cart`. This is a marker-recognition consistency fix, not a wire-contract
+  change; record it in the changelog and update the affected golden tests.
 - Tab 0 is the text before the first marker. Its `MarkerLine` is `-1` and its
   `StartLine` is `CodeStartLine()`.
 - A marker line belongs to the tab it introduces as `MarkerLine`; it is not
@@ -168,8 +168,18 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
 - `Name` is the trimmed text after `-->8`, or `Tab N` when empty. N is the
   one-based tab number (Tab 1 for the first tab).
 - Tab indices are zero-based.
-- The public and internal LSP tab models must agree; the column-0 alignment
-  above is part of this milestone.
+- Line coordinates: `pkg/cart` reports P8SCII lines (only LF and CRLF are
+  terminators). The LSP loader converts tab and section lines through
+  `source.LineIndex` because LSP clients treat a lone CR as a line break. The
+  two coordinate spaces agree for carts without a lone CR; this is an explicit
+  exception to model parity below.
+- `pico8/cartInfo` keeps its historical line values: an empty code body
+  followed by another section reports the `__lua__` header line, and the last
+  tab at EOF includes the virtual line after a trailing terminator. These
+  compatibility values can differ from `pkg/cart` by one line in those cases.
+- The public and internal LSP tab models must use the same column-0 rule and
+  tab boundaries; line coordinates and cartInfo compatibility follow the notes
+  above.
 
 ### 3. Include directives
 
@@ -202,7 +212,10 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   - Only LF and CRLF are line terminators. A lone CR is P8SCII glyph 13 and is
     preserved as data; never split, trim, or normalize it.
   - Normalize the input's CRLF line endings to LF first, leaving lone CR bytes
-    untouched.
+    untouched. A data CR immediately before a CRLF is kept distinct by using a
+    CRLF terminator; the resulting body then counts as CRLF-styled for later
+    replacements. This is the one case where preserving a data CR forces CRLF
+    in an LF cart.
   - If the original code body contains CRLF, convert those LF endings to CRLF
     before splicing.
   - Otherwise write LF.
@@ -376,7 +389,8 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
 - [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
 - [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
-      fixes are recorded and covered by golden tests.
+      fixes are recorded and covered by golden tests, with the documented
+      cartInfo historical values and LSP line-coordinate exception.
 
 ## Risks and mitigations
 
@@ -387,5 +401,5 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 | Public API leaks internal types | New `Document` model, consumer module, and an exported-signature review. |
 | Parse accidentally resolves includes | Pure parse contract, missing-include fixture, and no loader/Provider dependency in `pkg/cart`. |
 | Include ownership drifts from the LSP resolver | Shared include scanner and public-vs-internal parity tests. |
-| Tab model diverges from LSP | Column-0 shared helper, full-cart line tests, and parity fixtures. |
+| Tab model diverges from LSP | Shared column-0 helper, LSP line-conversion tests, historical cartInfo fixtures, and public-vs-internal parity tests. |
 | Resolver races | Mutex-protected cache plus concurrent `Owner`/`Invalidate` race tests. |

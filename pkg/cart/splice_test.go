@@ -287,3 +287,52 @@ func TestReplaceCodeKeepsTrailingLoneCR(t *testing.T) {
 		t.Fatalf("reparsed Code() = %q, want trailing CR data preserved", reparsed.Code())
 	}
 }
+
+func TestReplaceCodeKeepsDataCRBeforeCallerCRLF(t *testing.T) {
+	doc := parseFixture(t, "all_sections.p8")
+	out, err := doc.ReplaceCode("s=[[a\r\r\nb]]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := bodyBetween(t, out, "__lua__\n", "__gfx__")
+	want := "s=[[a\r\r\nb]]\n"
+	if body != want {
+		t.Fatalf("body = %q, want %q", body, want)
+	}
+	reparsed, err := cart.Parse("game.p8", out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(reparsed.Code(), "a\r\r\nb") {
+		t.Fatalf("reparsed Code() = %q, want data CR preserved", reparsed.Code())
+	}
+}
+
+func TestReplaceCodeRoundTripsDataCRBeforeCRLF(t *testing.T) {
+	original := []byte("pico-8 cartridge // pico-8.com\r\nversion 42\r\n__lua__\r\ns=[[a\r\r\nb]]\r\n__gfx__\r\n")
+	doc, err := cart.Parse("game.p8", original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := doc.ReplaceCode(doc.Code())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(out, original) {
+		t.Fatalf("round-trip changed bytes:\n got %q\nwant %q", out, original)
+	}
+}
+
+func bodyBetween(t *testing.T, data []byte, prefix, suffix string) string {
+	t.Helper()
+	start := bytes.Index(data, []byte(prefix))
+	if start < 0 {
+		t.Fatalf("missing prefix %q", prefix)
+	}
+	start += len(prefix)
+	end := start + bytes.Index(data[start:], []byte(suffix))
+	if end < start {
+		t.Fatalf("missing suffix %q", suffix)
+	}
+	return string(data[start:end])
+}
