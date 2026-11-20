@@ -37,14 +37,14 @@ settings, Lua attachment behavior, and limitations.
 
 ## Download a release
 
-Set `VERSION` to the release without the leading `v` (for example `1.6.0`) and
+Set `VERSION` to the release without the leading `v` (for example `1.7.0`) and
 choose the archive for your platform from the
 [releases page](https://github.com/asimmons91/pico-lsp/releases).
 
 ### Linux and macOS
 
 ```sh
-VERSION=1.6.0
+VERSION=1.7.0
 OS=linux          # or darwin
 ARCH=amd64        # or arm64
 ASSET="pico-lsp_${VERSION}_${OS}_${ARCH}.tar.gz"
@@ -72,7 +72,7 @@ In PowerShell, set the version and architecture, download the zip and
 checksums, and compare the SHA-256 hash:
 
 ```powershell
-$Version = "1.6.0"
+$Version = "1.7.0"
 $Arch = "amd64" # or arm64
 $Asset = "pico-lsp_${Version}_windows_${Arch}.zip"
 $Base = "https://github.com/asimmons91/pico-lsp/releases/download/v$Version"
@@ -97,7 +97,7 @@ Add `%LOCALAPPDATA%\pico-lsp` to your user `PATH` permanently to use
 For developers with Go 1.27.4 or newer:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.6.0
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.7.0
 ```
 
 `go install` reports the module version from Go build information when no

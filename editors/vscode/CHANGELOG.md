@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.7.0
+
+- Bundle `pico-lsp` 1.7.0 with the complete printable P8SCII glyph catalog for
+  the picker and completion.
+- Escape ASCII quotes and backslashes when inserting glyphs inside string
+  literals.
+
 ## 1.6.0
 
 - Bundle `pico-lsp` 1.6.0 with the public `pkg/p8scii`, `pkg/cart`,
