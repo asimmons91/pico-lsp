@@ -10,7 +10,7 @@ func ExampleBuiltins() {
 	entries := glyphs.Builtins()
 	fmt.Println(len(entries))
 	// Output:
-	// 55
+	// 250
 }
 
 func ExampleFindByName() {

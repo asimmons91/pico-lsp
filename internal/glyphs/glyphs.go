@@ -34,8 +34,11 @@ type Definition struct {
 
 // Entry is a resolved glyph in the server catalog.
 type Entry struct {
-	Name        string   `json:"name"`
-	Text        string   `json:"text"`
+	Name string `json:"name"`
+	Text string `json:"text"`
+	// StringText is the source spelling to insert inside a string literal when
+	// it differs from the canonical glyph text, for example \" and \\.
+	StringText  string   `json:"stringText,omitempty"`
 	Byte        byte     `json:"byte"`
 	Aliases     []string `json:"aliases,omitempty"`
 	Category    string   `json:"category"`
@@ -67,6 +70,12 @@ type builtinSpec struct {
 	category    string
 	description string
 	aliases     []string
+}
+
+// asciiStringText holds the source spellings that differ inside Lua strings.
+var asciiStringText = map[byte]string{
+	'"':  `\"`,
+	'\\': `\\`,
 }
 
 var builtinSpecs = []builtinSpec{
@@ -137,14 +146,27 @@ var controlSpecs = []controlSpec{
 	{0x0f, "font_default", `\15`, "Switch to the default font"},
 }
 
+// asciiSpecs covers printable ASCII 0x20-0x7e. Uppercase ASCII is the puny
+// font's lowercase-shaped glyph set; lowercase ASCII is the standard font.
+var asciiSpecs = buildASCIISpecs()
+
+// kanaSpecs covers the complete Hiragana and Katakana ranges 0x9a-0xfd.
+var kanaSpecs = buildKanaSpecs()
+
 var builtinEntries = buildBuiltins()
 
 func buildBuiltins() []Entry {
-	entries := make([]Entry, 0, len(builtinSpecs)+len(controlSpecs))
-	for _, spec := range builtinSpecs {
+	specs := make([]builtinSpec, 0, len(builtinSpecs)+len(asciiSpecs)+len(kanaSpecs)+len(controlSpecs))
+	specs = append(specs, builtinSpecs...)
+	specs = append(specs, asciiSpecs...)
+	specs = append(specs, kanaSpecs...)
+
+	entries := make([]Entry, 0, len(specs)+len(controlSpecs))
+	for _, spec := range specs {
 		entries = append(entries, Entry{
 			Name:        spec.name,
 			Text:        p8scii.Decode([]byte{spec.byte}),
+			StringText:  asciiStringText[spec.byte],
 			Byte:        spec.byte,
 			Aliases:     append([]string(nil), spec.aliases...),
 			Category:    spec.category,
@@ -164,6 +186,122 @@ func buildBuiltins() []Entry {
 		})
 	}
 	return entries
+}
+
+func buildASCIISpecs() []builtinSpec {
+	specs := make([]builtinSpec, 0, 95)
+	for b := byte(0x20); b <= 0x7e; b++ {
+		name, description := asciiGlyph(b)
+		specs = append(specs, builtinSpec{
+			byte:        b,
+			name:        name,
+			category:    asciiCategory(b),
+			description: description,
+		})
+	}
+	return specs
+}
+
+func asciiCategory(b byte) string {
+	switch {
+	case b >= 'A' && b <= 'Z':
+		return "puny"
+	case b >= 'a' && b <= 'z':
+		return "ascii"
+	default:
+		return "ascii"
+	}
+}
+
+func asciiGlyph(b byte) (string, string) {
+	if b >= '0' && b <= '9' {
+		return "digit_" + string(b), "Digit " + string(b)
+	}
+	if b >= 'a' && b <= 'z' {
+		return "letter_" + string(b), "Letter " + string(b)
+	}
+	if b >= 'A' && b <= 'Z' {
+		lower := string(b - 'A' + 'a')
+		return "puny_" + lower, "Puny " + string(b)
+	}
+	if name, ok := asciiPunctuation[b]; ok {
+		return name.name, name.description
+	}
+	return fmt.Sprintf("ascii_%02x", b), fmt.Sprintf("ASCII 0x%02x", b)
+}
+
+var asciiPunctuation = map[byte]struct {
+	name        string
+	description string
+}{
+	0x20: {"space", "Space"},
+	0x21: {"punct_exclam", "Exclamation mark"},
+	0x22: {"punct_quotedbl", "Quotation mark"},
+	0x23: {"punct_numbersign", "Number sign"},
+	0x24: {"punct_dollar", "Dollar sign"},
+	0x25: {"punct_percent", "Percent sign"},
+	0x26: {"punct_ampersand", "Ampersand"},
+	0x27: {"punct_apostrophe", "Apostrophe"},
+	0x28: {"punct_parenleft", "Left parenthesis"},
+	0x29: {"punct_parenright", "Right parenthesis"},
+	0x2a: {"punct_asterisk", "Asterisk"},
+	0x2b: {"punct_plus", "Plus sign"},
+	0x2c: {"punct_comma", "Comma"},
+	0x2d: {"punct_hyphen", "Hyphen-minus"},
+	0x2e: {"punct_period", "Full stop"},
+	0x2f: {"punct_slash", "Solidus"},
+	0x3a: {"punct_colon", "Colon"},
+	0x3b: {"punct_semicolon", "Semicolon"},
+	0x3c: {"punct_less", "Less-than sign"},
+	0x3d: {"punct_equal", "Equals sign"},
+	0x3e: {"punct_greater", "Greater-than sign"},
+	0x3f: {"punct_question", "Question mark"},
+	0x40: {"punct_at", "Commercial at"},
+	0x5b: {"punct_bracketleft", "Left square bracket"},
+	0x5c: {"punct_backslash", "Reverse solidus"},
+	0x5d: {"punct_bracketright", "Right square bracket"},
+	0x5e: {"punct_asciicircum", "Circumflex accent"},
+	0x5f: {"punct_underscore", "Low line"},
+	0x60: {"punct_grave", "Grave accent"},
+	0x7b: {"punct_braceleft", "Left curly bracket"},
+	0x7c: {"punct_bar", "Vertical line"},
+	0x7d: {"punct_braceright", "Right curly bracket"},
+	0x7e: {"punct_asciitilde", "Tilde"},
+}
+
+var kanaLabels = []string{
+	"a", "i", "u", "e", "o",
+	"ka", "ki", "ku", "ke", "ko",
+	"sa", "shi", "su", "se", "so",
+	"ta", "chi", "tsu", "te", "to",
+	"na", "ni", "nu", "ne", "no",
+	"ha", "hi", "fu", "he", "ho",
+	"ma", "mi", "mu", "me", "mo",
+	"ya", "yu", "yo",
+	"ra", "ri", "ru", "re", "ro",
+	"wa", "wo", "n",
+	"small_tsu", "small_ya", "small_yu", "small_yo",
+}
+
+func buildKanaSpecs() []builtinSpec {
+	specs := make([]builtinSpec, 0, len(kanaLabels)*2)
+	for i, label := range kanaLabels {
+		specs = append(specs, builtinSpec{
+			byte:        0x9a + byte(i),
+			name:        "hiragana_" + label,
+			category:    "kana",
+			description: "Hiragana " + strings.ReplaceAll(label, "_", " "),
+		})
+	}
+	for i, label := range kanaLabels {
+		specs = append(specs, builtinSpec{
+			byte:        0xcc + byte(i),
+			name:        "katakana_" + label,
+			category:    "kana",
+			description: "Katakana " + strings.ReplaceAll(label, "_", " "),
+		})
+	}
+	return specs
 }
 
 // Builtins returns a copy of the built-in catalog.

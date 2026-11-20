@@ -1,8 +1,9 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.6.0 released; M17–M19 shipped together in v1.6.0
+**Status:** v1.6.0 released; M17–M19 shipped together in v1.6.0. v1.7.0
+expands the glyph catalog to every printable P8SCII byte for pico-editor M6.
 
-**Last updated:** 2026-11-19
+**Last updated:** 2026-11-20
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -88,8 +89,9 @@ workspace-relative cart paths in the VS Code status tooltip.
 
 M17–M19 are the public-package releases for pico-editor. They ship together
 in **v1.6.0**: p8scii, cart, and the in-process LSP and glyph catalog. The
-separately planned v1.7.0 and v1.8.0 tags were folded into this release so all
-three packages share one supported snapshot.
+originally planned separate v1.7.0 and v1.8.0 milestones were folded into
+v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
+now the later, additive catalog-coverage release.
 
 Each milestone has a detailed spec:
 
@@ -166,6 +168,7 @@ that matches P8SCII, are allowed and must be recorded in the changelog.
 | Release | Milestone | Public package | Purpose | Blocks |
 | --- | --- | --- | --- | --- |
 | `v1.6.0` | M17–M19 | `pkg/p8scii`, `pkg/cart`, `pkg/lsp`, `pkg/glyphs` | Canonical P8SCII data, cart parsing and ownership, in-process server, and glyph catalog | pico-editor M1, M4, M5 |
+| `v1.7.0` | post-M19 | `pkg/glyphs` | Catalog every printable P8SCII byte, including ASCII, puny letters, and kana, for the glyph picker | pico-editor M6 |
 
 Rules:
 
@@ -177,7 +180,9 @@ Rules:
   cover it with tests and examples.
 - Tag `v1.6.0` only after the p8scii, cart, LSP, and glyph package tests pass.
   A milestone pin must reference a tag, never a branch or pseudo-version. The
-  separately planned v1.7.0 and v1.8.0 tags were folded into v1.6.0.
+  originally planned separate v1.7.0 and v1.8.0 milestones were folded into
+  v1.6.0; the v1.7.0 tag is the later additive catalog-coverage release
+  required by pico-editor M6.
 - pico-editor must not import `internal/` packages; Go enforces this.
 - The editor pins each release before the corresponding milestone starts. Its
   schedule is recorded in
@@ -318,10 +323,10 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`).
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0, with the separately planned v1.7.0 and v1.8.0 tags folded into that release. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

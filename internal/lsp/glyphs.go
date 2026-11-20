@@ -71,7 +71,7 @@ func (s *Server) glyphCompletions(nav *navContext, offset, start int, prefix str
 		if entry.Context == glyphs.ContextString && !inString {
 			continue
 		}
-		items = append(items, glyphCompletionItem(nav, entry, trigger, start, offset))
+		items = append(items, glyphCompletionItem(nav, entry, trigger, start, offset, inString))
 	}
 	if len(items) > maxCompletionItems {
 		items = items[:maxCompletionItems]
@@ -79,7 +79,14 @@ func (s *Server) glyphCompletions(nav *navContext, offset, start int, prefix str
 	return items
 }
 
-func glyphCompletionItem(nav *navContext, entry glyphs.Entry, trigger string, start, end int) protocol.CompletionItem {
+func glyphInsertText(entry glyphs.Entry, inString bool) string {
+	if inString && entry.StringText != "" {
+		return entry.StringText
+	}
+	return entry.Text
+}
+
+func glyphCompletionItem(nav *navContext, entry glyphs.Entry, trigger string, start, end int, inString bool) protocol.CompletionItem {
 	detail := fmt.Sprintf("P8SCII 0x%02x · %s", entry.Byte, entry.Description)
 	if entry.Category == "control" {
 		detail = fmt.Sprintf("P8SCII control 0x%02x · %s", entry.Byte, entry.Description)
@@ -97,7 +104,7 @@ func glyphCompletionItem(nav *navContext, entry glyphs.Entry, trigger string, st
 		Documentation:    &protocol.MarkupContent{Kind: protocol.MarkupKindMarkdown, Value: glyphDocumentation(entry)},
 		FilterText:       protocol.NewOptional(filter),
 		SortText:         protocol.NewOptional("5_" + analysis.CanonicalName(entry.Name)),
-		TextEdit:         &protocol.TextEdit{Range: nav.file.Index.Range(start, end), NewText: entry.Text},
+		TextEdit:         &protocol.TextEdit{Range: nav.file.Index.Range(start, end), NewText: glyphInsertText(entry, inString)},
 		InsertTextFormat: protocol.InsertTextFormatPlainText,
 	}
 }
@@ -115,6 +122,9 @@ func glyphDocumentation(entry glyphs.Entry) string {
 	builder.WriteString("\n\nUnicode: `")
 	builder.WriteString(glyphCodepoints(entry.Text))
 	builder.WriteString("`")
+	if entry.StringText != "" {
+		fmt.Fprintf(&builder, "\n\nInside a string literal this inserts `%s`.", entry.StringText)
+	}
 	if entry.Context == glyphs.ContextString {
 		builder.WriteString("\n\nString-only control code.")
 	}
@@ -219,7 +229,8 @@ func (s *Server) insertGlyph(ctx context.Context, params *protocol.ExecuteComman
 	if !ok {
 		return nil, fmt.Errorf("%s: unknown glyph", CommandInsertGlyph)
 	}
-	if entry.Context == glyphs.ContextString && !nav.inString(offset) {
+	inString := nav.inString(offset)
+	if entry.Context == glyphs.ContextString && !inString {
 		return nil, fmt.Errorf("%s: %s is only valid inside a string", CommandInsertGlyph, entry.Name)
 	}
 
@@ -231,7 +242,7 @@ func (s *Server) insertGlyph(ctx context.Context, params *protocol.ExecuteComman
 		Changes: map[uri.URI][]protocol.TextEdit{
 			u: {{
 				Range:   nav.file.Index.Range(start, offset),
-				NewText: entry.Text,
+				NewText: glyphInsertText(entry, inString),
 			}},
 		},
 	}
