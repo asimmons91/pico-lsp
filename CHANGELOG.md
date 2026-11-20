@@ -24,6 +24,9 @@ All notable changes to this project are documented here. The format follows
   plus the `Entry`, `Definition`, and `Context` types shared with
   `pico8/glyphs`.
 
+Additive; stdio server behavior, capabilities, and the LSP wire contract are
+unchanged.
+
 ### Fixed
 
 - PICO-8 tab markers are recognized only at column 0, matching PICO-8 and
