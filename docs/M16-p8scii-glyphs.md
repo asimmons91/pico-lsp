@@ -83,6 +83,8 @@ Confirmed before implementation:
 - Each entry includes:
   - stable ASCII `name`;
   - canonical Unicode `text`;
+  - optional `stringText` for source spellings that differ inside a string
+    literal, such as ASCII `"` (`\"`) and `\` (`\\`);
   - P8SCII `byte` (`0`–`255`);
   - optional aliases;
   - category (`button`, `symbol`, `ascii`, `puny`, `kana`, `control`, `custom`);

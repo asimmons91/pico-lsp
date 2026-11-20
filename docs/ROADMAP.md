@@ -89,8 +89,9 @@ workspace-relative cart paths in the VS Code status tooltip.
 
 M17–M19 are the public-package releases for pico-editor. They ship together
 in **v1.6.0**: p8scii, cart, and the in-process LSP and glyph catalog. The
-separately planned v1.7.0 and v1.8.0 tags were folded into this release so all
-three packages share one supported snapshot.
+originally planned separate v1.7.0 and v1.8.0 milestones were folded into
+v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
+now the later, additive catalog-coverage release.
 
 Each milestone has a detailed spec:
 
@@ -179,8 +180,9 @@ Rules:
   cover it with tests and examples.
 - Tag `v1.6.0` only after the p8scii, cart, LSP, and glyph package tests pass.
   A milestone pin must reference a tag, never a branch or pseudo-version. The
-  separately planned v1.7.0 and v1.8.0 tags were folded into v1.6.0; v1.7.0 is
-  the additive catalog-coverage release required by pico-editor M6.
+  originally planned separate v1.7.0 and v1.8.0 milestones were folded into
+  v1.6.0; the v1.7.0 tag is the later additive catalog-coverage release
+  required by pico-editor M6.
 - pico-editor must not import `internal/` packages; Go enforces this.
 - The editor pins each release before the corresponding milestone starts. Its
   schedule is recorded in
@@ -321,10 +323,10 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`).
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0, with the separately planned v1.7.0 and v1.8.0 tags folded into that release. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

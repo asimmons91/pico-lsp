@@ -34,8 +34,11 @@ type Definition struct {
 
 // Entry is a resolved glyph in the server catalog.
 type Entry struct {
-	Name        string   `json:"name"`
-	Text        string   `json:"text"`
+	Name string `json:"name"`
+	Text string `json:"text"`
+	// StringText is the source spelling to insert inside a string literal when
+	// it differs from the canonical glyph text, for example \" and \\.
+	StringText  string   `json:"stringText,omitempty"`
 	Byte        byte     `json:"byte"`
 	Aliases     []string `json:"aliases,omitempty"`
 	Category    string   `json:"category"`
@@ -67,6 +70,12 @@ type builtinSpec struct {
 	category    string
 	description string
 	aliases     []string
+}
+
+// asciiStringText holds the source spellings that differ inside Lua strings.
+var asciiStringText = map[byte]string{
+	'"':  `\"`,
+	'\\': `\\`,
 }
 
 var builtinSpecs = []builtinSpec{
@@ -157,6 +166,7 @@ func buildBuiltins() []Entry {
 		entries = append(entries, Entry{
 			Name:        spec.name,
 			Text:        p8scii.Decode([]byte{spec.byte}),
+			StringText:  asciiStringText[spec.byte],
 			Byte:        spec.byte,
 			Aliases:     append([]string(nil), spec.aliases...),
 			Category:    spec.category,

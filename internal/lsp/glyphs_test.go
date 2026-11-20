@@ -193,6 +193,72 @@ func TestGlyphCompletionNotOfferedInNonCodeSections(t *testing.T) {
 	}
 }
 
+func TestGlyphCompletionEscapesStringPunctuation(t *testing.T) {
+	dir := t.TempDir()
+	text := `pico-8 cartridge // pico-8.com
+version 42
+__lua__
+p8_punct_quotedbl
+local s = "p8_punct_quotedbl"
+p8_punct_backslash
+local t = "p8_punct_backslash"
+`
+	root := writeTemp(t, dir, "string_punctuation.p8", text)
+	client := newTestClient()
+	h := newHarness(t, client)
+	h.initialize(t, &protocol.InitializeParams{
+		Capabilities: protocol.ClientCapabilities{
+			Workspace: &protocol.WorkspaceClientCapabilities{ApplyEdit: boolPtr(true)},
+		},
+	})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	openDoc(t, h, ctx, root, text)
+
+	codePos := positionAt(t, text, "p8_punct_quotedbl\n", len("p8_punct_quotedbl"))
+	items := completionItems(t, h, ctx, root, codePos)
+	quotedbl := findGlyphCompletion(items, "p8_punct_quotedbl")
+	if quotedbl == nil {
+		t.Fatalf("code completion missing punct_quotedbl: %v", completionLabels(items))
+	}
+	if edit := itemTextEdit(t, *quotedbl); edit.NewText != `"` {
+		t.Fatalf("code quotedbl edit = %+v, want raw quote", edit)
+	}
+
+	stringPos := positionAt(t, text, `local s = "p8_punct_quotedbl"`, len(`local s = "p8_punct_quotedbl`))
+	items = completionItems(t, h, ctx, root, stringPos)
+	quotedbl = findGlyphCompletion(items, "p8_punct_quotedbl")
+	if quotedbl == nil {
+		t.Fatalf("string completion missing punct_quotedbl: %v", completionLabels(items))
+	}
+	if edit := itemTextEdit(t, *quotedbl); edit.NewText != `\"` {
+		t.Fatalf("string quotedbl edit = %+v, want escaped quote", edit)
+	}
+
+	backslashPos := positionAt(t, text, `local t = "p8_punct_backslash"`, len(`local t = "p8_punct_backslash`))
+	items = completionItems(t, h, ctx, root, backslashPos)
+	backslash := findGlyphCompletion(items, "p8_punct_backslash")
+	if backslash == nil {
+		t.Fatalf("string completion missing punct_backslash: %v", completionLabels(items))
+	}
+	if edit := itemTextEdit(t, *backslash); edit.NewText != `\\` {
+		t.Fatalf("string backslash edit = %+v, want escaped backslash", edit)
+	}
+
+	if _, err := executeInsertGlyph(t, h, ctx, root, stringPos, "punct_quotedbl", nil); err != nil {
+		t.Fatalf("insert quotedbl: %v", err)
+	}
+	select {
+	case applied := <-client.applied:
+		edits := applied.Edit.Changes[root]
+		if len(edits) != 1 || edits[0].NewText != `\"` {
+			t.Fatalf("applied string quote edits = %+v", edits)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("server did not apply the string-quote edit")
+	}
+}
+
 func TestGlyphSubtractionFallsBackToNormalCompletion(t *testing.T) {
 	dir := t.TempDir()
 	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\np8_x = 1\np8_x-\n"
@@ -270,6 +336,14 @@ func TestGlyphsRequestFiltersStringOnlyEntries(t *testing.T) {
 	if findGlyphEntry(all, "font_custom") == nil || findGlyphEntry(all, "left") == nil {
 		t.Fatalf("all glyphs = %+v, missing built-ins", all)
 	}
+	if len(all) != 250 {
+		t.Fatalf("all glyphs = %d entries, want 250", len(all))
+	}
+	for _, name := range []string{"digit_0", "letter_a", "puny_a", "hiragana_a", "katakana_a"} {
+		if findGlyphEntry(all, name) == nil {
+			t.Errorf("all glyphs missing %s", name)
+		}
+	}
 
 	codePos := positionAt(t, text, "p8_le", len("p8_le"))
 	code := requestGlyphs(t, h, ctx, &glyphsParams{
@@ -281,6 +355,12 @@ func TestGlyphsRequestFiltersStringOnlyEntries(t *testing.T) {
 	}
 	if findGlyphEntry(code, "left") == nil {
 		t.Fatalf("code glyphs missing left: %+v", code)
+	}
+	if len(code) != 240 {
+		t.Fatalf("code glyphs = %d entries, want 240 printable entries", len(code))
+	}
+	if findGlyphEntry(code, "hiragana_a") == nil || findGlyphEntry(code, "digit_0") == nil {
+		t.Fatalf("code glyphs missing ASCII or kana entries")
 	}
 
 	stringPos := positionAt(t, text, `local s = ""`, len(`local s = "`))

@@ -97,6 +97,54 @@ func TestLookupASCIIAndKanaBuiltins(t *testing.T) {
 	}
 }
 
+func TestBuiltinsKanaNamesMatchCharset(t *testing.T) {
+	entries := Builtins()
+	for i, label := range kanaLabels {
+		hiragana, ok := FindByName(entries, "hiragana_"+label)
+		if !ok {
+			t.Fatalf("missing hiragana_%s", label)
+		}
+		if want := p8scii.Decode([]byte{0x9a + byte(i)}); hiragana.Text != want {
+			t.Errorf("hiragana_%s = %q, want %q", label, hiragana.Text, want)
+		}
+		katakana, ok := FindByName(entries, "katakana_"+label)
+		if !ok {
+			t.Fatalf("missing katakana_%s", label)
+		}
+		if want := p8scii.Decode([]byte{0xcc + byte(i)}); katakana.Text != want {
+			t.Errorf("katakana_%s = %q, want %q", label, katakana.Text, want)
+		}
+	}
+}
+
+func TestBuiltinsASCIINamesAndCategories(t *testing.T) {
+	entries := Builtins()
+	for b := 0x20; b <= 0x7e; b++ {
+		name, _ := asciiGlyph(byte(b))
+		if strings.HasPrefix(name, "ascii_") {
+			t.Errorf("byte 0x%02x has fallback name %q; add an explicit punctuation name", b, name)
+		}
+		entry, ok := FindByName(entries, name)
+		if !ok {
+			t.Errorf("missing ASCII entry %q", name)
+			continue
+		}
+		wantCategory := "ascii"
+		if b >= 'A' && b <= 'Z' {
+			wantCategory = "puny"
+		}
+		if entry.Category != wantCategory {
+			t.Errorf("%s category = %q, want %q", name, entry.Category, wantCategory)
+		}
+	}
+	for b := 0x9a; b <= 0xfd; b++ {
+		entry, ok := FindByByte(entries, byte(b))
+		if !ok || entry.Category != "kana" {
+			t.Errorf("byte 0x%02x = %+v, want kana", b, entry)
+		}
+	}
+}
+
 func TestLookupBuiltins(t *testing.T) {
 	entries := Builtins()
 	for _, name := range []string{"left", "p8_left", "p8-left", "LEFT"} {

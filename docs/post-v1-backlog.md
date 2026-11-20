@@ -27,9 +27,10 @@ The following backlog items have been promoted and split into milestone specs:
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
-M17, M18, and M19 shipped together in v1.6.0. The separately planned v1.7.0
-and v1.8.0 tags were folded into that release. The items below are not part of
-that release.
+M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
+v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
+later additive catalog-coverage release. The items below are not part of these
+releases.
 
 ## Prioritization
 
