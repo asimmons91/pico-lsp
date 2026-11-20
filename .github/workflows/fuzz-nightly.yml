@@ -55,3 +55,9 @@ jobs:
 
       - name: Fuzz cart parser
         run: go test -run=^$ -fuzz=FuzzParse -fuzztime=60s ./pkg/cart
+
+      - name: Fuzz glyph catalog
+        run: go test -run=^$ -fuzz=FuzzNormalizeDefinition -fuzztime=60s ./pkg/glyphs
+
+      - name: Fuzz public server frames
+        run: go test -run=^$ -fuzz=FuzzMalformedFrames -fuzztime=60s ./pkg/lsp

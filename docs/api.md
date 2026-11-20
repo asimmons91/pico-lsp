@@ -262,6 +262,8 @@ without a compressed budget show `compressed n/a`. Disable the lens with
 
 Go programs can import stable public facades without importing `internal/`
 packages. These packages are additive and do not change the LSP protocol.
+`pico8/cartInfo`, `pico8/decodeCart`, and `pico8/glyphs` remain protocol
+requests; they are not Go APIs.
 
 ### `pkg/p8scii`
 
@@ -302,3 +304,55 @@ glyph 13) as data, forcing a CRLF terminator when the CR is adjacent to one.
 `Owner` requires an absolute `.p8` or `.lua` path; it finds the nearest
 ancestor cart that includes the `.lua` file and is safe for concurrent use.
 Added in v1.7.0 and stable under semver.
+
+### `pkg/lsp`
+
+`github.com/asimmons91/pico-lsp/pkg/lsp` runs the server in-process over a
+caller-owned stream:
+
+```go
+serverPipe, clientPipe := net.Pipe()
+
+srv := lsp.New(lsp.Options{Logger: logger}) // nil Logger is silent
+conn := srv.Serve(ctx, jsonrpc2.NewStream(serverPipe))
+defer conn.Close()
+
+_, clientConn, client := protocol.NewClient(
+	clientCtx, editor, jsonrpc2.NewStream(clientPipe),
+)
+defer clientConn.Close()
+
+result, err := client.Initialize(ctx, params)
+```
+
+`New` always returns a usable server, and the zero `Options` is valid. One
+server serves one connection. Configuration arrives through
+`initializationOptions.pico8` and `workspace/configuration`; there are no Go
+settings types. The caller supplies the transport, workspace folders in the
+`initialize` params, and the lifecycle: cancel the context or close the
+returned connection. `Serve` never writes to stdout, and a nil logger discards
+all records. The in-process server advertises the same capabilities and
+`ServerInfo` version as the stdio binary. Added in v1.8.0 and stable under
+semver.
+
+### `pkg/glyphs`
+
+`github.com/asimmons91/pico-lsp/pkg/glyphs` exposes the P8SCII glyph catalog
+used by `pico8/glyphs` and glyph completion:
+
+```go
+entries := glyphs.Builtins()                    // 55 built-in entries, a copy
+heart, heartOK := glyphs.FindByName(entries, "p8_heart")
+left, leftOK := glyphs.FindByByte(entries, 0x8b)
+
+slot := 0x80
+entries, warnings := glyphs.Build([]glyphs.Definition{
+	{Name: "logo", Byte: &slot},
+})
+```
+
+`Entry` and `Definition` alias the server's catalog types, so their JSON tags
+are part of the public contract. `Builtins` returns a copy and `Build` keeps
+the server's merge, override, and warning behavior. `pico8/glyphs` remains the
+canonical picker path for LSP clients; both read the same catalog. Added in
+v1.8.0 and stable under semver.
