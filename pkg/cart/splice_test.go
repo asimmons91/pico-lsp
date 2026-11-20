@@ -323,6 +323,27 @@ func TestReplaceCodeRoundTripsDataCRBeforeCRLF(t *testing.T) {
 	}
 }
 
+func TestReplaceCodeSecondSaveUsesCRLFStyle(t *testing.T) {
+	doc := parseFixture(t, "all_sections.p8")
+	first, err := doc.ReplaceCode("s=[[a\r\r\nb]]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reparsed, err := cart.Parse("game.p8", first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := reparsed.ReplaceCode(reparsed.Code())
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := bodyBetween(t, second, "__lua__\n", "__gfx__")
+	want := "s=[[a\r\r\nb]]\r\n"
+	if body != want {
+		t.Fatalf("second-save body = %q, want %q", body, want)
+	}
+}
+
 func bodyBetween(t *testing.T, data []byte, prefix, suffix string) string {
 	t.Helper()
 	start := bytes.Index(data, []byte(prefix))

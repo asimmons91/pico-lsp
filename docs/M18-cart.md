@@ -29,7 +29,7 @@ Confirmed before implementation:
 |---|---|---|
 | D1 | Public model | A new cart-only `Document` API. Internal `cart.Cart`, `Snapshot`, and source-map types are not exposed. |
 | D2 | Parse boundary | `Parse` is pure: it never reads the filesystem, resolves `#include`, or flattens includes. `Code()` retains directive text. |
-| D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style. |
+| D3 | Code replacement | `ReplaceCode` takes the complete code body, including `-->8` markers. It preserves blank lines and the code section's newline style; a data CR adjacent to a required terminator forces CRLF (see §4). |
 | D4 | Missing code section | A cart without `__lua__` parses for inspection (`HasCode` false) but cannot be spliced; `ReplaceCode` returns a typed error. No section is created implicitly. |
 | D5 | Byte preservation | Only the `__lua__` body changes. The BOM, header, section order, unknown sections, and every non-code byte are preserved. An unterminated `__lua__` header is a save error, never rewritten. |
 | D6 | File writing | `ReplaceCode` returns bytes. Atomic writes and fsync stay in pico-editor's `fsutil`. |
@@ -175,8 +175,10 @@ func (d *Document) ReplaceCode(code string) ([]byte, error)
   exception to model parity below.
 - `pico8/cartInfo` keeps its historical line values: an empty code body
   followed by another section reports the `__lua__` header line, and the last
-  tab at EOF includes the virtual line after a trailing terminator. These
-  compatibility values can differ from `pkg/cart` by one line in those cases.
+  tab at EOF includes the virtual line after a trailing terminator. Tab folding
+  likewise keeps that historical virtual EOF line. These compatibility values
+  can differ from `pkg/cart` by one line in those cases; the public `Tab.EndLine`
+  remains exclusive.
 - The public and internal LSP tab models must use the same column-0 rule and
   tab boundaries; line coordinates and cartInfo compatibility follow the notes
   above.
@@ -376,7 +378,8 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [x] `pkg/cart.Document` parses `.p8` carts without exposing internal types.
 - [x] `Parse` never reads the filesystem or flattens includes.
 - [x] `Code()` preserves CRLF; `ReplaceCode` re-applies the original code
-      newline style and changes only the `__lua__` body.
+      newline style, except for the documented data-CR CRLF exception, and
+      changes only the `__lua__` body.
 - [x] BOM, unknown sections, section order, and blank lines are preserved.
 - [x] Missing, empty, and duplicate `__lua__` cases match the spec.
 - [x] `Tabs` follows column-0 markers, zero-based indices, full-cart lines,
@@ -390,14 +393,15 @@ document and the input text. `Resolver` owns a mutex-protected cache and a
 - [ ] `v1.7.0` is tagged and pico-editor M4 can pin it.
 - [x] No LSP wire-contract change; the column-0 marker and lone-CR scanner
       fixes are recorded and covered by golden tests, with the documented
-      cartInfo historical values and LSP line-coordinate exception.
+      cartInfo/folding historical virtual EOF values and LSP line-coordinate
+      exception.
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
 | Save corrupts non-code sections | Golden byte-diff tests on real carts; only the Lua body is replaced. |
-| CRLF normalization surprises users | `Code()` preserves the original style; `ReplaceCode` restores it; round-trip tests include CRLF carts. |
+| CRLF normalization surprises users | `Code()` preserves the original style; `ReplaceCode` restores it, except when a data CR forces CRLF to stay data; round-trip tests include CRLF carts. |
 | Public API leaks internal types | New `Document` model, consumer module, and an exported-signature review. |
 | Parse accidentally resolves includes | Pure parse contract, missing-include fixture, and no loader/Provider dependency in `pkg/cart`. |
 | Include ownership drifts from the LSP resolver | Shared include scanner and public-vs-internal parity tests. |

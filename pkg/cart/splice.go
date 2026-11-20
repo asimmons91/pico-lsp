@@ -10,9 +10,12 @@ import (
 //
 // Only the existing body region changes. The BOM, header, section order,
 // unknown sections, line endings outside the code body, and every other byte
-// are preserved. Code is normalized to LF and then restored to CRLF when the
-// original body used CRLF. A lone CR is P8SCII glyph 13 data and is never
-// treated as a line terminator.
+// are preserved. Code is normalized to LF and restored to the body's CRLF
+// style. A lone CR is P8SCII glyph 13 data and is never treated as a line
+// terminator. A data CR immediately before a caller CRLF, or at the end of code
+// that needs a following-section terminator, forces a CRLF terminator so the CR
+// stays data; the resulting body then counts as CRLF-styled for later
+// replacements.
 //
 // ReplaceCode never mutates the document and never returns partial output.
 func (d *Document) ReplaceCode(code string) ([]byte, error) {
