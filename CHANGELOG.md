@@ -15,6 +15,17 @@ All notable changes to this project are documented here. The format follows
 - Public `pkg/cart` package (M18): pure `.p8` parsing for code, tabs, sections,
   and lexical includes; byte-preserving `ReplaceCode`; typed parse and splice
   errors; and a cached, concurrency-safe `Resolver` for include ownership.
+- Public `pkg/lsp` package (M19): an in-process server with `Options`, `New`,
+  and `Serve(ctx, stream)` over a caller-owned `jsonrpc2.Stream`. It advertises
+  the same capabilities and version as the stdio binary, logs only through the
+  supplied `slog.Logger`, and never writes to stdout.
+- Public `pkg/glyphs` package (M19): the canonical P8SCII catalog with
+  `Builtins`, `Build`, `NormalizeDefinition`, `FindByName`, and `FindByByte`,
+  plus the `Entry`, `Definition`, and `Context` types shared with
+  `pico8/glyphs`.
+
+Additive; stdio server behavior, capabilities, and the LSP wire contract are
+unchanged.
 
 ### Fixed
 

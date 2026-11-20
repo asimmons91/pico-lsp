@@ -28,8 +28,8 @@ The following backlog items have been promoted and split into milestone specs:
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17 is merged and pending the v1.6.0 tag. M18 is done; its v1.7.0 tag is
-deferred to the manual release pass after M19. M19 is specified and not yet
-implemented. The items below are not part of those releases.
+deferred to the manual release pass after M19. M19 is done; the v1.8.0 tag is
+pending. The items below are not part of those releases.
 
 ## Prioritization
 

@@ -72,6 +72,11 @@ jobs:
         run: go test -count=1 ./...
         working-directory: testdata/publicapi/cart
 
+      - name: Test LSP public API consumer module
+        if: runner.os == 'Linux'
+        run: go test -count=1 ./...
+        working-directory: testdata/publicapi/lsp
+
       - name: Coverage
         if: runner.os == 'Linux'
         run: go test -count=1 -coverprofile=coverage.out ./...
@@ -250,6 +255,12 @@ jobs:
 
       - name: Fuzz cart parser
         run: go test -run=^$ -fuzz=FuzzParse -fuzztime=10s ./pkg/cart
+
+      - name: Fuzz glyph catalog
+        run: go test -run=^$ -fuzz=FuzzNormalizeDefinition -fuzztime=10s ./pkg/glyphs
+
+      - name: Fuzz public server frames
+        run: go test -run=^$ -fuzz=FuzzMalformedFrames -fuzztime=10s ./pkg/lsp
 
   release-snapshot:
     name: release snapshot

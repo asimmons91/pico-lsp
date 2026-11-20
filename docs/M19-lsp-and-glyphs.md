@@ -1,6 +1,6 @@
 # M19 — LSP and Glyph Public Packages
 
-**Status:** Planned — spec ready, implementation not started
+**Status:** Done — implementation complete; v1.8.0 release pending
 
 **Depends on:** M18  
 **Release target:** v1.8.0  
@@ -216,17 +216,17 @@ func FindByByte(entries []Entry, value byte) (Entry, bool)
 
 ## Exit criteria
 
-- [ ] `pkg/lsp` exposes only `Options`, `Server`, `New`, and `Serve`.
-- [ ] `pkg/glyphs` exposes the catalog types, constants, and functions without
+- [x] `pkg/lsp` exposes only `Options`, `Server`, `New`, and `Serve`.
+- [x] `pkg/glyphs` exposes the catalog types, constants, and functions without
       internal types in signatures.
-- [ ] An in-memory LSP client completes initialize, open, diagnostics,
+- [x] An in-memory LSP client completes initialize, open, diagnostics,
       semantic tokens, configuration, and shutdown.
-- [ ] Advertised capabilities and `ServerInfo` match the stdio server.
-- [ ] The server writes nothing to stdout and respects the supplied logger.
-- [ ] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
-- [ ] The external consumer module imports only public packages and runs in CI.
+- [x] Advertised capabilities and `ServerInfo` match the stdio server.
+- [x] The server writes nothing to stdout and respects the supplied logger.
+- [x] `go test -race`, lint, vet, gofmt, and the consumer readonly build pass.
+- [x] The external consumer module imports only public packages and runs in CI.
 - [ ] `v1.8.0` is tagged and pico-editor M5 can pin it.
-- [ ] No existing stdio server behavior or LSP capability changed.
+- [x] No existing stdio server behavior or LSP capability changed.
 
 ## Risks and mitigations
 
