@@ -218,9 +218,9 @@ Run **PICO-8: Copy Server Diagnostics** to place a Markdown block on the
 clipboard containing the extension version, server version, version status,
 server source, resolved path, platform and architecture, cache root,
 workspace-folder count, Lua attachment state, running state, and the last
-startup error. It works when the server is running, stopped, or failed, and it
-never copies source text or cart contents. Paste it into an issue report
-together with the steps to reproduce the problem.
+startup error when present. It works when the server is running, stopped, or
+failed, and it never copies source text or cart contents. Paste it into an issue
+report together with the steps to reproduce the problem.
 
 ## Logs and stdout
 

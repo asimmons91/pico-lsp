@@ -16,8 +16,8 @@ Marketplace publishing is not available yet. Install the
    **Install from VSIX...**.
 3. Open a folder containing a `.p8` cart.
 
-The extension version and server version are identical. For example, extension
-`1.7.0` downloads `pico-lsp` v1.7.0 on first use.
+By default, the extension version and server version are identical. For example,
+extension `1.7.0` downloads `pico-lsp` v1.7.0 on first use.
 
 ## Server installation
 
@@ -46,7 +46,8 @@ features; the extension shows one advisory warning with **Show Server Info**,
 downloaded mismatches offer **Clear Server Cache** instead. Development builds
 report “development build” and do not produce a mismatch warning. Use
 **PICO-8: Copy Server Diagnostics** to copy the extension and server versions,
-source, path, platform, cache root, and last startup error for an issue report.
+source, path, platform, cache root, and last startup error when present for an
+issue report.
 
 ## Language support
 
@@ -108,8 +109,8 @@ test.
 
 **PICO-8: Show Server Info** writes the current extension version, server
 version and source, path, platform, cache root, workspace-folder count, Lua
-attachment state, and last startup error to the **PICO-8 Language Server**
-output channel. Both info commands work when the server is stopped or failed.
+attachment state, and last startup error when present to the **PICO-8 Language
+Server** output channel. Both info commands work when the server is stopped or failed.
 **PICO-8: Copy Server Diagnostics** copies the same block as Markdown to the
 clipboard.
 

@@ -169,8 +169,8 @@ pre-release versions, and Go pseudo-versions) are labeled â€œdevelopment buildâ€
 and do not warn. The comparison is an exact normalized `X.Y.Z` check, not a
 semver compatibility range. Use **PICO-8: Copy Server Diagnostics** to copy the
 versions, source, path, platform, cache root, workspace-folder count, Lua
-attachment state, and last startup error without copying source text or cart
-contents.
+attachment state, and last startup error when present, without copying source
+text or cart contents.
 
 The VS Code client also reads four extension-owned settings. They are not sent
 to the language server as behavior settings.

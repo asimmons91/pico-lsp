@@ -18,9 +18,9 @@ All notable changes to this project are documented here. The format follows
   `pico8.serverPath`, a cached download, or a new download, and shows one
   non-blocking warning when a release server version differs from the extension
   version. **PICO-8: Show Server Info** writes versions, source, path, platform,
-  cache root, workspace-folders, Lua attachment, and the last startup error to
-  the output channel; **PICO-8: Copy Server Diagnostics** copies the same
-  metadata as Markdown without source text or cart contents.
+  cache root, workspace-folders, Lua attachment, and the last startup error
+  when present to the output channel; **PICO-8: Copy Server Diagnostics** copies
+  the same metadata as Markdown without source text or cart contents.
 - The built-in P8SCII glyph catalog now covers every printable byte
   (`0x10`–`0xff`). ASCII punctuation, digits, standard letters, puny-font
   uppercase letters, Hiragana, and Katakana get stable names for
