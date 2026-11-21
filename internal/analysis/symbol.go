@@ -198,12 +198,18 @@ type Result struct {
 	// symbols. Runtime receiver fields link back through Symbol.ClassField.
 	ClassFields map[string]map[string]*Symbol
 
-	typeNames     map[string]types.Type
-	aliasRaw      map[string]string
-	aliasNameSpan map[string]source.Span
-	enumNameSpan  map[string]source.Span
-	funcSymbols   map[*syntax.FunctionExpr]*Symbol
-	diagLines     map[Diagnostic]int
+	typeNames      map[string]types.Type
+	aliasRaw       map[string]string
+	aliasNameSpan  map[string]source.Span
+	aliasNameSpans map[string][]source.Span
+	enumNameSpan   map[string]source.Span
+	enumNameSpans  map[string][]source.Span
+	funcSymbols    map[*syntax.FunctionExpr]*Symbol
+	// annotationGenerics records the generic names visible at each annotation
+	// type-reference span. Rename refuses a type name that would be captured by
+	// a generic in that context.
+	annotationGenerics map[source.Span]map[string]struct{}
+	diagLines          map[Diagnostic]int
 
 	// Casts, AsCasts, and DiagnosticDirectives are parsed annotation directives
 	// used by inference and diagnostic suppression.
@@ -667,6 +673,9 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 		if other := r.TypeSymbols[newCanonical]; other != nil && other != sym {
 			return other
 		}
+		if r.typeNameCapturedByGeneric(sym, newCanonical) {
+			return &Symbol{Name: newCanonical, Canonical: newCanonical}
+		}
 		return nil
 	}
 	table := r.Table
@@ -754,6 +763,20 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 		}
 	}
 	return nil
+}
+
+func (r *Result) typeNameCapturedByGeneric(sym *Symbol, newCanonical string) bool {
+	if r == nil || sym == nil || newCanonical == "" {
+		return false
+	}
+	for _, span := range sym.Uses {
+		if generics := r.annotationGenerics[span]; generics != nil {
+			if _, ok := generics[newCanonical]; ok {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (r *Result) classFieldRenameConflict(canonical *Symbol, newCanonical string) *Symbol {

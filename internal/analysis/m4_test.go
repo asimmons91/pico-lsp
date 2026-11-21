@@ -369,10 +369,20 @@ func symbolByName(result *Result, name string) *Symbol {
 		return nil
 	}
 	canonical := CanonicalName(name)
+	var field *Symbol
 	for _, sym := range result.Table.Symbols {
-		if sym != nil && sym.Canonical == canonical {
+		if sym == nil || sym.Canonical != canonical {
+			continue
+		}
+		if sym.Owner == nil {
 			return sym
 		}
+		if field == nil {
+			field = sym
+		}
+	}
+	if field != nil {
+		return field
 	}
 	for name, sym := range result.Table.Builtins {
 		if name == canonical {

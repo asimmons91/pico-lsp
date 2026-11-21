@@ -3,6 +3,8 @@ package analysis
 import (
 	"strings"
 	"testing"
+
+	"github.com/asimmons91/pico-lsp/internal/analysis/types"
 )
 
 func occurrenceTexts(text string, occurrences []Occurrence) []string {
@@ -582,6 +584,261 @@ func TestAnnotationCastTarget(t *testing.T) {
 	castOffset := strings.Index(text, "---@cast p: Player") + len("---@cast ")
 	if occ := result.OccurrenceAt(0, castOffset); occ == nil || occ.Symbol != p {
 		t.Fatalf("OccurrenceAt(cast) = %+v", occ)
+	}
+}
+
+func TestAnnotationGenericClassReceiver(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Box<T>",
+		"---@field item T",
+		"local Box = {}",
+		"Box.item = 1",
+		"---@type Box<number>",
+		"local b = Box",
+		"local item = b.item",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	boxField := result.ClassFields["box"]["item"]
+	if boxField == nil {
+		t.Fatal("missing Box.item")
+	}
+	b := findSymbolByCanonical(result, "b")
+	if b == nil || b.Fields["item"] == nil || b.Fields["item"].ClassField != boxField {
+		t.Fatalf("generic receiver b.item = %+v, want Box.item", b)
+	}
+	if hasDiagnostic(result, CodeAnnotationUnknownType) {
+		t.Fatalf("generic receiver produced unknown-type diagnostics: %+v", result.Diagnostics)
+	}
+	if got := types.Display(symbolByName(result, "item").Type); got != "number" {
+		t.Fatalf("generic receiver item type = %q, want number", got)
+	}
+	if occs := result.OccurrencesForSymbol(boxField); len(occs) != 3 {
+		t.Fatalf("generic field occurrences = %v, want annotation, Box.item, b.item", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationGenericParentField(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Base<T>",
+		"---@field hp T",
+		"---@class Player: Base<number>",
+		"local Player = {}",
+		"---@type Player",
+		"local p = Player",
+		"local hp = p.hp",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	baseField := result.ClassFields["base"]["hp"]
+	if baseField == nil {
+		t.Fatal("missing Base.hp")
+	}
+	p := findSymbolByCanonical(result, "p")
+	if p == nil || p.Fields["hp"] == nil || p.Fields["hp"].ClassField != baseField {
+		t.Fatalf("generic parent receiver p.hp = %+v, want Base.hp", p)
+	}
+	if hasDiagnostic(result, CodeAnnotationUnknownType) {
+		t.Fatalf("generic parent produced unknown-type diagnostics: %+v", result.Diagnostics)
+	}
+	if got := types.Display(symbolByName(result, "hp").Type); got != "number" {
+		t.Fatalf("generic parent hp type = %q, want number", got)
+	}
+	if !result.Renameable(baseField) {
+		t.Fatal("generic parent field should be renameable")
+	}
+}
+
+func TestAnnotationNestedInheritedField(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Body",
+		"---@field arm number",
+		"---@class Base",
+		"---@field body Body",
+		"---@class Player: Base",
+		"local Player = {}",
+		"---@type Player",
+		"local p = Player",
+		"p.body.arm = 1",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	baseBody := result.ClassFields["base"]["body"]
+	bodyArm := result.ClassFields["body"]["arm"]
+	if baseBody == nil || bodyArm == nil {
+		t.Fatal("missing canonical fields")
+	}
+	p := findSymbolByCanonical(result, "p")
+	if p == nil || p.Fields["body"] == nil || p.Fields["body"].ClassField != baseBody {
+		t.Fatalf("p.body = %+v, want Base.body", p)
+	}
+	if p.Fields["body"].Doc == nil || p.Fields["body"].Doc.Type != "Body" {
+		t.Fatalf("p.body docs = %+v, want Body", p.Fields["body"].Doc)
+	}
+	arm := p.Fields["body"].Fields["arm"]
+	if arm == nil || arm.ClassField != bodyArm {
+		t.Fatalf("p.body.arm = %+v, want Body.arm", arm)
+	}
+	if occs := result.OccurrencesForSymbol(bodyArm); len(occs) != 2 {
+		t.Fatalf("nested inherited occurrences = %v, want annotation and write", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationSubclassDynamicAccessBlocksInheritedFieldRename(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Base",
+		"---@field hp number",
+		"local Base = {}",
+		"---@class Player: Base",
+		"local Player = {}",
+		"---@type Base",
+		"local b = Base",
+		"b.hp = 1",
+		"---@type Player",
+		"local p = Player",
+		"local key = \"hp\"",
+		"p[key] = 1",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	baseField := result.ClassFields["base"]["hp"]
+	if baseField == nil {
+		t.Fatal("missing Base.hp")
+	}
+	p := findSymbolByCanonical(result, "p")
+	if p == nil || p.Fields["hp"] == nil || p.Fields["hp"].ClassField != baseField {
+		t.Fatalf("subclass dynamic receiver p.hp = %+v, want Base.hp", p)
+	}
+	if result.Renameable(baseField) {
+		t.Fatal("inherited field with dynamic subclass access should not be renameable")
+	}
+	if conflict := result.RenameConflict(baseField, "armor"); conflict == nil {
+		t.Fatal("dynamic subclass access should produce a rename conflict")
+	}
+}
+
+func TestAnnotationOccurrencesDoNotCountAsLintUses(t *testing.T) {
+	text := "local x = 1\n---@cast x number\n"
+	result := analyzeTextLint(t, text, LintOptions{UnusedLocal: SeverityWarning})
+	if !hasDiagnostic(result, CodeUnusedLocal) {
+		t.Fatalf("unused local was suppressed by an annotation use: %+v", result.Diagnostics)
+	}
+}
+
+func TestAnnotationOccurrencesDoNotEmitDeprecatedHints(t *testing.T) {
+	text := strings.Join([]string{
+		"---@deprecated",
+		"local x = 1",
+		"---@cast x number",
+		"print(x)",
+		"",
+	}, "\n")
+	result := analyzeTextMode(t, text, TypeCheckingBasic)
+	var spans []string
+	for _, diag := range result.Diagnostics {
+		if diag.Code == CodeDeprecated {
+			spans = append(spans, text[diag.Span.Start:diag.Span.End])
+		}
+	}
+	if len(spans) != 1 {
+		t.Fatalf("deprecated spans = %v, want one code use", spans)
+	}
+}
+
+func TestAnnotationDuplicateAliasDeclarations(t *testing.T) {
+	text := strings.Join([]string{
+		"---@alias Mode string",
+		"---@alias Mode number",
+		"---@param m Mode",
+		"local function set_mode(m) end",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	mode := result.TypeSymbols["mode"]
+	if mode == nil || len(mode.Decls) != 2 {
+		t.Fatalf("alias declarations = %+v, want both @alias lines", mode)
+	}
+	if occs := result.OccurrencesForSymbol(mode); len(occs) != 3 {
+		t.Fatalf("alias occurrences = %v, want two declarations and the type reference", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationClassNameAliasCollision(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Shared",
+		"local A = {}",
+		"---@alias Shared string",
+		"---@param value Shared",
+		"local function use(value) end",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	shared := result.TypeSymbols["shared"]
+	if shared == nil || len(shared.Decls) != 2 {
+		t.Fatalf("shared type = %+v, want class and alias declarations on one symbol", shared)
+	}
+	if occs := result.OccurrencesForSymbol(shared); len(occs) != 3 {
+		t.Fatalf("shared occurrences = %v, want two declarations and the type reference", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationDuplicateGenericClassHeader(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class T",
+		"local TClass = {}",
+		"---@class Box<T>",
+		"---@field first T",
+		"local Box = {}",
+		"---@class Box",
+		"---@field second T",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	classT := result.TypeSymbols["t"]
+	if classT == nil {
+		t.Fatal("missing T class")
+	}
+	if occs := result.OccurrencesForSymbol(classT); len(occs) != 1 {
+		t.Fatalf("class T occurrences = %v, want only its declaration", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationTypeRenameCapturedByGeneric(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Player",
+		"local Player = {}",
+		"---@class Box<T>",
+		"---@field owner Player",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	player := result.TypeSymbols["player"]
+	if player == nil {
+		t.Fatal("missing Player class")
+	}
+	if conflict := result.RenameConflict(player, "t"); conflict == nil {
+		t.Fatal("type rename to a generic parameter should conflict")
+	}
+}
+
+func TestAnnotationPrimitiveParentDoesNotLinkFields(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class string",
+		"---@field len number",
+		"---@class Player: string",
+		"local Player = {}",
+		"---@type Player",
+		"local p = Player",
+		"print(p.len)",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	p := findSymbolByCanonical(result, "p")
+	if p == nil || p.Fields["len"] == nil {
+		t.Fatalf("missing p.len: %+v", p)
+	}
+	if p.Fields["len"].ClassField != nil {
+		t.Fatalf("primitive parent linked p.len to %+v", p.Fields["len"].ClassField)
 	}
 }
 

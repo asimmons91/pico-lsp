@@ -385,6 +385,114 @@ func TestEndToEndAnnotationFieldRenameAndNavigation(t *testing.T) {
 	}
 }
 
+func TestEndToEndAnnotationGenericFieldRename(t *testing.T) {
+	text := strings.Join([]string{
+		"pico-8 cartridge // pico-8.com",
+		"version 42",
+		"__lua__",
+		"---@class Box<T>",
+		"---@field item T",
+		"local Box = {}",
+		"Box.item = 1",
+		"---@type Box<number>",
+		"local b = Box",
+		"print(b.item)",
+		"",
+	}, "\n")
+	h, root, ctx, cancel := openAnnotationCart(t, text)
+	defer cancel()
+	defer h.exit(t, true)
+
+	annotationPos := positionAt(t, text, "---@field item", len("---@field "))
+	itemPos := positionAt(t, text, "print(b.item)", len("print(b."))
+	def, err := h.server.Definition(ctx, &protocol.DefinitionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     itemPos,
+		},
+	})
+	if err != nil {
+		t.Fatalf("definition: %v", err)
+	}
+	locs := definitionLocations(t, def)
+	if len(locs) != 1 || locs[0].Range.Start != annotationPos {
+		t.Fatalf("definition = %+v, want ---@field item", locs)
+	}
+
+	rename, err := h.server.Rename(ctx, &protocol.RenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     itemPos,
+		},
+		NewName: "value",
+	})
+	if err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+	edits := rename.Changes[root]
+	if len(edits) != 3 {
+		t.Fatalf("rename edits = %+v, want annotation, Box.item, and b.item", edits)
+	}
+}
+
+func TestEndToEndAnnotationDuplicateAliasRename(t *testing.T) {
+	text := strings.Join([]string{
+		"pico-8 cartridge // pico-8.com",
+		"version 42",
+		"__lua__",
+		"---@alias Mode string",
+		"---@alias Mode number",
+		"---@param m Mode",
+		"local function set_mode(m) end",
+		"",
+	}, "\n")
+	h, root, ctx, cancel := openAnnotationCart(t, text)
+	defer cancel()
+	defer h.exit(t, true)
+
+	secondAlias := positionAt(t, text, "---@alias Mode number", len("---@alias "))
+	prepare, err := h.server.PrepareRename(ctx, &protocol.PrepareRenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     secondAlias,
+		},
+	})
+	if err != nil {
+		t.Fatalf("prepareRename: %v", err)
+	}
+	placeholder, ok := prepare.(*protocol.PrepareRenamePlaceholder)
+	if !ok || placeholder.Placeholder != "Mode" {
+		t.Fatalf("prepareRename = %T %+v, want Mode", prepare, prepare)
+	}
+
+	def, err := h.server.Definition(ctx, &protocol.DefinitionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     secondAlias,
+		},
+	})
+	if err != nil {
+		t.Fatalf("definition: %v", err)
+	}
+	if locs := definitionLocations(t, def); len(locs) != 2 {
+		t.Fatalf("definition = %+v, want both alias declarations", locs)
+	}
+
+	rename, err := h.server.Rename(ctx, &protocol.RenameParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Position:     secondAlias,
+		},
+		NewName: "State",
+	})
+	if err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+	if edits := rename.Changes[root]; len(edits) != 3 {
+		t.Fatalf("rename edits = %+v, want both aliases and the type reference", edits)
+	}
+}
+
 func TestEndToEndAnnotationCastRename(t *testing.T) {
 	text := strings.Join([]string{
 		"pico-8 cartridge // pico-8.com",

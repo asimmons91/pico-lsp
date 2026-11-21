@@ -171,8 +171,8 @@ namespace separate from code identifiers.
 - `@param` names resolve to the function's parameter symbols and count as uses.
 - `@field` names declare canonical field symbols for the class. Runtime fields
   on receivers typed by that class link to the same canonical symbol,
-  including locals, `@param` parameters, implicit method `self`, and receivers
-  of subclasses.
+  including locals, `@param` parameters, implicit method `self`, generic
+  applications such as `Box<number>`, and receivers of subclasses.
 - `@cast` names resolve to the visible local, parameter, or global.
 - `@class`, `@alias`, and `@enum` names declare type symbols. Type identifiers
   in annotation type expressions resolve to them, including `@param`, `@return`,
@@ -190,7 +190,11 @@ namespace separate from code identifiers.
   access.
 - Renaming a type updates only annotation occurrences; code identifiers that
   happen to share a spelling are a separate namespace and are left alone.
-  Likewise, code rename checks do not treat type names as collisions.
+  Likewise, code rename checks do not treat type names as collisions. A type
+  rename refuses a new name that would be captured by a generic parameter in an
+  annotation that references the type.
+- Duplicate `@class`, `@field`, `@alias`, and `@enum` declarations remain
+  individually navigable and rename together.
 - Annotation occurrences never produce code lint diagnostics.
 
 ### Go-to-definition

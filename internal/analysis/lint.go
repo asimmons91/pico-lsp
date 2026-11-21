@@ -208,6 +208,9 @@ func unusedLocal(result *Result, sym *Symbol) bool {
 		return false
 	}
 	for _, occ := range result.OccurrencesForSymbol(sym) {
+		if occ.Annotation {
+			continue
+		}
 		if !occ.Decl && !occ.Write {
 			return false
 		}

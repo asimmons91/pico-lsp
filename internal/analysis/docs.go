@@ -746,7 +746,7 @@ func attachClassFields(result *Result) {
 		return
 	}
 	for _, sym := range result.Table.Symbols {
-		if sym == nil || sym.Builtin || isClassFieldDeclaration(sym) {
+		if sym == nil || sym.Builtin || IsTypeSymbol(sym) || isClassFieldDeclaration(sym) {
 			continue
 		}
 		class := result.classForSymbol(sym)
@@ -786,25 +786,62 @@ func attachClassFields(result *Result) {
 			applyClassFieldDoc(fieldSym, field)
 			sym.Fields[canonical] = fieldSym
 		}
-		// Link fields inherited from parent classes so annotation rename and
-		// references reach the parent's `---@field` declaration too.
-		for key, fieldSym := range sym.Fields {
-			if fieldSym == nil || fieldSym.ClassField != nil || isClassFieldDeclaration(fieldSym) {
+		// Materialize fields inherited from parent classes so rename,
+		// references, dynamic-access checks, and nested field families see
+		// them even when the receiver never uses the field statically.
+		inherited := result.ancestorClassFields(classCanonical)
+		keys := make([]string, 0, len(inherited))
+		for key := range inherited {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			parentField := inherited[key]
+			if parentField == nil {
 				continue
 			}
-			if parentField := ancestorClassField(result, classCanonical, key); parentField != nil {
-				fieldSym.ClassField = parentField
+			if existing := sym.Fields[key]; existing != nil {
+				if existing.ClassField != nil || isClassFieldDeclaration(existing) {
+					continue
+				}
+				existing.ClassField = parentField
+				existing.FromClass = true
+				result.applyCanonicalFieldDoc(existing, parentField)
+				continue
 			}
+			fieldSym := result.Table.NewSymbol(SymbolField, parentField.Name, parentField.DeclSpan, nil)
+			fieldSym.Owner = sym
+			fieldSym.FromClass = true
+			fieldSym.ClassField = parentField
+			result.applyCanonicalFieldDoc(fieldSym, parentField)
+			sym.Fields[key] = fieldSym
 		}
 	}
 }
 
-func ancestorClassField(result *Result, classCanonical, fieldCanonical string) *Symbol {
-	if result == nil || classCanonical == "" || fieldCanonical == "" {
-		return nil
+// ancestorClassFields returns fields inherited through parent classes, nearest
+// parents first.
+func (r *Result) ancestorClassFields(classCanonical string) map[string]*Symbol {
+	out := make(map[string]*Symbol)
+	if r == nil || classCanonical == "" {
+		return out
+	}
+	class := r.Classes[classCanonical]
+	if class == nil {
+		return out
 	}
 	seen := make(map[string]struct{})
-	queue := []string{classCanonical}
+	queue := make([]string, 0, len(class.Parents))
+	enqueue := func(parent string) {
+		name := singleClassName(parent)
+		if name == "" || IsPrimitiveTypeName(name) {
+			return
+		}
+		queue = append(queue, CanonicalName(name))
+	}
+	for _, parent := range class.Parents {
+		enqueue(parent)
+	}
 	for len(queue) > 0 {
 		canonical := queue[0]
 		queue = queue[1:]
@@ -812,24 +849,80 @@ func ancestorClassField(result *Result, classCanonical, fieldCanonical string) *
 			continue
 		}
 		seen[canonical] = struct{}{}
-		class := result.Classes[canonical]
-		if class == nil {
+		ancestor := r.Classes[canonical]
+		if ancestor == nil {
 			continue
 		}
-		for _, parent := range class.Parents {
-			parentCanonical := CanonicalName(parent)
-			if base := classTypeName(parent); base != "" {
-				parentCanonical = CanonicalName(base)
-			}
-			if fields := result.ClassFields[parentCanonical]; fields != nil {
-				if field := fields[fieldCanonical]; field != nil {
-					return field
+		if fields := r.ClassFields[canonical]; fields != nil {
+			for key, field := range fields {
+				if field != nil && out[key] == nil {
+					out[key] = field
 				}
 			}
-			queue = append(queue, parentCanonical)
+		}
+		for _, parent := range ancestor.Parents {
+			enqueue(parent)
 		}
 	}
-	return nil
+	return out
+}
+
+func (r *Result) applyCanonicalFieldDoc(sym, canonical *Symbol) {
+	if sym == nil || canonical == nil || canonical.Doc == nil {
+		return
+	}
+	if sym.Doc == nil {
+		sym.Doc = &DocComment{}
+	}
+	if sym.Doc.Type == "" && !r.fieldTypeUsesClassGenerics(canonical) {
+		sym.Doc.Type = canonical.Doc.Type
+	}
+	if sym.Doc.Summary == "" {
+		sym.Doc.Summary = canonical.Doc.Summary
+	}
+	sym.Doc.Optional = sym.Doc.Optional || canonical.Doc.Optional
+}
+
+func (r *Result) fieldTypeUsesClassGenerics(canonical *Symbol) bool {
+	if r == nil || canonical == nil || canonical.Doc == nil || canonical.Owner == nil {
+		return false
+	}
+	class := r.classForSymbol(canonical.Owner)
+	if class == nil {
+		return false
+	}
+	for _, decl := range class.GenericDecls {
+		if typeTextContainsIdentifier(canonical.Doc.Type, decl.Name) {
+			return true
+		}
+	}
+	return false
+}
+
+func typeTextContainsIdentifier(text, name string) bool {
+	canonical := CanonicalName(text)
+	target := CanonicalName(name)
+	if target == "" {
+		return false
+	}
+	for i := 0; i < len(canonical); {
+		if !isTypeIdentifierByte(canonical[i]) {
+			i++
+			continue
+		}
+		start := i
+		for i < len(canonical) && isTypeIdentifierByte(canonical[i]) {
+			i++
+		}
+		if canonical[start:i] == target {
+			return true
+		}
+	}
+	return false
+}
+
+func isTypeIdentifierByte(c byte) bool {
+	return c == '_' || c == '.' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
 }
 
 func isClassFieldDeclaration(sym *Symbol) bool {
@@ -938,11 +1031,40 @@ func classTypeName(value string) string {
 	return value
 }
 
+// singleClassName resolves one type expression to a class name, including a
+// generic application such as Box<number>.
+func singleClassName(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	open := strings.IndexByte(value, '<')
+	if open < 0 {
+		return classTypeName(value)
+	}
+	name := strings.TrimSpace(value[:open])
+	if name == "" || classTypeName(name) != name {
+		return ""
+	}
+	close := matchingAnnotationDelimiter(value, open, '<', '>')
+	if close < 0 {
+		return ""
+	}
+	rest := strings.TrimSpace(value[close+1:])
+	if rest == "?" {
+		rest = ""
+	}
+	if rest != "" {
+		return ""
+	}
+	return name
+}
+
 // singleClassTypeName resolves a type expression to one class name. A union
 // whose only non-nil member is the same class resolves to that class; unions
 // of multiple classes remain ambiguous.
 func singleClassTypeName(value string) string {
-	if name := classTypeName(value); name != "" {
+	if name := singleClassName(value); name != "" {
 		return name
 	}
 	if !strings.Contains(value, "|") {
@@ -954,7 +1076,7 @@ func singleClassTypeName(value string) string {
 		if part == "" || strings.EqualFold(part, "nil") {
 			continue
 		}
-		candidate := classTypeName(part)
+		candidate := singleClassName(part)
 		if candidate == "" {
 			return ""
 		}

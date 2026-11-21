@@ -42,7 +42,7 @@ func bindAnnotationNames(snap *cart.Snapshot, result *Result) {
 	if snap == nil || snap.Cart == nil || result == nil || result.Table == nil {
 		return
 	}
-	bindTypeDeclarationSymbols(result)
+	bindTypeDeclarationSymbols(snap, result)
 	bindCastNames(result)
 	bindTypeReferences(snap, result)
 }
@@ -50,7 +50,7 @@ func bindAnnotationNames(snap *cart.Snapshot, result *Result) {
 // bindTypeDeclarationSymbols creates symbols for `---@alias` and `---@enum`
 // declarations and finalizes the type-name namespace. Class symbols were
 // created by bindClassSymbols before class fields were attached.
-func bindTypeDeclarationSymbols(result *Result) {
+func bindTypeDeclarationSymbols(snap *cart.Snapshot, result *Result) {
 	if result == nil || result.Table == nil {
 		return
 	}
@@ -75,22 +75,18 @@ func bindTypeDeclarationSymbols(result *Result) {
 		if alias == nil {
 			continue
 		}
-		span := result.aliasNameSpan[canonical]
-		if span.IsEmpty() {
+		spans := result.aliasNameSpans[canonical]
+		if len(spans) == 0 {
+			if span := result.aliasNameSpan[canonical]; !span.IsEmpty() {
+				spans = []source.Span{span}
+			}
+		}
+		sym := bindTypeDeclarationSymbol(snap, result, canonical, alias.Name, spans)
+		if sym == nil {
 			continue
 		}
-		sym := result.Table.NewSymbol(SymbolClass, alias.Name, span, nil)
 		sym.Type = alias
 		sym.TypeExplicit = true
-		result.TypeSymbols[canonical] = sym
-		result.addOccurrence(Occurrence{
-			Span:       span,
-			Text:       alias.Name,
-			Symbol:     sym,
-			Decl:       true,
-			Write:      true,
-			Annotation: true,
-		})
 	}
 	enumNames := make([]string, 0, len(result.Enums))
 	for canonical := range result.Enums {
@@ -102,23 +98,48 @@ func bindTypeDeclarationSymbols(result *Result) {
 		if enum == nil {
 			continue
 		}
-		span := result.enumNameSpan[canonical]
+		spans := result.enumNameSpans[canonical]
+		if len(spans) == 0 {
+			if span := result.enumNameSpan[canonical]; !span.IsEmpty() {
+				spans = []source.Span{span}
+			}
+		}
+		sym := bindTypeDeclarationSymbol(snap, result, canonical, enum.Name, spans)
+		if sym == nil {
+			continue
+		}
+		sym.Type = enum
+		sym.TypeExplicit = true
+	}
+}
+
+func bindTypeDeclarationSymbol(snap *cart.Snapshot, result *Result, canonical, name string, spans []source.Span) *Symbol {
+	if result == nil || result.Table == nil || len(spans) == 0 {
+		return nil
+	}
+	sym := result.TypeSymbols[canonical]
+	if sym == nil {
+		sym = result.Table.NewSymbol(SymbolClass, name, spans[0], nil)
+		result.TypeSymbols[canonical] = sym
+	}
+	for _, span := range spans {
 		if span.IsEmpty() {
 			continue
 		}
-		sym := result.Table.NewSymbol(SymbolClass, enum.Name, span, nil)
-		sym.Type = enum
-		sym.TypeExplicit = true
-		result.TypeSymbols[canonical] = sym
+		text := annotationSpanText(snap, span)
+		if text == "" {
+			text = name
+		}
 		result.addOccurrence(Occurrence{
 			Span:       span,
-			Text:       enum.Name,
+			Text:       text,
 			Symbol:     sym,
 			Decl:       true,
 			Write:      true,
 			Annotation: true,
 		})
 	}
+	return sym
 }
 
 // bindCastNames resolves `---@cast name` targets to the visible local, global,
@@ -192,19 +213,30 @@ func bindTypeReferences(snap *cart.Snapshot, result *Result) {
 			continue
 		}
 		// Generic declarations scope every later line in the same block,
-		// including a class header such as `---@class Box<T>`.
-		for _, segment := range segments {
-			if segment.Role != AnnotationGenericName {
-				continue
-			}
-			name := CanonicalName(annotationSpanText(snap, segment.Span))
-			if name == "" {
-				continue
+		// including a class header such as `---@class Box<T>` and repeated
+		// class headers that omit their generic list.
+		addGeneric := func(name string) {
+			canonical := CanonicalName(name)
+			if canonical == "" {
+				return
 			}
 			if generics == nil {
 				generics = make(map[string]struct{})
 			}
-			generics[name] = struct{}{}
+			generics[canonical] = struct{}{}
+		}
+		for _, segment := range segments {
+			switch segment.Role {
+			case AnnotationGenericName:
+				addGeneric(annotationSpanText(snap, segment.Span))
+			case AnnotationClassName:
+				name := annotationSpanText(snap, segment.Span)
+				if class := result.Classes[CanonicalName(name)]; class != nil {
+					for _, decl := range class.GenericDecls {
+						addGeneric(decl.Name)
+					}
+				}
+			}
 		}
 		result.bindTypeSegments(snap, segments, generics)
 	}
@@ -300,6 +332,12 @@ func (r *Result) bindTypeSegments(snap *cart.Snapshot, segments []AnnotationSegm
 		sym := r.TypeSymbols[canonical]
 		if sym == nil {
 			continue
+		}
+		if len(generics) > 0 {
+			if r.annotationGenerics == nil {
+				r.annotationGenerics = make(map[source.Span]map[string]struct{})
+			}
+			r.annotationGenerics[segment.Span] = cloneGenericSet(generics)
 		}
 		r.addOccurrence(Occurrence{
 			Span:       segment.Span,
