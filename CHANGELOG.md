@@ -8,6 +8,11 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- VS Code settings schema (M21): every documented `pico8.*` server setting now
+  appears in the Settings UI and `settings.json` with its type, allowed values,
+  default, window scope, and description. Nested `limits`, `format`,
+  `diagnostics`, `lint`, and `refactors` objects reject unknown keys, and a Go
+  drift test keeps the manifest in sync with `internal/config`.
 - The built-in P8SCII glyph catalog now covers every printable byte
   (`0x10`–`0xff`). ASCII punctuation, digits, standard letters, puny-font
   uppercase letters, Hiragana, and Katakana get stable names for

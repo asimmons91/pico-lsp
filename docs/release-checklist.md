@@ -75,6 +75,10 @@ publishing are deferred to post-v1. The current release is **v1.7.0**.
 - [ ] Live first-run download from the public v1.7.0 release is verified in a
       real VS Code window.
 - [x] Restart is covered by the integration suite.
+- [ ] Open Settings, search `pico8`, and verify every contributed server and
+      client setting appears with a description and the expected default.
+- [ ] Set `pico8.typeChecking` to an invalid value in `settings.json` and
+      confirm VS Code flags it; set it to `strict` and confirm it is accepted.
 
 ## Rollback
 

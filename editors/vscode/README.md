@@ -65,17 +65,27 @@ and error colors appear at 90% of a limit and above a limit.
 
 ## Settings
 
+Every documented `pico8.*` server setting appears in the VS Code Settings UI
+and in `settings.json` with its type, allowed values, default, and description.
+Search for `pico8` in Settings. Server settings are window-scoped; VS Code
+validates enum values and rejects unknown keys in `limits`, `format`,
+`diagnostics`, `lint`, and `refactors`. The same settings work in other editors
+because the server reads them through the standard LSP configuration section.
+
+The client-owned settings are:
+
 | Setting | Default | Description |
 |---|---|---|
-| `pico8.serverPath` | `""` | Absolute path to a `pico-lsp` executable. Disables downloads. |
+| `pico8.serverPath` | `""` | Absolute path to a `pico-lsp` executable. Disables downloads. Machine-scoped. |
 | `pico8.autoDownload` | `true` | Download the matching verified server when not cached. |
 | `pico8.attachLua` | `true` | Attach to `.lua` files in PICO-8 workspace folders. |
 | `pico8.trace.server` | `off` | LSP trace level: `off`, `messages`, or `verbose`. |
-| `pico8.glyphs` | `[]` | Custom P8SCII glyph snippets for completion and the picker. |
 
 Server settings such as `pico8.typeChecking`, `pico8.diagnostics`,
 `pico8.format`, and `pico8.glyphs` are documented in the
 [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md).
+The extension manifest and the server defaults are kept in sync by a repository
+test.
 
 ## Commands
 

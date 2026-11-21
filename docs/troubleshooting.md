@@ -171,10 +171,25 @@ folders that contain a `.p8` cart. Disable another Lua language server for those
 folders to avoid duplicate diagnostics. `.lua` files outside PICO-8 workspaces
 are intentionally not attached.
 
-The VS Code client supports local desktop windows only. Remote SSH, WSL, Dev
-Containers, Codespaces, web extension hosts, and read-only `.p8.png` virtual
-documents are not supported in the current release. Marketplace and Open VSX
-publishing are follow-ups; install the VSIX from the GitHub release.
+The VS Code client supports local desktop windows only. Remote extension hosts,
+web extension hosts, and read-only `.p8.png` virtual documents are not supported
+in the current release. Marketplace and Open VSX publishing are follow-ups;
+install the VSIX from the GitHub release.
+
+### VS Code settings validation
+
+The extension contributes the full `pico8` schema, so the Settings UI shows the
+defaults the server uses and `settings.json` gets completion and validation. A
+value outside a contributed enum, such as `"pico8.typeChecking": "stric"`, is
+flagged by VS Code before the server sees it. The server still falls back to its
+default if an invalid value arrives from another client.
+
+To compare effective defaults, search for `pico8` in Settings and hover a
+setting to see its default, or open **Preferences: Open Default Settings (JSON)**
+and search for `pico8`. If a setting is accepted by VS Code but appears to have
+no effect, confirm it is a documented server setting and check the **PICO-8
+Language Server** output channel for a configuration warning. Server settings
+are window-scoped; `pico8.serverPath` is the only machine-scoped setting.
 
 ## Logs and stdout
 
