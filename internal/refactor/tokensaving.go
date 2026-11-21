@@ -73,8 +73,12 @@ func TokenSavingActions(ctx *Context, start, end int) []*Action {
 	}
 
 	var candidates []tokenSavingCandidate
-	add := func(span source.Span, pattern int, action *Action) {
-		if action == nil || !tokenCandidateSelected(span, start, end) {
+	consider := func(span source.Span, pattern int, build func() *Action) {
+		if !tokenCandidateSelected(span, start, end) {
+			return
+		}
+		action := build()
+		if action == nil {
 			return
 		}
 		candidates = append(candidates, tokenSavingCandidate{span: span, pattern: pattern, action: action})
@@ -86,11 +90,13 @@ func TokenSavingActions(ctx *Context, start, end int) []*Action {
 			if !ok {
 				continue
 			}
-			add(call.Span(), 0, printAction(ctx, call))
+			consider(call.Span(), 0, func() *Action { return printAction(ctx, call) })
 		case *syntax.AssignStmt:
-			add(n.Span(), 1, compoundAction(ctx, n))
+			stmt := n
+			consider(stmt.Span(), 1, func() *Action { return compoundAction(ctx, stmt) })
 		case *syntax.CallExpr:
-			add(n.Span(), 2, peekAction(ctx, n))
+			call := n
+			consider(call.Span(), 2, func() *Action { return peekAction(ctx, call) })
 		}
 	}
 	if len(candidates) == 0 {
