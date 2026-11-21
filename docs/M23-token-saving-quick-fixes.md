@@ -1,16 +1,18 @@
 # M23 — Token-Saving Quick Fixes
 
 **Status:** Proposed — specified, not committed to a release.  
-**Depends on:** M13 (token/char/compressed budgets), M14 (code actions)  
+**Depends on:** M14 (code actions and the M1/M5 token rules)  
 **Release target:** Post-v1.8 (TBD)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
 
 PICO-8 developers can replace common verbose idioms with shorter PICO-8
-equivalents from the editor lightbulb/code-action menu. Every action is
+equivalents from the editor lightbulb/code-action menu. Every new action is
 conservative, previewable as a standard `WorkspaceEdit`, and offered only when
-the rewrite is behavior-preserving and reduces the counted token total.
+the rewrite is behavior-preserving and reduces the counted token total. The
+existing M14 shorthand actions remain available even where their token count is
+equal to the standard form.
 
 **Demo:** With the cursor on `print(score)`, the editor offers
 `Use ? print shorthand (saves 1 token)`. On `score = score + 1`, it offers
@@ -64,7 +66,7 @@ family without changing its semantics.
 | D3 | Trigger model | Only cursor/selection-local candidates. No cart-wide fix-all in the first version. |
 | D4 | Configuration | Reuse `pico8.refactors.enabled`; do not add a new setting initially. |
 | D5 | Diagnostic coupling | None. Actions are available regardless of budget diagnostics; exceeding a budget is not required. |
-| D6 | Token savings | Compute from the PICO-8 token rules in `internal/cart`; show the exact positive delta in the title. Omit the action when the delta is not positive. |
+| D6 | Token savings | For the new patterns, compute from the PICO-8 token rules in `internal/cart`; show the exact positive delta in the title and omit the action when the delta is not positive. |
 | D7 | Preferred flag | Leave `isPreferred` unset/false. Token-saving rewrites are stylistic, so editors must not surprise users by auto-preferring them. |
 | D8 | Shorthand | Reuse M14's safe `if`/`while` conversion unchanged. Do not broaden eligibility in this milestone. |
 | D9 | Bulk behavior | No `source.fixAll` or command in the first version. Defer to a separate decision after local actions ship. |
@@ -78,7 +80,7 @@ family without changing its semantics.
 |---|---|
 | Before | `print(expr)` or `print(a, b, ...)` as a statement |
 | After | `?expr` or `?a, b, ...` |
-| Savings | One token plus any argument-list tokens already saved by `?`; computed, never assumed |
+| Savings | Computed exactly; typically one for a simple call (`print(x)` 3 → `?x` 2) |
 | Availability | `print` resolves to the PICO-8 built-in, not a user-defined or shadowed value |
 
 Eligibility:
@@ -90,11 +92,17 @@ Eligibility:
   if a PICO-8 parity fixture confirms identical output and token accounting.
 - The call is not used as a value: not in `return`, an assignment expression, a
   table constructor, a nested call argument, or a method call.
-- No statement follows the call on the same line. A trailing `--`/`//` comment
-  is preserved only if the parser and a PICO-8 parity fixture confirm `?` does
-  not consume the comment as an argument; otherwise refuse.
+- Nothing follows the call on the same line except a trailing `--`/`//`
+  comment. In particular, another statement, another call, `else`, or `elseif`
+  after the call makes the rewrite unsafe because `?` consumes the rest of the
+  line. A trailing comment is preserved only if the parser and a PICO-8 parity
+  fixture confirm `?` does not consume the comment as an argument; otherwise
+  refuse.
 - The call, its arguments, and any trailing comment contain no line break.
 - The call contains no comments between `print` and its closing parenthesis.
+- Multi-value argument behavior is preserved. In particular, a final function
+  call argument (for example `print(f())`) must expand to the same arguments
+  under `?`; add a parity fixture before offering that shape.
 - `print` is not reassigned anywhere in the cart. Use the resolved symbol, not
   source text.
 
@@ -149,8 +157,7 @@ Eligibility:
 - No comments exist between the assignment target, `=`, the repeated target, the
   operator, or the value.
 - The replacement preserves the value's source text and parentheses exactly.
-  Parentheses are added only when required by precedence, and adding them must
-  not erase the token savings.
+  Do not add parentheses or reformat the value.
 - Multiple assignment, multiple return values, method-call targets, peek
   targets, and assignments with unresolved/dynamic receivers are refused.
 - `target = value op target` is refused even for operators that happen to be
@@ -167,19 +174,25 @@ Titles:
 |---|---|
 | Before | `peek(addr)`, `peek2(addr)`, `peek4(addr)` |
 | After | `@addr`, `%addr`, `$addr` |
-| Savings | One token for the built-in name and opening parenthesis, computed exactly |
-| Availability | The function resolves to the PICO-8 built-in and takes exactly one argument |
+| Savings | Computed exactly; typically one for a simple atom (`peek(a)` 3 → `@a` 2) |
+| Availability | The function resolves to the PICO-8 built-in, takes exactly one argument, and the rewrite has a positive token delta |
 
 Eligibility:
 
 - The call has exactly one argument and no comments or line breaks.
 - The called name resolves to the built-in `peek`, `peek2`, or `peek4`; a local,
   global, parameter, or field with the same spelling suppresses the action.
-- The argument is parenthesized when required by unary-operator precedence. For
-  example, `peek(a + b)` becomes `@(a + b)`, not `@a + b`.
+- The call is part of a value-producing expression. A bare `peek(x)` statement
+  is refused because `@x` is not a valid Lua expression statement.
+- Parentheses are required when the argument has lower precedence than the
+  unary peek operator. If those parentheses consume the token savings, do not
+  offer the action. For example, `peek(a + b)` would need `@(a + b)` and has no
+  token savings, so it is refused.
 - Calls used as values are allowed when the surrounding expression remains
   unchanged and the generated operator parses at the same precedence. Calls in
   assignment targets are impossible and are refused by syntax.
+- The generated `%` is always in prefix position; binary modulo parsing is
+  unchanged.
 - No `poke`/`poke2`/`poke4` conversion exists; those have no shorthand.
 
 Titles:
@@ -207,6 +220,7 @@ single-statement/no-comment/line-length eligibility rules.
 | Pattern | Reason deferred |
 |---|---|
 | `flr(a / b)` → `a \ b` | PICO-8 `\` behavior for negative and non-integer operands must be verified against `flr`; conversion could change results. |
+| Bracket/index compound targets (`t[1] = t[1] + 1`) | Index evaluation count, side effects, and table/metatable behavior need their own safety proof. |
 | Redundant parentheses | Requires a complete precedence, associativity, multi-value, and table/call-context safety proof. |
 | `else if` → `elseif` | Structural rewrite changes nesting and needs its own line-boundary tests. |
 | Cart-wide “fix all” | Overlapping edits and unexpected bulk behavior need a separate preview/confirmation design. |
@@ -232,8 +246,9 @@ Requirements:
   trimming.
 - Each action carries a standard single-file `WorkspaceEdit` in original-file
   coordinates. Included-file edits are not combined with root-file edits.
-- Titles include the pattern and the exact positive token delta.
-- Actions are not returned when the delta is zero or negative.
+- Titles for the new actions include the pattern and the exact positive token
+  delta. Existing shorthand titles remain unchanged.
+- New token-saving actions are not returned when the delta is zero or negative.
 - `isPreferred` is not set.
 - No command is used; applying the action is a normal previewable workspace
   edit.
@@ -269,7 +284,8 @@ Requirements:
     commas, dots, and colons are not counted;
   - `?` and the peek operators follow the documented M1 counting rules.
 - Generated titles must not claim a savings value that disagrees with the
-  token counter.
+  token counter. Actions optimize the token count; they make no promise about
+  character or compressed size.
 - No new diagnostics, no changes to existing diagnostic severities, and no
   automatic application.
 
@@ -294,11 +310,11 @@ kind family.
 
 - `print` → `?`:
   - one argument, multiple arguments, nested expressions, comments;
-  - zero-argument parity fixture;
+  - zero-argument and final multi-value call-argument parity fixtures;
   - final statement of a same-line shorthand `if`/`while` body;
   - shadowed/reassigned `print`;
-  - expression, return, nested-call, method-call, multi-line, and
-    trailing-statement refusals;
+  - expression, return, nested-call, method-call, multi-line,
+    trailing-statement, and same-line `else`/`elseif` refusals;
   - exact token delta.
 - Compound assignment:
   - every operator in the map;
@@ -309,7 +325,8 @@ kind family.
 - Peek operators:
   - `peek`, `peek2`, `peek4`;
   - low-precedence arguments requiring parentheses;
-  - shadowed built-ins, wrong arity, comments, and multi-line calls;
+  - shadowed built-ins, wrong arity, comments, multi-line calls, and bare
+    statement calls;
   - exact token delta.
 - Existing shorthand if/while regression tests remain green.
 - Token-delta helper tests cover comments, annotations, unary literal folding,
@@ -369,7 +386,8 @@ kind family.
 - [ ] Existing shorthand if/while conversion remains available and unchanged.
 - [ ] No action is offered when behavior, comments, line boundaries, source
   maps, read-only status, or token savings are unsafe.
-- [ ] Titles report exact token deltas computed with the PICO-8 token rules.
+- [ ] New action titles report exact token deltas computed with the PICO-8
+  token rules.
 - [ ] Unit, LSP e2e, corpus, safety, and performance tests pass.
 - [ ] API/docs/roadmap/changelog updates are complete.
 - [ ] Existing v1 through v1.8 behavior and performance budgets do not regress.
