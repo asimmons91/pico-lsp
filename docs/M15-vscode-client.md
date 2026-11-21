@@ -476,6 +476,9 @@ Extend `.github/workflows/release.yml`:
   surfaces the server's `pico8.*` settings in the Settings UI.
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
   adds server version checks and copyable diagnostics.
+- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md)
+  proposes Marketplace/Open VSX publication, public-documentation cleanup, and
+  manual VS Code verification.
 
 ## Risks and mitigations
 

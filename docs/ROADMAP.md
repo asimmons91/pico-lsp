@@ -1,7 +1,8 @@
 # PICO-8 Language Server — Roadmap
 
 **Status:** v1.8.0 released with the VS Code settings schema and server health
-reporting, annotation-aware navigation, and token-saving code actions.
+reporting, annotation-aware navigation, and token-saving code actions. M24
+(VS Code Marketplace launch and documentation cleanup) is proposed.
 
 **Last updated:** 2026-11-21
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -37,7 +38,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Area | Decision | Notes |
 |---|---|---|
 | v1 scope | Core LSP + type features only | Formatter and `.p8.png` support are post-v1. |
-| Editors | Neovim + Helix | VS Code client is M15; M21 adds the full VS Code settings schema; M22 adds server health; remote and web extension hosts remain out of scope; Zed remains post-v1; the server remains editor-agnostic. |
+| Editors | Neovim + Helix | VS Code client is M15; M21 adds the full VS Code settings schema; M22 adds server health; M24 proposes Marketplace/Open VSX distribution; remote and web extension hosts remain out of scope; Zed remains post-v1; the server remains editor-agnostic. |
 | Neovim helper | Helper plugin, optional at runtime | Auto-attaches to `.lua` files owned by a cart; avoids attaching to unrelated Lua buffers. |
 | Syntax highlighting | Vim syntax file + semantic tokens | Ship a small `.p8` syntax file for sections/dialect; semantic tokens cover Lua code. |
 | Project naming | `pico-lsp` + `pico8` | Binary/repo `pico-lsp`; primary language ID `pico8`; config section `pico8`; accept `pico-8` aliases. |
@@ -47,7 +48,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Includes | Faithful PICO-8 | Non-recursive includes. Nested includes produce a warning. |
 | Include ownership | Nearest ancestor cart | A `.lua` file belongs to the nearest ancestor `.p8` that includes it. |
 | Built-in API | PICO-8 0.2.7 only | Reserve `pico8.apiVersion` for future versions. |
-| Install channels | GitHub release binaries for v1 | Checksummed archives and `go install`; M15 adds a VS Code VSIX asset. Homebrew tap, Mason package, and Marketplace/Open VSX publishing are post-v1. |
+| Install channels | GitHub release binaries for v1 | Checksummed archives and `go install`; M15 adds a VS Code VSIX asset. M24 proposes Marketplace/Open VSX publishing. Homebrew tap and Mason package remain post-v1. |
 | Distribution | Static Go binary | `go install` is documented for developers; release binaries are the primary user path. |
 | LSP library | `go.lsp.dev/protocol` + `go.lsp.dev/jsonrpc2` | Typed LSP 3.18 types with `UnimplementedServer`; pinned to v1.0.1. |
 | Position encoding | UTF-16 by default | Negotiate UTF-8 if the client supports it; UTF-16 must be correct first. |
@@ -82,6 +83,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0) |
 | M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
 | M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
+| M24 | VS Code Marketplace Launch and Documentation Cleanup | Marketplace/Open VSX listings, documentation cleanup, release automation, and manual VS Code verification | M15, M21, M22 | Proposed |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -104,6 +106,12 @@ conversion; the pattern catalog, safety rules, deferred patterns, and resolved
 decisions are in [M23](M23-token-saving-quick-fixes.md). Zero-argument
 `print()`, `flr` division, redundant parentheses, and cart-wide fix-all remain
 deferred.
+
+M24 is proposed, not committed to a release. It covers the Marketplace/Open VSX
+listing, public-documentation cleanup, registry release automation, and manual
+verification on a machine with a real VS Code installation. The exact release
+tag, icon/trademark path, and registry sequence are open decisions in the
+[milestone spec](M24-vscode-marketplace.md).
 
 Each milestone has a detailed spec:
 
@@ -130,6 +138,7 @@ Each milestone has a detailed spec:
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
+- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — proposed
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -226,8 +235,11 @@ LSP wire contract, server defaults, or the editor-agnostic server contract.
 - **M22 — Server health:** the extension reports the running server version
   and source, warns once on a release-version mismatch, and copies diagnostics
   for issue reports.
+- **M24 — Marketplace launch:** proposed public-documentation cleanup,
+  Marketplace/Open VSX publication, and manual VS Code verification. No server
+  or extension feature behavior changes.
 
-Each milestone has its own spec. M21 and M22 shipped in v1.8.0.
+Each milestone has its own spec. M21 and M22 shipped in v1.8.0; M24 is proposed.
 
 ## Cross-cutting standards
 
@@ -365,7 +377,7 @@ These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`).
-- **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
+- **Install channels:** v1 publishes GitHub release archives and documents `go install`. M24 proposes adding VS Code Marketplace and Open VSX listings for the extension. Homebrew and Mason packaging remain deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
 - **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21, M22, and M23 shipped together as v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.
 
