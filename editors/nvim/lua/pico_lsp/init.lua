@@ -20,6 +20,7 @@ local default_settings = {
 }
 
 local warned_missing_binary = false
+local warned_glyph_maps = false
 
 local function notify(message, level)
   vim.notify("pico-lsp: " .. message, level or vim.log.levels.WARN)
@@ -263,6 +264,76 @@ function M.insert_glyph(name)
   end
   if response.result and response.result.edit then
     vim.lsp.util.apply_workspace_edit(response.result.edit, client.offset_encoding)
+  end
+end
+
+-- PICO-8 assigns the 26 typeable symbols at P8SCII 0x80-0x99 to Shift-A..Z
+-- in alphabetical order. The glyph text comes from the server catalog, so
+-- custom pico8.glyphs entries and canonical Unicode spellings stay server-owned.
+local shift_glyph_first_byte = 0x80
+local shift_glyph_count = 26
+
+local function glyph_text(byte, key)
+  local bufnr = vim.api.nvim_get_current_buf()
+  if not vim.bo[bufnr].modifiable then
+    return ""
+  end
+  local mode = vim.fn.mode(1)
+  if mode == "R" or mode == "r" then
+    return key
+  end
+
+  local client = vim.lsp.get_clients({ name = "pico_lsp", bufnr = bufnr })[1]
+  if not client then
+    if not warned_glyph_maps then
+      warned_glyph_maps = true
+      notify("no pico_lsp client attached; PICO-8 Shift glyph maps fall back to uppercase letters")
+    end
+    return key
+  end
+
+  local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
+  local response = client:request_sync("pico8/glyphs", {
+    textDocument = position.textDocument,
+    position = position.position,
+  }, 2000, bufnr)
+  if not response or response.err or not response.result then
+    if not warned_glyph_maps then
+      warned_glyph_maps = true
+      notify("could not load P8SCII glyphs; Shift glyph maps fall back to uppercase letters", vim.log.levels.ERROR)
+    end
+    return key
+  end
+
+  -- Later entries win so a custom definition can override a built-in byte.
+  local text = ""
+  for _, entry in ipairs(response.result.glyphs or {}) do
+    if entry.byte == byte then
+      text = entry.text or ""
+    end
+  end
+  if text == "" then
+    return key
+  end
+  return text
+end
+
+function M.install_glyph_maps(bufnr)
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if bufnr == 0 then
+    bufnr = vim.api.nvim_get_current_buf()
+  end
+  for i = 0, shift_glyph_count - 1 do
+    local key = string.char(string.byte("A") + i)
+    local byte = shift_glyph_first_byte + i
+    vim.keymap.set("i", key, function()
+      return glyph_text(byte, key)
+    end, {
+      buffer = bufnr,
+      expr = true,
+      replace_keycodes = false,
+      desc = string.format("PICO-8 Shift-%s glyph (P8SCII 0x%02x)", key, byte),
+    })
   end
 end
 

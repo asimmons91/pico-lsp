@@ -57,7 +57,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
   generated `---@class`, `if`/`while` shorthand conversion, exact-class
   missing-field inserts, and confirmed unused-local removal. All edits are
   previewable workspace edits in original source coordinates.
-- Optional auto-attachment to cart-owned `.lua` buffers in Neovim.
+- Optional auto-attachment to cart-owned `.lua` buffers in Neovim, plus opt-in
+  `Shift-A`..`Shift-Z` glyph input backed by the server catalog.
 
 ## Install
 

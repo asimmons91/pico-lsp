@@ -13,6 +13,13 @@ All notable changes to this project are documented here. The format follows
   uppercase letters, Hiragana, and Katakana get stable names for
   `pico8/glyphs`, glyph completion, and the picker. Existing symbol names and
   aliases are unchanged.
+- Neovim: the optional ftplugin can install PICO-8's `Shift-A` through
+  `Shift-Z` insert-mode shortcuts for the 26 typeable P8SCII symbols
+  (`0x80`-`0x99`). The mappings use the server glyph catalog by byte and fall
+  back to the literal uppercase key outside editable Lua code or without a
+  client; custom font slots still insert canonical Unicode. Enable them with
+  `g:pico8_glyph_maps`; they are off by default because they replace uppercase
+  letters in code.
 
 ## [1.6.0] - 2026-11-19
 

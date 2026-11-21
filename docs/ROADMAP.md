@@ -188,6 +188,18 @@ Rules:
   schedule is recorded in
   [pico-editor's architecture document](https://github.com/asimmons91/pico-editor/blob/main/docs/ARCHITECTURE.md).
 
+## Post-v1 editor additions
+
+- **Neovim Shift-glyph input:** the optional `editors/nvim` ftplugin can
+  install PICO-8's `Shift-A` through `Shift-Z` insert-mode mappings for the 26
+  typeable P8SCII symbols at `0x80`-`0x99` when `g:pico8_glyph_maps` is
+  enabled. The mappings fetch each glyph by byte from the server's
+  `pico8/glyphs` catalog, so canonical Unicode spellings stay server-owned;
+  outside editable Lua code, in include paths, or without a client, they fall
+  back to the literal uppercase letter. They are opt-in because they replace
+  uppercase letters in code. PICO-8's `CTRL-J`/`CTRL-K`/`CTRL-P` input modes
+  remain out of scope.
+
 ## Cross-cutting standards
 
 ### Diagnostics
