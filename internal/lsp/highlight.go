@@ -28,7 +28,7 @@ func (s *Server) DocumentHighlight(ctx context.Context, params *protocol.Documen
 
 	out := make([]protocol.DocumentHighlight, 0)
 	for _, candidate := range nav.semantics.Occurrences(nav.fileID) {
-		if candidate.Symbol != occ.Symbol {
+		if !nav.semantics.SameSymbol(candidate.Symbol, occ.Symbol) {
 			continue
 		}
 		kind := protocol.DocumentHighlightKindRead

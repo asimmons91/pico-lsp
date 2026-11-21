@@ -162,23 +162,61 @@ API coverage test:
 
 ## LSP features
 
+### LuaCATS annotation names
+
+Navigation and rename treat declaration and reference names inside `---@`
+comments as part of the semantic model. Annotation type names live in a
+namespace separate from code identifiers.
+
+- `@param` names resolve to the function's parameter symbols and count as uses.
+- `@field` names declare canonical field symbols for the class. Runtime fields
+  on receivers typed by that class link to the same canonical symbol,
+  including locals, `@param` parameters, implicit method `self`, generic
+  applications such as `Box<number>`, and receivers of subclasses.
+- `@cast` names resolve to the visible local, parameter, or global.
+- `@class`, `@alias`, and `@enum` names declare type symbols. Type identifiers
+  in annotation type expressions resolve to them, including `@param`, `@return`,
+  `@field`, `@type`, `@cast`, `@operator`, `@generic` constraints and defaults,
+  `@overload`, class parents, alias targets, and `--[[@as Type]]`.
+- Generic parameter names declared by `@generic`, a class header, or a method's
+  class stay scoped to their annotation context and are not type references.
+- Optional markers (`name?`), field scopes, and other annotation punctuation
+  stay outside rename ranges.
+- Go-to-definition on an annotation name returns the declaration it annotates.
+  References include annotation occurrences. Rename updates annotation and code
+  occurrences together.
+- Renaming a class field updates its `@field` declaration and every linked
+  runtime use across receivers. It refuses when any linked receiver has dynamic
+  access.
+- Renaming a type updates only annotation occurrences; code identifiers that
+  happen to share a spelling are a separate namespace and are left alone.
+  Likewise, code rename checks do not treat type names as collisions. A type
+  rename refuses a new name that would be captured by a generic parameter in an
+  annotation that references the type.
+- Duplicate `@class`, `@field`, `@alias`, and `@enum` declarations remain
+  individually navigable and rename together.
+- Annotation occurrences never produce code lint diagnostics.
+
 ### Go-to-definition
 
 - Resolve the symbol at the cursor:
   - locals, params, globals, functions, methods, fields, labels;
+  - LuaCATS annotation names as described above;
   - built-ins: return no definition in v1 (hover shows docs in M3);
   - include paths: return the included file.
 - Return all declarations when a global has multiple.
 - Cross-file results use each file's URI and a `LineIndex`-derived range.
-- If the cursor is on a comment or string, return empty.
+- If the cursor is on a non-annotation comment or string, return empty.
 - If the cursor is on a field access whose receiver type is unknown, return empty rather than guessing.
 
 ### References
 
 - Return all `Uses` plus declarations if `context.includeDeclaration` is true.
 - Include uses in all cart files and tabs.
-- Exclude comments, strings, and include path text.
-- For fields, include all statically resolved accesses on the same receiver symbol.
+- Exclude comments and strings, except LuaCATS annotation names as described
+  above.
+- For fields, include all statically resolved accesses on the same receiver
+  symbol and its linked class-field family.
 - For built-ins, return empty (do not report the entire stub).
 
 ### Prepare rename / rename
@@ -196,11 +234,17 @@ Refuse rename for:
 Rename rules:
 
 - Rename all declarations and uses in the cart.
-- New name must be a valid PICO-8 identifier and not a keyword.
+- New name must be a valid PICO-8 identifier and not a keyword. Type
+  declarations also accept qualified names such as `Player.State`, but cannot
+  use a reserved primitive type name such as `number` or `table`.
 - Preserve the user's original casing style where reasonable: if the symbol was consistently uppercase, uppercase the new name; otherwise use the typed spelling. If usages mix cases, replace all with the typed spelling (PICO-8 folds them anyway).
-- Do not rename inside comments or strings.
+- Do not rename inside comments or strings, except LuaCATS annotation names as
+  described above.
 - Return a `WorkspaceEdit` grouped by URI; do not apply edits directly.
-- Check for collisions in the target scope; refuse or warn if a local collision would occur.
+- Check for collisions in the target scope; refuse or warn if a local collision
+  would occur. Type declarations use their own namespace, so a type rename does
+  not collide with a same-named local and a code rename does not collide with a
+  same-named type.
 
 ### Document highlights
 

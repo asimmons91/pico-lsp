@@ -21,7 +21,7 @@ func (s *Server) PrepareRename(ctx context.Context, params *protocol.PrepareRena
 		return nil, nil
 	}
 	nav, sym, occ, ok := s.renameTarget(ctx, params.TextDocument.URI, params.Position)
-	if !ok || !renameable(sym) {
+	if !ok || !nav.semantics.Renameable(sym) {
 		return nil, nil
 	}
 	return &protocol.PrepareRenamePlaceholder{
@@ -36,12 +36,15 @@ func (s *Server) Rename(ctx context.Context, params *protocol.RenameParams) (*pr
 	if params == nil {
 		return nil, jsonrpc2.NewError(jsonrpc2.InvalidParams, "rename: missing params")
 	}
-	if !syntax.IsIdentifier(params.NewName) {
-		return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "rename: %q is not a valid PICO-8 identifier", params.NewName)
-	}
 	nav, sym, _, ok := s.renameTarget(ctx, params.TextDocument.URI, params.Position)
-	if !ok || !renameable(sym) {
+	if !ok || !nav.semantics.Renameable(sym) {
 		return nil, jsonrpc2.NewError(jsonrpc2.InvalidRequest, "rename: symbol cannot be renamed safely")
+	}
+	if !validRenameName(sym, params.NewName) {
+		if analysis.IsTypeSymbol(sym) {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "rename: %q is not a valid LuaCATS type name", params.NewName)
+		}
+		return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "rename: %q is not a valid PICO-8 identifier", params.NewName)
 	}
 
 	newCanonical := analysis.CanonicalName(params.NewName)
@@ -104,12 +107,19 @@ func (s *Server) renameTarget(ctx context.Context, u uri.URI, pos protocol.Posit
 	return nav, occ.Symbol, occ, true
 }
 
-func renameable(sym *analysis.Symbol) bool {
-	if sym == nil || sym.Builtin || len(sym.Decls) == 0 {
+// validRenameName accepts PICO-8 identifiers for code symbols and qualified
+// names such as `Player.State` for annotation type declarations.
+func validRenameName(sym *analysis.Symbol, name string) bool {
+	if !analysis.IsTypeSymbol(sym) {
+		return syntax.IsIdentifier(name)
+	}
+	if name == "" || analysis.IsPrimitiveTypeName(name) {
 		return false
 	}
-	if sym.Owner != nil && sym.Owner.DynamicFields {
-		return false
+	for _, part := range strings.Split(name, ".") {
+		if !syntax.IsIdentifier(part) {
+			return false
+		}
 	}
 	return true
 }

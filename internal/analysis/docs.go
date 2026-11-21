@@ -1,6 +1,7 @@
 package analysis
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -20,6 +21,8 @@ type ParamDoc struct {
 	ParsedType types.Type
 	Doc        string
 	Optional   bool
+	// NameSpan is the byte range of the parameter name in the annotation.
+	NameSpan source.Span
 }
 
 // DocComment is the subset of LuaCATS docs used by M3 hover and completion.
@@ -50,6 +53,8 @@ type ClassField struct {
 	Doc        string
 	Optional   bool
 	Span       source.Span
+	// NameSpan is the byte range of the field name in the annotation.
+	NameSpan source.Span
 }
 
 // Class is the class metadata used for member completion and type checking.
@@ -62,6 +67,11 @@ type Class struct {
 	GenericDecls []GenericDecl
 	Operators    []ClassOperator
 	DeclSpan     source.Span
+	// NameSpan is the byte range of the first class name in `---@class`.
+	NameSpan source.Span
+	// NameSpans records every `---@class` name span when a class is declared
+	// more than once.
+	NameSpans []source.Span
 }
 
 // GenericDecl is one parsed generic parameter declaration.
@@ -101,7 +111,12 @@ func ParseDocComments(comments []syntax.Comment) *DocComment {
 			continue
 		}
 		if strings.HasPrefix(text, "@") {
+			before := len(doc.Params)
 			parseDocTag(doc, text)
+			if len(doc.Params) > before {
+				doc.Params[len(doc.Params)-1].NameSpan = trimAnnotationNameSpan(
+					comment, annotationRoleSpan(comment, AnnotationParamName), "?")
+			}
 			continue
 		}
 		summary = append(summary, text)
@@ -210,7 +225,7 @@ func attachDocs(snap *cart.Snapshot, result *Result) {
 		}
 		sym.Doc = doc
 	}
-	attachClassFields(result)
+	bindClassSymbols(snap, result)
 }
 
 func collectClasses(snap *cart.Snapshot) map[string]*Class {
@@ -271,6 +286,12 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 			if current.DeclSpan.IsEmpty() {
 				current.DeclSpan = comment.Span
 			}
+			if span := annotationRoleSpan(comment, AnnotationClassName); !span.IsEmpty() {
+				if current.NameSpan.IsEmpty() {
+					current.NameSpan = span
+				}
+				current.NameSpans = appendUniqueSpan(current.NameSpans, span)
+			}
 		case "@field":
 			if current == nil {
 				current = nil
@@ -281,6 +302,8 @@ func collectClasses(snap *cart.Snapshot) map[string]*Class {
 				current = nil
 				continue
 			}
+			field.NameSpan = trimAnnotationNameSpan(
+				comment, annotationRoleSpan(comment, AnnotationFieldName), "?")
 			current.Fields = append(current.Fields, field)
 		case "@operator":
 			if current == nil {
@@ -577,42 +600,333 @@ func commentsAdjacent(snap *cart.Snapshot, previous, current syntax.Comment) boo
 	return onlyWhitespace(gap) && strings.Count(gap, "\n") == 1
 }
 
+// bindClassSymbols creates one declaration symbol per `---@class` and one
+// canonical symbol per `---@field`. Runtime receiver fields link to the
+// canonical field through Symbol.ClassField so rename and references cover the
+// annotation and every annotated receiver together.
+func bindClassSymbols(snap *cart.Snapshot, result *Result) {
+	if result == nil || result.Table == nil || len(result.Classes) == 0 {
+		return
+	}
+	if result.TypeSymbols == nil {
+		result.TypeSymbols = make(map[string]*Symbol)
+	}
+	if result.ClassFields == nil {
+		result.ClassFields = make(map[string]map[string]*Symbol)
+	}
+	names := make([]string, 0, len(result.Classes))
+	for name := range result.Classes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, canonical := range names {
+		class := result.Classes[canonical]
+		if class == nil {
+			continue
+		}
+		span := class.NameSpan
+		if span.IsEmpty() {
+			continue
+		}
+		classSym := result.TypeSymbols[canonical]
+		if classSym == nil {
+			classSym = result.Table.NewSymbol(SymbolClass, class.Name, span, nil)
+			// The class name doubles as the receiver type for generic
+			// resolution on canonical `---@field` symbols.
+			classSym.Doc = &DocComment{Class: class.Name}
+			result.TypeSymbols[canonical] = classSym
+		}
+		nameSpans := class.NameSpans
+		if len(nameSpans) == 0 {
+			nameSpans = []source.Span{span}
+		}
+		for _, nameSpan := range nameSpans {
+			text := annotationSpanText(snap, nameSpan)
+			if text == "" {
+				text = class.Name
+			}
+			result.addOccurrence(Occurrence{
+				Span:       nameSpan,
+				Text:       text,
+				Symbol:     classSym,
+				Decl:       true,
+				Write:      true,
+				Annotation: true,
+			})
+		}
+		if classSym.Fields == nil {
+			classSym.Fields = make(map[string]*Symbol)
+		}
+		fields := result.ClassFields[canonical]
+		if fields == nil {
+			fields = make(map[string]*Symbol)
+			result.ClassFields[canonical] = fields
+		}
+		for i := range class.Fields {
+			field := &class.Fields[i]
+			key := CanonicalName(field.Name)
+			if key == "" {
+				continue
+			}
+			fieldSym := fields[key]
+			if fieldSym != nil {
+				applyClassFieldDoc(fieldSym, *field)
+				if !field.NameSpan.IsEmpty() {
+					text := annotationSpanText(snap, field.NameSpan)
+					if text == "" {
+						text = field.Name
+					}
+					result.addOccurrence(Occurrence{
+						Span:       field.NameSpan,
+						Text:       text,
+						Symbol:     fieldSym,
+						Decl:       true,
+						Write:      true,
+						Annotation: true,
+					})
+				}
+				continue
+			}
+			fieldSpan := field.NameSpan
+			if fieldSpan.IsEmpty() {
+				continue
+			}
+			fieldSym = result.Table.NewSymbol(SymbolField, field.Name, fieldSpan, nil)
+			fieldSym.Owner = classSym
+			fieldSym.FromClass = true
+			text := annotationSpanText(snap, fieldSpan)
+			if text == "" {
+				text = field.Name
+			}
+			result.addOccurrence(Occurrence{
+				Span:       fieldSpan,
+				Text:       text,
+				Symbol:     fieldSym,
+				Decl:       true,
+				Write:      true,
+				Annotation: true,
+			})
+			fields[key] = fieldSym
+			classSym.Fields[key] = fieldSym
+			applyClassFieldDoc(fieldSym, *field)
+		}
+	}
+}
+
+// classForSymbol returns the class named by a receiver's `@class` or `@type`
+// annotation. Implicit method self resolves through its function owner.
+func (r *Result) classForSymbol(sym *Symbol) *Class {
+	if r == nil || sym == nil {
+		return nil
+	}
+	className := ""
+	if sym.Doc != nil {
+		className = sym.Doc.Class
+		if className == "" {
+			className = singleClassTypeName(sym.Doc.Type)
+		}
+	}
+	if className == "" && sym.Kind == SymbolParam && sym.Canonical == "self" && sym.Function != nil && sym.Function.Owner != nil {
+		owner := sym.Function.Owner
+		if owner.Doc != nil {
+			className = owner.Doc.Class
+			if className == "" {
+				className = singleClassTypeName(owner.Doc.Type)
+			}
+		}
+	}
+	if className == "" || IsPrimitiveTypeName(className) {
+		return nil
+	}
+	return r.Classes[CanonicalName(className)]
+}
+
 func attachClassFields(result *Result) {
 	if result == nil || result.Table == nil || len(result.Classes) == 0 {
 		return
 	}
 	for _, sym := range result.Table.Symbols {
-		if sym == nil || sym.Builtin || sym.Doc == nil {
+		if sym == nil || sym.Builtin || IsTypeSymbol(sym) || isClassFieldDeclaration(sym) {
 			continue
 		}
-		className := sym.Doc.Class
-		if className == "" {
-			className = classTypeName(sym.Doc.Type)
-		}
-		class := result.Classes[CanonicalName(className)]
+		class := result.classForSymbol(sym)
 		if class == nil {
 			continue
 		}
 		if sym.Fields == nil {
 			sym.Fields = make(map[string]*Symbol)
 		}
+		classCanonical := CanonicalName(class.Name)
+		canonicalFields := result.ClassFields[classCanonical]
 		for _, field := range class.Fields {
 			canonical := CanonicalName(field.Name)
 			if canonical == "" {
 				continue
 			}
+			classField := canonicalFields[canonical]
 			if existing := sym.Fields[canonical]; existing != nil {
+				if existing == classField {
+					continue
+				}
 				existing.FromClass = true
+				if existing.ClassField == nil {
+					existing.ClassField = classField
+				}
 				applyClassFieldDoc(existing, field)
 				continue
 			}
-			fieldSym := result.Table.NewSymbol(SymbolField, field.Name, field.Span, nil)
+			fieldSpan := field.NameSpan
+			if fieldSpan.IsEmpty() {
+				fieldSpan = field.Span
+			}
+			fieldSym := result.Table.NewSymbol(SymbolField, field.Name, fieldSpan, nil)
 			fieldSym.Owner = sym
 			fieldSym.FromClass = true
+			fieldSym.ClassField = classField
 			applyClassFieldDoc(fieldSym, field)
 			sym.Fields[canonical] = fieldSym
 		}
+		// Materialize fields inherited from parent classes so rename,
+		// references, dynamic-access checks, and nested field families see
+		// them even when the receiver never uses the field statically.
+		inherited := result.ancestorClassFields(classCanonical)
+		keys := make([]string, 0, len(inherited))
+		for key := range inherited {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			parentField := inherited[key]
+			if parentField == nil {
+				continue
+			}
+			if existing := sym.Fields[key]; existing != nil {
+				if existing.ClassField != nil || isClassFieldDeclaration(existing) {
+					continue
+				}
+				existing.ClassField = parentField
+				existing.FromClass = true
+				result.applyCanonicalFieldDoc(existing, parentField)
+				continue
+			}
+			fieldSym := result.Table.NewSymbol(SymbolField, parentField.Name, parentField.DeclSpan, nil)
+			fieldSym.Owner = sym
+			fieldSym.FromClass = true
+			fieldSym.ClassField = parentField
+			result.applyCanonicalFieldDoc(fieldSym, parentField)
+			sym.Fields[key] = fieldSym
+		}
 	}
+}
+
+// ancestorClassFields returns fields inherited through parent classes, nearest
+// parents first.
+func (r *Result) ancestorClassFields(classCanonical string) map[string]*Symbol {
+	out := make(map[string]*Symbol)
+	if r == nil || classCanonical == "" {
+		return out
+	}
+	class := r.Classes[classCanonical]
+	if class == nil {
+		return out
+	}
+	seen := make(map[string]struct{})
+	queue := make([]string, 0, len(class.Parents))
+	enqueue := func(parent string) {
+		name := singleClassName(parent)
+		if name == "" || IsPrimitiveTypeName(name) {
+			return
+		}
+		queue = append(queue, CanonicalName(name))
+	}
+	for _, parent := range class.Parents {
+		enqueue(parent)
+	}
+	for len(queue) > 0 {
+		canonical := queue[0]
+		queue = queue[1:]
+		if _, ok := seen[canonical]; ok {
+			continue
+		}
+		seen[canonical] = struct{}{}
+		ancestor := r.Classes[canonical]
+		if ancestor == nil {
+			continue
+		}
+		if fields := r.ClassFields[canonical]; fields != nil {
+			for key, field := range fields {
+				if field != nil && out[key] == nil {
+					out[key] = field
+				}
+			}
+		}
+		for _, parent := range ancestor.Parents {
+			enqueue(parent)
+		}
+	}
+	return out
+}
+
+func (r *Result) applyCanonicalFieldDoc(sym, canonical *Symbol) {
+	if sym == nil || canonical == nil || canonical.Doc == nil {
+		return
+	}
+	if sym.Doc == nil {
+		sym.Doc = &DocComment{}
+	}
+	if sym.Doc.Type == "" && !r.fieldTypeUsesClassGenerics(canonical) {
+		sym.Doc.Type = canonical.Doc.Type
+	}
+	if sym.Doc.Summary == "" {
+		sym.Doc.Summary = canonical.Doc.Summary
+	}
+	sym.Doc.Optional = sym.Doc.Optional || canonical.Doc.Optional
+}
+
+func (r *Result) fieldTypeUsesClassGenerics(canonical *Symbol) bool {
+	if r == nil || canonical == nil || canonical.Doc == nil || canonical.Owner == nil {
+		return false
+	}
+	class := r.classForSymbol(canonical.Owner)
+	if class == nil {
+		return false
+	}
+	for _, decl := range class.GenericDecls {
+		if typeTextContainsIdentifier(canonical.Doc.Type, decl.Name) {
+			return true
+		}
+	}
+	return false
+}
+
+func typeTextContainsIdentifier(text, name string) bool {
+	canonical := CanonicalName(text)
+	target := CanonicalName(name)
+	if target == "" {
+		return false
+	}
+	for i := 0; i < len(canonical); {
+		if !isTypeIdentifierByte(canonical[i]) {
+			i++
+			continue
+		}
+		start := i
+		for i < len(canonical) && isTypeIdentifierByte(canonical[i]) {
+			i++
+		}
+		if canonical[start:i] == target {
+			return true
+		}
+	}
+	return false
+}
+
+func isTypeIdentifierByte(c byte) bool {
+	return c == '_' || c == '.' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+}
+
+func isClassFieldDeclaration(sym *Symbol) bool {
+	return sym != nil && sym.Kind == SymbolField && sym.Owner != nil && sym.Owner.Kind == SymbolClass
 }
 
 func applyClassFieldDoc(sym *Symbol, field ClassField) {
@@ -657,8 +971,9 @@ func fieldAtLineStart(file *cart.File, span source.Span) bool {
 	return true
 }
 
-// attachParamDocs copies matching `---@param` metadata onto parameter symbols.
-// The function-level doc block is still attached to the function itself.
+// attachParamDocs copies matching `---@param` metadata onto parameter symbols
+// and records the annotation names as uses. The function-level doc block is
+// still attached to the function itself.
 func attachParamDocs(result *Result) {
 	if result == nil || result.Table == nil {
 		return
@@ -667,10 +982,24 @@ func attachParamDocs(result *Result) {
 		if sym == nil || sym.Kind != SymbolParam || sym.Function == nil || sym.Function.Doc == nil {
 			continue
 		}
+		matched := false
 		for _, param := range sym.Function.Doc.Params {
 			if !strings.EqualFold(param.Name, sym.Name) {
 				continue
 			}
+			if !param.NameSpan.IsEmpty() {
+				result.addOccurrence(Occurrence{
+					Span:       param.NameSpan,
+					Text:       param.Name,
+					Symbol:     sym,
+					Scope:      sym.Scope,
+					Annotation: true,
+				})
+			}
+			if matched {
+				continue
+			}
+			matched = true
 			if sym.Doc == nil {
 				sym.Doc = &DocComment{}
 			}
@@ -681,7 +1010,6 @@ func attachParamDocs(result *Result) {
 				sym.Doc.Summary = param.Doc
 			}
 			sym.Doc.Optional = sym.Doc.Optional || param.Optional
-			break
 		}
 	}
 }
@@ -701,6 +1029,86 @@ func classTypeName(value string) string {
 		return value[:i]
 	}
 	return value
+}
+
+// singleClassName resolves one type expression to a class name, including a
+// generic application such as Box<number>.
+func singleClassName(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	open := strings.IndexByte(value, '<')
+	if open < 0 {
+		return classTypeName(value)
+	}
+	name := strings.TrimSpace(value[:open])
+	if name == "" || classTypeName(name) != name {
+		return ""
+	}
+	close := matchingAnnotationDelimiter(value, open, '<', '>')
+	if close < 0 {
+		return ""
+	}
+	rest := strings.TrimSpace(value[close+1:])
+	if rest == "?" {
+		rest = ""
+	}
+	if rest != "" {
+		return ""
+	}
+	return name
+}
+
+// singleClassTypeName resolves a type expression to one class name. A union
+// whose only non-nil member is the same class resolves to that class; unions
+// of multiple classes remain ambiguous.
+func singleClassTypeName(value string) string {
+	if name := singleClassName(value); name != "" {
+		return name
+	}
+	if !strings.Contains(value, "|") {
+		return ""
+	}
+	var name string
+	for _, part := range splitTopLevelUnion(value) {
+		part = strings.TrimSpace(part)
+		if part == "" || strings.EqualFold(part, "nil") {
+			continue
+		}
+		candidate := singleClassName(part)
+		if candidate == "" {
+			return ""
+		}
+		if name != "" && CanonicalName(name) != CanonicalName(candidate) {
+			return ""
+		}
+		name = candidate
+	}
+	return name
+}
+
+func splitTopLevelUnion(text string) []string {
+	var out []string
+	depth := 0
+	start := 0
+	for i, r := range text {
+		switch r {
+		case '<', '{', '[', '(':
+			depth++
+		case '>', '}', ']', ')':
+			if depth > 0 {
+				depth--
+			}
+		case '|':
+			if depth == 0 {
+				out = append(out, strings.TrimSpace(text[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	out = append(out, strings.TrimSpace(text[start:]))
+	return out
 }
 
 // docCommentsFor returns the contiguous doc-comment block directly above

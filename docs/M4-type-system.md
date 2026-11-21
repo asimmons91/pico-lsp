@@ -137,6 +137,9 @@ Notes:
 - `--[[@as T]]` attaches to the expression it follows on the same line.
 - `@cast` applies from its line onward within the current block.
 - `@diagnostic` applies to the next line, current line, or whole file as specified.
+- Annotation names participate in go-to-definition, references, highlights, and
+  rename as specified in [M2](M2-semantic-core.md#luacats-annotation-names).
+  This does not change type inference or checking.
 
 ### Annotation diagnostics
 

@@ -1634,8 +1634,11 @@ func (inf *inferer) emitDeprecated() {
 		if sym == nil || sym.Doc == nil || !sym.Doc.Deprecated {
 			continue
 		}
-		for _, span := range sym.Uses {
-			inf.result.addTypeDiagnostic(inf.mode, CodeDeprecated, fmt.Sprintf("%s is deprecated", sym.Name), span, SeverityHint)
+		for _, occ := range inf.result.OccurrencesForSymbol(sym) {
+			if occ.Annotation || occ.Decl {
+				continue
+			}
+			inf.result.addTypeDiagnostic(inf.mode, CodeDeprecated, fmt.Sprintf("%s is deprecated", sym.Name), occ.Span, SeverityHint)
 		}
 	}
 }

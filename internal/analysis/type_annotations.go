@@ -23,12 +23,14 @@ const (
 
 // CastDirective narrows or widens a named symbol from its line onward.
 type CastDirective struct {
-	Name   string
-	Type   types.Type
-	Mode   CastMode
-	Span   source.Span
-	Line   int
-	FileID source.FileID
+	Name string
+	Type types.Type
+	Mode CastMode
+	Span source.Span
+	// NameSpan is the byte range of the cast target in the annotation.
+	NameSpan source.Span
+	Line     int
+	FileID   source.FileID
 }
 
 // AsDirective forces the preceding expression on its line to a type.
@@ -49,11 +51,15 @@ type DiagnosticDirective struct {
 }
 
 type typeDeclarationSet struct {
-	aliases   map[string]*types.Alias
-	enums     map[string]*types.Record
-	aliasRaw  map[string]string
-	aliasSpan map[string]source.Span
-	enumSpan  map[string]source.Span
+	aliases        map[string]*types.Alias
+	enums          map[string]*types.Record
+	aliasRaw       map[string]string
+	aliasSpan      map[string]source.Span
+	aliasNameSpan  map[string]source.Span
+	aliasNameSpans map[string][]source.Span
+	enumSpan       map[string]source.Span
+	enumNameSpan   map[string]source.Span
+	enumNameSpans  map[string][]source.Span
 }
 
 func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
@@ -65,6 +71,10 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 	result.Aliases = decls.aliases
 	result.Enums = decls.enums
 	result.aliasRaw = decls.aliasRaw
+	result.aliasNameSpan = decls.aliasNameSpan
+	result.aliasNameSpans = decls.aliasNameSpans
+	result.enumNameSpan = decls.enumNameSpan
+	result.enumNameSpans = decls.enumNameSpans
 
 	buildTypeNamespace(result)
 	resolver := result.resolveType
@@ -243,11 +253,15 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 
 func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 	set := &typeDeclarationSet{
-		aliases:   make(map[string]*types.Alias),
-		enums:     make(map[string]*types.Record),
-		aliasRaw:  make(map[string]string),
-		aliasSpan: make(map[string]source.Span),
-		enumSpan:  make(map[string]source.Span),
+		aliases:        make(map[string]*types.Alias),
+		enums:          make(map[string]*types.Record),
+		aliasRaw:       make(map[string]string),
+		aliasSpan:      make(map[string]source.Span),
+		aliasNameSpan:  make(map[string]source.Span),
+		aliasNameSpans: make(map[string][]source.Span),
+		enumSpan:       make(map[string]source.Span),
+		enumNameSpan:   make(map[string]source.Span),
+		enumNameSpans:  make(map[string][]source.Span),
 	}
 	if snap == nil {
 		return set
@@ -270,12 +284,20 @@ func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 				continue
 			}
 			canonical := CanonicalName(name)
+			nameSpan := annotationRoleSpan(comment, AnnotationTypeName)
 			if _, exists := set.aliases[canonical]; exists {
+				if !nameSpan.IsEmpty() {
+					set.aliasNameSpans[canonical] = appendUniqueSpan(set.aliasNameSpans[canonical], nameSpan)
+				}
 				continue
 			}
 			set.aliases[canonical] = &types.Alias{Name: name, Underlying: types.AnyType}
 			set.aliasRaw[canonical] = typeText
 			set.aliasSpan[canonical] = comment.Span
+			set.aliasNameSpan[canonical] = nameSpan
+			if !nameSpan.IsEmpty() {
+				set.aliasNameSpans[canonical] = appendUniqueSpan(set.aliasNameSpans[canonical], nameSpan)
+			}
 		case "@enum":
 			rest := strings.TrimSpace(text[len("@enum"):])
 			name, _ := cutFirstField(rest)
@@ -284,13 +306,21 @@ func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 				continue
 			}
 			canonical := CanonicalName(name)
+			nameSpan := annotationRoleSpan(comment, AnnotationEnumName)
 			if _, exists := set.enums[canonical]; exists {
+				if !nameSpan.IsEmpty() {
+					set.enumNameSpans[canonical] = appendUniqueSpan(set.enumNameSpans[canonical], nameSpan)
+				}
 				continue
 			}
 			record := types.NewRecord(name)
 			record.Enum = true
 			set.enums[canonical] = record
 			set.enumSpan[canonical] = comment.Span
+			set.enumNameSpan[canonical] = nameSpan
+			if !nameSpan.IsEmpty() {
+				set.enumNameSpans[canonical] = appendUniqueSpan(set.enumNameSpans[canonical], nameSpan)
+			}
 		}
 	}
 	return set
@@ -341,14 +371,10 @@ func genericResolver(params []*types.GenericParam, fallback TypeResolver) TypeRe
 }
 
 func (r *Result) classGenericResolver(owner *Symbol, fallback TypeResolver) TypeResolver {
-	if r == nil || owner == nil || owner.Doc == nil {
+	if r == nil || owner == nil {
 		return fallback
 	}
-	className := owner.Doc.Class
-	if className == "" {
-		className = classTypeName(owner.Doc.Type)
-	}
-	class := r.Classes[CanonicalName(className)]
+	class := r.classForSymbol(owner)
 	if class == nil || class.Record == nil || len(class.Record.TypeParams) == 0 {
 		return fallback
 	}
@@ -614,6 +640,8 @@ func collectCastDirective(result *Result, text string, comment syntax.Comment, r
 		result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "cast requires a name and a type", comment.Span, SeverityWarning)
 		return
 	}
+	nameSpan := trimAnnotationNameSpan(
+		comment, annotationRoleSpan(comment, AnnotationVariableName), ":")
 	for {
 		rest = strings.TrimSpace(rest)
 		if rest == "" {
@@ -634,12 +662,13 @@ func collectCastDirective(result *Result, text string, comment syntax.Comment, r
 			return
 		}
 		result.Casts = append(result.Casts, CastDirective{
-			Name:   name,
-			Type:   parsed,
-			Mode:   castMode,
-			Span:   comment.Span,
-			Line:   result.lineForSpan(comment.Span),
-			FileID: comment.Span.FileID,
+			Name:     name,
+			Type:     parsed,
+			Mode:     castMode,
+			Span:     comment.Span,
+			NameSpan: nameSpan,
+			Line:     result.lineForSpan(comment.Span),
+			FileID:   comment.Span.FileID,
 		})
 		rest = strings.TrimSpace(rest[end:])
 		if !strings.HasPrefix(rest, ",") {
@@ -967,6 +996,17 @@ func (r *Result) syncClassFields() {
 		for key, fieldSym := range sym.Fields {
 			if fieldSym == nil || fieldSym.Name == "" {
 				continue
+			}
+			if fieldSym.ClassField != nil {
+				classSym := r.TypeSymbols[CanonicalName(class.Name)]
+				ownAnnotationField := classSym != nil && fieldSym.ClassField.Owner == classSym
+				// Annotation-derived copies already exist in the class
+				// hierarchy; do not shadow inherited generic fields with an
+				// inferred `any`. A subclass field with a real code
+				// declaration can still shadow an inherited field.
+				if ownAnnotationField || len(fieldSym.Decls) == 0 {
+					continue
+				}
 			}
 			if link := r.classFieldLinks[fieldSym]; link != nil {
 				if fieldSym.Type != nil {

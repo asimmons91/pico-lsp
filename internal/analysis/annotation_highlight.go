@@ -49,6 +49,37 @@ type AnnotationSegment struct {
 	Role AnnotationRole
 }
 
+// annotationRoleSpan returns the first segment with role, or a zero span.
+func annotationRoleSpan(comment syntax.Comment, role AnnotationRole) source.Span {
+	for _, segment := range AnnotationSegments(comment) {
+		if segment.Role == role {
+			return segment.Span
+		}
+	}
+	return source.Span{}
+}
+
+// trimAnnotationNameSpan removes declaration suffixes such as the optional
+// marker `?` or a trailing colon from a name span.
+func trimAnnotationNameSpan(comment syntax.Comment, span source.Span, suffixes string) source.Span {
+	if span.IsEmpty() || suffixes == "" {
+		return span
+	}
+	start := span.Start - comment.Span.Start
+	end := span.End - comment.Span.Start
+	if start < 0 || end > len(comment.Text) || start >= end {
+		return span
+	}
+	for end > start && strings.ContainsRune(suffixes, rune(comment.Text[end-1])) {
+		end--
+	}
+	return source.Span{
+		FileID: span.FileID,
+		Start:  span.Start,
+		End:    comment.Span.Start + end,
+	}
+}
+
 // AnnotationSegments splits a `---@` doc comment into semantic-highlight
 // segments. The `---` prefix, whitespace, and trailing prose keep their normal
 // comment styling because they are not returned. Unknown tags still produce a

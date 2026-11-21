@@ -103,6 +103,11 @@ type Symbol struct {
 	// doc block above the line documents the local or assignment target, not
 	// the individual field.
 	InTableConstructor bool
+	// ClassField links a runtime field copied from a LuaCATS `---@field`
+	// declaration to the canonical annotation field symbol. The canonical
+	// symbol is shared by every receiver of the class and owns the annotation
+	// declaration occurrence.
+	ClassField *Symbol
 }
 
 // CanonicalName ASCII-lowercases name. PICO-8 has no case distinction for
@@ -134,6 +139,11 @@ type Occurrence struct {
 	// targets. Labels are function-scoped, so this is not necessarily Scope or
 	// one of its ancestors.
 	LabelScope *Scope
+
+	// Annotation marks a declaration or use inside a LuaCATS `---@` comment.
+	// Annotation occurrences participate in navigation and rename but never in
+	// code lint rules.
+	Annotation bool
 }
 
 // SymbolTable is the cart's symbol store.
@@ -180,11 +190,26 @@ type Result struct {
 	Aliases map[string]*types.Alias
 	// Enums holds `---@enum` declarations by canonical name.
 	Enums map[string]*types.Record
+	// TypeSymbols maps canonical `---@class`, `---@alias`, and `---@enum`
+	// names to their declaration symbols. Type names live in a namespace
+	// separate from globals, locals, and fields.
+	TypeSymbols map[string]*Symbol
+	// ClassFields maps a canonical class name to its canonical `---@field`
+	// symbols. Runtime receiver fields link back through Symbol.ClassField.
+	ClassFields map[string]map[string]*Symbol
 
-	typeNames   map[string]types.Type
-	aliasRaw    map[string]string
-	funcSymbols map[*syntax.FunctionExpr]*Symbol
-	diagLines   map[Diagnostic]int
+	typeNames      map[string]types.Type
+	aliasRaw       map[string]string
+	aliasNameSpan  map[string]source.Span
+	aliasNameSpans map[string][]source.Span
+	enumNameSpan   map[string]source.Span
+	enumNameSpans  map[string][]source.Span
+	funcSymbols    map[*syntax.FunctionExpr]*Symbol
+	// annotationGenerics records the generic names visible at each annotation
+	// type-reference span. Rename refuses a type name that would be captured by
+	// a generic in that context.
+	annotationGenerics map[source.Span]map[string]struct{}
+	diagLines          map[Diagnostic]int
 
 	// Casts, AsCasts, and DiagnosticDirectives are parsed annotation directives
 	// used by inference and diagnostic suppression.
@@ -400,18 +425,81 @@ func (r *Result) Occurrences(fileID source.FileID) []Occurrence {
 	return r.byFile[fileID]
 }
 
-// OccurrencesForSymbol returns every declaration and use of sym.
+// OccurrencesForSymbol returns every declaration and use of sym. A runtime
+// field copied from `---@field` shares occurrences with the canonical
+// annotation field and every other receiver of the same class.
 func (r *Result) OccurrencesForSymbol(sym *Symbol) []Occurrence {
 	if r == nil || sym == nil {
 		return nil
 	}
+	targets := r.relatedSymbols(sym)
 	out := make([]Occurrence, 0, len(sym.Decls)+len(sym.Uses))
+	seen := make(map[source.Span]struct{}, len(sym.Decls)+len(sym.Uses))
 	for _, occ := range r.occs {
-		if occ.Symbol == sym {
-			out = append(out, occ)
+		if _, ok := targets[occ.Symbol]; !ok {
+			continue
 		}
+		if _, ok := seen[occ.Span]; ok {
+			continue
+		}
+		seen[occ.Span] = struct{}{}
+		out = append(out, occ)
 	}
 	return out
+}
+
+// SameSymbol reports whether a and b refer to the same navigable entity. A
+// runtime class field and its `---@field` declaration are the same entity.
+func (r *Result) SameSymbol(a, b *Symbol) bool {
+	if a == b {
+		return true
+	}
+	if r == nil || a == nil || b == nil {
+		return false
+	}
+	canonical := r.canonicalClassField(a)
+	return canonical != nil && canonical == r.canonicalClassField(b)
+}
+
+// relatedSymbols returns sym plus every runtime field linked to the same
+// canonical `---@field` symbol.
+func (r *Result) relatedSymbols(sym *Symbol) map[*Symbol]struct{} {
+	targets := map[*Symbol]struct{}{sym: {}}
+	canonical := r.canonicalClassField(sym)
+	if canonical == nil {
+		return targets
+	}
+	targets[canonical] = struct{}{}
+	if r.Table == nil {
+		return targets
+	}
+	for _, other := range r.Table.Symbols {
+		if other != nil && other.ClassField == canonical {
+			targets[other] = struct{}{}
+		}
+	}
+	return targets
+}
+
+// canonicalClassField returns the canonical `---@field` symbol for a linked
+// runtime field or for the class field declaration itself.
+func (r *Result) canonicalClassField(sym *Symbol) *Symbol {
+	if sym == nil {
+		return nil
+	}
+	if sym.ClassField != nil {
+		return sym.ClassField
+	}
+	if sym.Kind == SymbolField && sym.Owner != nil && sym.Owner.Kind == SymbolClass {
+		return sym
+	}
+	return nil
+}
+
+// IsTypeSymbol reports whether sym is a `---@class`, `---@alias`, or
+// `---@enum` declaration.
+func IsTypeSymbol(sym *Symbol) bool {
+	return sym != nil && sym.Kind == SymbolClass && sym.Owner == nil
 }
 
 // OccurrenceAt returns the occurrence at or immediately before offset. A
@@ -452,6 +540,11 @@ func (r *Result) Definitions(sym *Symbol) []source.Span {
 		// declaration occurrence of its own.
 		return []source.Span{sym.DeclSpan}
 	}
+	if len(sym.Decls) == 0 && sym.ClassField != nil {
+		// A receiver field with no code declaration inherits the `---@field`
+		// declaration.
+		return sym.ClassField.Decls
+	}
 	return sym.Decls
 }
 
@@ -462,10 +555,19 @@ func (r *Result) References(sym *Symbol, includeDecl bool) []source.Span {
 		return nil
 	}
 	out := make([]source.Span, 0, len(sym.Uses)+len(sym.Decls))
-	if includeDecl {
-		out = append(out, sym.Decls...)
+	for target := range r.relatedSymbols(sym) {
+		if target == nil {
+			continue
+		}
+		if includeDecl {
+			for _, span := range target.Decls {
+				out = appendUniqueSpan(out, span)
+			}
+		}
+		for _, span := range target.Uses {
+			out = appendUniqueSpan(out, span)
+		}
 	}
-	out = append(out, sym.Uses...)
 	sortSpans(out)
 	return out
 }
@@ -527,6 +629,36 @@ func sortSpans(spans []source.Span) {
 	})
 }
 
+// Renameable reports whether sym has a safe user-navigable declaration. It
+// rejects built-ins, implicit self, provisional fields, and any field whose
+// receiver also uses dynamic access.
+func (r *Result) Renameable(sym *Symbol) bool {
+	if r == nil || sym == nil || sym.Builtin {
+		return false
+	}
+	if canonical := r.canonicalClassField(sym); canonical != nil {
+		if len(canonical.Decls) == 0 {
+			return false
+		}
+		for target := range r.relatedSymbols(sym) {
+			if target == nil || target.Owner == nil {
+				continue
+			}
+			if target.Owner.DynamicFields {
+				return false
+			}
+		}
+		return true
+	}
+	if IsTypeSymbol(sym) {
+		return len(sym.Decls) > 0
+	}
+	if len(sym.Decls) == 0 {
+		return false
+	}
+	return sym.Owner == nil || !sym.Owner.DynamicFields
+}
+
 // RenameConflict returns another symbol that would collide if sym were renamed
 // to newCanonical, or nil when the rename is safe. Callers still need to refuse
 // built-ins, dynamic fields, and invalid names.
@@ -534,7 +666,22 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 	if r == nil || sym == nil || sym.Builtin || newCanonical == sym.Canonical {
 		return nil
 	}
+	if canonical := r.canonicalClassField(sym); canonical != nil {
+		return r.classFieldRenameConflict(canonical, newCanonical)
+	}
+	if IsTypeSymbol(sym) {
+		if other := r.TypeSymbols[newCanonical]; other != nil && other != sym {
+			return other
+		}
+		if r.typeNameCapturedByGeneric(sym, newCanonical) {
+			return &Symbol{Name: newCanonical, Canonical: newCanonical}
+		}
+		return nil
+	}
 	table := r.Table
+	if table == nil {
+		return nil
+	}
 	if sym.Owner != nil {
 		if sym.Owner.DynamicFields {
 			return sym
@@ -585,7 +732,7 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 	// Locals, parameters, and local functions can be shadowed by another
 	// declaration or can capture an existing use inside their scope.
 	for _, other := range table.Symbols {
-		if other == sym || other.Builtin || other.Owner != nil || other.Kind == SymbolLabel || other.Canonical != newCanonical {
+		if other == sym || other.Builtin || other.Owner != nil || other.Kind == SymbolLabel || IsTypeSymbol(other) || other.Canonical != newCanonical {
 			continue
 		}
 		if table.Globals[other.Canonical] == other {
@@ -602,8 +749,8 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 		if occ.Symbol == sym || CanonicalName(occ.Text) != newCanonical {
 			continue
 		}
-		if occ.Symbol != nil && (occ.Symbol.Owner != nil || occ.Symbol.Kind == SymbolLabel) {
-			// Field and label names live in separate namespaces.
+		if occ.Symbol != nil && (occ.Symbol.Owner != nil || occ.Symbol.Kind == SymbolLabel || IsTypeSymbol(occ.Symbol)) {
+			// Field, label, and type names live in separate namespaces.
 			continue
 		}
 		if sym.Scope != nil && sym.Scope.IsAncestorOf(occ.Scope) {
@@ -613,6 +760,47 @@ func (r *Result) RenameConflict(sym *Symbol, newCanonical string) *Symbol {
 			// An unresolved or built-in use would be captured by the renamed
 			// local, so the rename is not safe.
 			return &Symbol{Name: occ.Text, Canonical: newCanonical}
+		}
+	}
+	return nil
+}
+
+func (r *Result) typeNameCapturedByGeneric(sym *Symbol, newCanonical string) bool {
+	if r == nil || sym == nil || newCanonical == "" {
+		return false
+	}
+	for _, span := range sym.Uses {
+		if generics := r.annotationGenerics[span]; generics != nil {
+			if _, ok := generics[newCanonical]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *Result) classFieldRenameConflict(canonical *Symbol, newCanonical string) *Symbol {
+	if canonical == nil {
+		return nil
+	}
+	if owner := canonical.Owner; owner != nil {
+		if other := owner.Fields[newCanonical]; other != nil && other != canonical {
+			return other
+		}
+	}
+	for target := range r.relatedSymbols(canonical) {
+		if target == nil || target == canonical {
+			continue
+		}
+		owner := target.Owner
+		if owner == nil {
+			continue
+		}
+		if owner.DynamicFields {
+			return target
+		}
+		if other := owner.Fields[newCanonical]; other != nil && other != target && other != canonical {
+			return other
 		}
 	}
 	return nil
