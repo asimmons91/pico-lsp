@@ -360,8 +360,8 @@ Record the following for each run:
 | VSIX contents | `vsce ls` and inspect the package | No source, tests, scripts, or internal notes |
 | Remote/web limitation | Read the listing and docs | Unsupported hosts are clearly stated; no support claim is made |
 
-Run the platform rows the test machine supports. Record any unverified platform
-as an open release item rather than implying it passed.
+Run these checks on each platform the test machine supports. Record any
+unverified platform as an open release item rather than implying it passed.
 
 ## Testing and CI
 
