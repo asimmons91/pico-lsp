@@ -28,20 +28,21 @@ Items marked proposed are specified but not yet committed to a release.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — shipped in v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
+- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — proposed
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0.
-The items below are not part of these releases.
+M24 is specified but not yet committed to a release. The unpromoted items below
+are not part of these releases.
 
 ## Prioritization
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
-| P2 | VS Code Marketplace and Open VSX publishing | Makes the M15 client discoverable and one-click installable | Low |
 | P2 | Zed extension | Modern editor support | Medium |
 | P3 | API version selection | Support future PICO-8 API versions | Medium |
 
@@ -61,22 +62,10 @@ Requirements:
 
 ## 2. VS Code Marketplace and Open VSX publishing
 
-Publish the M15 client to the VS Code Marketplace and Open VSX. M15 ships the
-extension as a GitHub release VSIX; this follow-up makes it discoverable and
-one-click installable.
-
-Requirements:
-
-- Register and verify `asimmons91` as the publisher in both registries.
-- Keep Marketplace and Open VSX publishers independently retryable.
-- Publish from the release workflow using repository secrets, with a documented
-  manual fallback.
-- Include the extension README, icon, LICENSE, CHANGELOG, repository links,
-  categories, and keywords in both listings.
-- Publish only VSIXs that passed the M15 CI and release checks.
-- Test installation from both registries on all supported local desktop
-  platforms.
-- Document install, upgrade, and uninstall paths for each registry.
+Promoted to [M24 — VS Code Marketplace Launch and Documentation
+Cleanup](M24-vscode-marketplace.md) as a proposed milestone. The milestone spec
+owns the scope, release decisions, documentation deliverables, publication
+automation, and manual VS Code verification checklist.
 
 ## 3. Zed extension
 
