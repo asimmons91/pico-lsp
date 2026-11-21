@@ -206,8 +206,8 @@ and returns `{"applied": true}`. Otherwise it returns the edit for the client:
 
 ## Code actions and refactors
 
-`textDocument/codeAction` returns standard `CodeAction`s. The M14 actions use
-these kinds:
+`textDocument/codeAction` returns standard `CodeAction`s. The refactor actions
+use these kinds:
 
 | Kind | Action |
 |---|---|
@@ -215,6 +215,9 @@ these kinds:
 | `refactor.rewrite.class` | Generate a `---@class` block from a table literal. |
 | `refactor.rewrite.local` | Convert a safe global declaration to `local`. |
 | `refactor.rewrite.shorthand` | Convert between standard and PICO-8 shorthand `if`/`while`. |
+| `refactor.rewrite.token-saving.print` | Convert a safe `print(...)` statement to `?`. |
+| `refactor.rewrite.token-saving.compound` | Convert `target = target op value` to `target op= value`. |
+| `refactor.rewrite.token-saving.peek` | Convert built-in `peek`/`peek2`/`peek4` calls to `@`/`%`/`$`. |
 | `quickfix.pico-lsp.add-missing-fields` | Add required fields to a table literal flagged by `missing-fields`. |
 | `quickfix.pico-lsp.remove-unused` | Remove an unused local or local function. |
 
@@ -222,7 +225,15 @@ All actions except remove-unused embed a previewable `WorkspaceEdit`. Edits are
 always expressed in the coordinates of the original `.p8` file or included
 `.lua` file; includes are never added, removed, or reordered. No action is
 offered when an open document differs from the analyzed snapshot. Disable the
-M14 actions with `pico8.refactors.enabled: false`.
+refactor actions with `pico8.refactors.enabled: false`.
+
+Token-saving actions are cursor/selection-local. Their titles include the exact
+positive token delta, for example `Use ? print shorthand (saves 1 token)` or
+`Use compound assignment += (saves 2 tokens)`. No action is offered when the
+delta is zero or negative. Actions are suppressed for virtual `.p8.png`
+documents, `---@meta` files, and stale analysis. They never set `isPreferred`.
+Zero-argument `print()`, `flr(a / b)` → `a \ b`, redundant-parenthesis removal,
+bracket-index compound targets, and cart-wide fix-all edits are not offered.
 
 Remove-unused returns a code action with a `pico8.removeUnused` command instead
 of an embedded edit so the editor can treat it as an explicit confirmation. The

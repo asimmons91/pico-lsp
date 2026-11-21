@@ -1176,6 +1176,16 @@ func isUnaryOp(tok Token) bool {
 
 const unaryPrecedence = 11
 
+// UnaryPrecedence is the binding power of PICO-8 unary operators.
+const UnaryPrecedence = unaryPrecedence
+
+// BinaryPrecedence reports the binding power of a binary operator. It is used
+// by refactors that must preserve expression grouping when generating code.
+func BinaryPrecedence(tok Token) (prec int, ok bool) {
+	prec, _, ok = binaryPrecedence(tok)
+	return prec, ok
+}
+
 func binaryPrecedence(tok Token) (prec int, rightAssoc bool, ok bool) {
 	if tok.Kind == TokenKeyword {
 		switch tok.Value {
