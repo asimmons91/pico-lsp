@@ -56,7 +56,7 @@ export async function run(): Promise<void> {
   }
   assert.equal(serverInfo.platform, process.platform);
   assert.equal(serverInfo.arch, process.arch);
-  assert.equal(serverInfo.workspaceFolders, 1);
+  assert.equal(serverInfo.workspaceFolders, 2);
   assert.equal(serverInfo.attachLua, true);
 
   const codeLenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(

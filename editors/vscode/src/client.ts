@@ -98,7 +98,7 @@ export class PicoClient implements vscode.Disposable {
       platform: process.platform,
       arch: process.arch,
       cacheRoot: context.globalStorageUri.fsPath,
-      workspaceFolders: monitor.current().length,
+      workspaceFolders: vscode.workspace.workspaceFolders?.length ?? 0,
       attachLua: extensionSettings().attachLua,
       running: false
     };
@@ -113,7 +113,7 @@ export class PicoClient implements vscode.Disposable {
       ...this.serverDetails,
       extensionVersion: this.extensionVersion(),
       cacheRoot: this.context.globalStorageUri.fsPath,
-      workspaceFolders: this.monitor.current().length,
+      workspaceFolders: vscode.workspace.workspaceFolders?.length ?? 0,
       attachLua: extensionSettings().attachLua
     };
   }
@@ -304,7 +304,7 @@ export class PicoClient implements vscode.Disposable {
       platform: process.platform,
       arch: process.arch,
       cacheRoot,
-      workspaceFolders: folders.length,
+      workspaceFolders: vscode.workspace.workspaceFolders?.length ?? 0,
       attachLua: settings.attachLua,
       running: false
     };
@@ -408,7 +408,9 @@ export class PicoClient implements vscode.Disposable {
         `pico-lsp ${serverVersion ?? 'unknown version'} started from ${resolved.path} (${versionStatus})`
       );
       this.statusBar.updateNow();
-      void this.warnAboutVersion();
+      void this.warnAboutVersion().catch((error) => {
+        this.output.warn(`unable to show server version warning: ${errorMessage(error)}`);
+      });
     } catch (error) {
       this.client = undefined;
       this.running = undefined;

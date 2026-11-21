@@ -77,6 +77,19 @@ describe('server info formatting', () => {
     expect(text).toContain('Running: yes');
   });
 
+  it('keeps the last server version for a stopped client', () => {
+    const stopped = details({
+      running: false,
+      source: 'cache',
+      lastError: undefined
+    });
+    expect(formatServerInfo(stopped)).toContain('Server: not running');
+    expect(formatServerInfo(stopped)).toContain('Last server version: v1.7.0');
+    expect(formatServerDiagnostics(stopped)).toContain(
+      '- Last server version: `v1.7.0`'
+    );
+  });
+
   it('labels development builds without treating them as a mismatch', () => {
     const development = details({ serverVersion: 'dev', versionStatus: 'development' });
     expect(formatServerInfo(development)).toContain('Server: dev');

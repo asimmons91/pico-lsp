@@ -74,6 +74,9 @@ export function formatServerInfo(details: ServerDetails): string {
     `Lua attachment: ${luaAttachLabel(details)}`,
     `Running: ${details.running ? 'yes' : 'no'}`
   ];
+  if (!details.running && details.serverVersion) {
+    lines.push(`Last server version: ${details.serverVersion}`);
+  }
   if (details.lastError) {
     lines.push(`Last error: ${details.lastError}`);
   }
@@ -97,6 +100,9 @@ export function formatServerDiagnostics(details: ServerDetails): string {
     `- Lua attachment: \`${luaAttachLabel(details)}\``,
     `- Running: \`${details.running ? 'yes' : 'no'}\``
   ];
+  if (!details.running && details.serverVersion) {
+    lines.push(`- Last server version: \`${details.serverVersion}\``);
+  }
   if (details.lastError) {
     lines.push(`- Last error: \`${details.lastError}\``);
   }
