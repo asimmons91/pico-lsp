@@ -15,10 +15,11 @@ All notable changes to this project are documented here. The format follows
   aliases are unchanged.
 - Neovim: the optional ftplugin can install PICO-8's `Shift-A` through
   `Shift-Z` insert-mode shortcuts for the 26 typeable P8SCII symbols
-  (`0x80`-`0x99`). The mappings fetch canonical text from the server glyph
-  catalog, so custom `pico8.glyphs` overrides apply. Enable them with
+  (`0x80`-`0x99`). The mappings use the server glyph catalog by byte and fall
+  back to the literal uppercase key outside editable Lua code or without a
+  client; custom font slots still insert canonical Unicode. Enable them with
   `g:pico8_glyph_maps`; they are off by default because they replace uppercase
-  letters.
+  letters in code.
 
 ## [1.6.0] - 2026-11-19
 

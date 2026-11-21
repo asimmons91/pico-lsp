@@ -30,6 +30,13 @@ vim.lsp.config("pico_lsp", {
   cmd = { binary },
   filetypes = { "pico8" },
   root_dir = tmp,
+  settings = {
+    pico8 = {
+      glyphs = {
+        { name = "logo", byte = 128, description = "custom font slot 0x80" },
+      },
+    },
+  },
 })
 vim.lsp.enable("pico_lsp")
 require("pico_lsp").setup()
@@ -113,13 +120,42 @@ local client = vim.lsp.get_clients({ name = "pico_lsp", bufnr = cart_bufnr })[1]
 if not client then
   fail("pico-lsp did not attach to the cart buffer")
 end
-local glyph_response = client:request_sync("pico8/glyphs", vim.empty_dict(), 2000, cart_bufnr)
-if not glyph_response or glyph_response.err or not glyph_response.result then
-  fail("could not load the P8SCII glyph catalog")
+
+vim.api.nvim_buf_set_lines(0, -1, -1, false, { "" })
+vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(0), 0 })
+local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
+local glyph_response
+if not vim.wait(5000, function()
+  glyph_response = client:request_sync("pico8/glyphs", {
+    textDocument = position.textDocument,
+    position = position.position,
+  }, 2000, cart_bufnr)
+  if not glyph_response or glyph_response.err or not glyph_response.result then
+    return false
+  end
+  for _, entry in ipairs(glyph_response.result.glyphs) do
+    if entry.name == "logo" then
+      return true
+    end
+  end
+  return false
+end, 50) then
+  fail("pico8/glyphs did not include the custom logo entry")
 end
+
 local glyph_by_byte = {}
+local custom_logo
 for _, entry in ipairs(glyph_response.result.glyphs) do
   glyph_by_byte[entry.byte] = entry.text
+  if entry.name == "logo" then
+    custom_logo = entry
+  end
+end
+if not custom_logo.custom or custom_logo.byte ~= 128 then
+  fail("custom logo entry did not resolve to byte 0x80")
+end
+if custom_logo.text ~= "█" then
+  fail("custom font slot did not use canonical Unicode text")
 end
 local expected_parts = {}
 for i = 0, #shift_keys - 1 do
@@ -131,8 +167,6 @@ for i = 0, #shift_keys - 1 do
 end
 local expected_text = table.concat(expected_parts)
 
-vim.api.nvim_buf_set_lines(0, -1, -1, false, { "" })
-vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(0), 0 })
 local esc = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
 vim.api.nvim_feedkeys("i" .. shift_keys .. esc, "xt", false)
 local inserted = vim.api.nvim_buf_get_lines(0, -2, -1, false)[1]
@@ -155,10 +189,52 @@ for key, codepoint in pairs({ U = "0055", O = "004F", X = "0058" }) do
   end
 end
 
+local header = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+vim.api.nvim_feedkeys("AA" .. esc, "xt", false)
+local header_after = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+if header_after ~= header .. "A" then
+  fail("Shift-A did not fall back to a literal letter outside code")
+end
+vim.api.nvim_buf_set_lines(0, 0, 1, false, { header })
+
+local include_line = vim.api.nvim_buf_get_lines(0, 3, 4, false)[1]
+local include_col = #('#include "')
+vim.api.nvim_win_set_cursor(0, { 4, include_col })
+vim.api.nvim_feedkeys("iP" .. esc, "xt", false)
+local include_after = vim.api.nvim_buf_get_lines(0, 3, 4, false)[1]
+if include_after
+  ~= include_line:sub(1, include_col) .. "P" .. include_line:sub(include_col + 1)
+then
+  fail("Shift-P did not fall back to a literal letter in an include path")
+end
+vim.api.nvim_buf_set_lines(0, 3, 4, false, { include_line })
+
+vim.api.nvim_buf_set_lines(0, -1, -1, false, { "abcdefghij" })
+local replace_line = vim.api.nvim_buf_line_count(0)
+vim.api.nvim_win_set_cursor(0, { replace_line, 0 })
+vim.api.nvim_feedkeys("RD" .. esc, "xt", false)
+local replaced = vim.api.nvim_buf_get_lines(0, replace_line - 1, replace_line, false)[1]
+if replaced ~= "Dbcdefghij" then
+  fail("Replace mode did not preserve a single-character replacement: " .. vim.inspect(replaced))
+end
+vim.api.nvim_buf_set_lines(0, replace_line - 1, replace_line, false, {})
+
 vim.bo[cart_bufnr].filetype = "lua"
 check_shift_maps(cart_bufnr, false)
 vim.bo[cart_bufnr].filetype = "pico8"
 check_shift_maps(cart_bufnr, true)
+
+local no_client_probe = vim.api.nvim_create_buf(false, true)
+vim.bo[no_client_probe].filetype = "pico8"
+vim.api.nvim_buf_set_lines(no_client_probe, 0, -1, false, { "" })
+vim.api.nvim_buf_call(no_client_probe, function()
+  vim.api.nvim_feedkeys("iA" .. esc, "xt", false)
+end)
+if vim.api.nvim_buf_get_lines(no_client_probe, 0, -1, false)[1] ~= "A" then
+  fail("Shift-A did not fall back to a literal letter without a client")
+end
+vim.api.nvim_buf_delete(no_client_probe, { force = true })
 
 local function check_wrap(leader, message)
   local probe = vim.api.nvim_create_buf(false, true)

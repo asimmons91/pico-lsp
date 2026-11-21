@@ -155,19 +155,25 @@ The optional ftplugin can install PICO-8's `Shift-A` through `Shift-Z`
 insert-mode glyph shortcuts. PICO-8 assigns the 26 typeable symbols at P8SCII
 `0x80`-`0x99` to those keys in alphabetical order, including the six button
 glyphs at `Shift-L/R/U/D/O/X`. They are disabled by default because they
-replace uppercase letters. Enable them before opening a cart:
+replace uppercase letters in Lua code sections. Enable them before opening a
+cart:
 
 ```lua
 vim.g.pico8_glyph_maps = 1
 ```
 
-The Vimscript equivalent is `let g:pico8_glyph_maps = 1`. The mappings fetch
-the canonical glyph text from the server's `pico8/glyphs` catalog by byte, so a
-custom `pico8.glyphs` entry that overrides one of those bytes is used, and an
-attached `pico_lsp` client is required. To insert a literal uppercase letter,
-use Neovim's character-code entry with the four-digit Unicode code point:
-`CTRL-V u0055` inserts `U`, `CTRL-V u004F` inserts `O`, and so on. The mappings
-are buffer-local to `pico8` buffers; included `.lua` files do not receive them.
+The Vimscript equivalent is `let g:pico8_glyph_maps = 1`. In Lua code
+sections (but not `#include` paths), the mappings fetch the canonical glyph
+text from the server's `pico8/glyphs` catalog by byte, so an attached
+`pico_lsp` client is required and a custom font slot still inserts the
+canonical Unicode spelling for its byte. To insert a literal uppercase letter
+in code, use Neovim's character-code entry with the four-digit Unicode code
+point: `CTRL-V u0055` inserts `U`, `CTRL-V u004F` inserts `O`, and so on.
+Outside Lua code sections, in `#include` paths, when no client is attached, or
+when the catalog has no entry for a byte, the key inserts the literal uppercase
+letter instead. Read-only `.p8.png` buffers do not accept the insertions. The
+mappings are buffer-local to `pico8` buffers; included `.lua` files do not
+receive them.
 
 The remaining printable P8SCII characters are available through `p8_`
 completion or `:Pico8InsertGlyph`. PICO-8's `CTRL-J` (Hiragana), `CTRL-K`

@@ -273,15 +273,23 @@ end
 local shift_glyph_first_byte = 0x80
 local shift_glyph_count = 26
 
-local function glyph_text(byte)
+local function glyph_text(byte, key)
   local bufnr = vim.api.nvim_get_current_buf()
+  if not vim.bo[bufnr].modifiable then
+    return ""
+  end
+  local mode = vim.fn.mode(1)
+  if mode == "R" or mode == "r" then
+    return key
+  end
+
   local client = vim.lsp.get_clients({ name = "pico_lsp", bufnr = bufnr })[1]
   if not client then
     if not warned_glyph_maps then
       warned_glyph_maps = true
-      notify("no pico_lsp client attached; PICO-8 Shift glyph maps are inactive")
+      notify("no pico_lsp client attached; PICO-8 Shift glyph maps fall back to uppercase letters")
     end
-    return ""
+    return key
   end
 
   local position = vim.lsp.util.make_position_params(0, client.offset_encoding)
@@ -292,9 +300,9 @@ local function glyph_text(byte)
   if not response or response.err or not response.result then
     if not warned_glyph_maps then
       warned_glyph_maps = true
-      notify("could not load P8SCII glyphs", vim.log.levels.ERROR)
+      notify("could not load P8SCII glyphs; Shift glyph maps fall back to uppercase letters", vim.log.levels.ERROR)
     end
-    return ""
+    return key
   end
 
   -- Later entries win so a custom definition can override a built-in byte.
@@ -303,6 +311,9 @@ local function glyph_text(byte)
     if entry.byte == byte then
       text = entry.text or ""
     end
+  end
+  if text == "" then
+    return key
   end
   return text
 end
@@ -316,7 +327,7 @@ function M.install_glyph_maps(bufnr)
     local key = string.char(string.byte("A") + i)
     local byte = shift_glyph_first_byte + i
     vim.keymap.set("i", key, function()
-      return glyph_text(byte)
+      return glyph_text(byte, key)
     end, {
       buffer = bufnr,
       expr = true,
