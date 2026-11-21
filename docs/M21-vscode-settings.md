@@ -1,9 +1,10 @@
 # M21 — Full Server Settings Schema in the VS Code Client
 
-**Status:** Proposed — not started
+**Status:** Done — implementation complete. The manual Settings UI check and the
+v1.8.0 tag remain open release items.
 
 **Depends on:** M15  
-**Release target:** v1.9.0 (may ship with M22)  
+**Release target:** v1.8.0 (may ship with M22)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -34,7 +35,7 @@ server setting, default, or enum is added without updating the VS Code schema.
 | D6 | Descriptions | Every property has a description; complex settings use `markdownDescription` with links to `docs/configuration.md` and `docs/diagnostics.md`. |
 | D7 | Glyph schema | Preserve the existing `pico8.glyphs` schema and behavior. Do not tighten it beyond today's fields. |
 | D8 | Runtime behavior | No server defaults, configuration parsing, extension startup, or LSP behavior changes. |
-| D9 | Release | M21 may ship together with M22 as v1.9.0; the milestones remain independently reviewable. |
+| D9 | Release | M21 may ship together with M22 as v1.8.0; the milestones remain independently reviewable. |
 
 ## Scope
 
@@ -56,7 +57,7 @@ server setting, default, or enum is added without updating the VS Code schema.
 - A generated `package.json` or a new settings-generation tool.
 - Custom Settings UI views, webviews, or configuration wizards.
 - Marketplace/Open VSX publishing.
-- Remote host support and server-health reporting; those are M20 and M22.
+- Remote host support is not planned; server-health reporting is M22.
 
 ## Settings inventory
 
@@ -195,7 +196,7 @@ Add a Vitest test that:
   accepts the same settings from other LSP clients.
 - `docs/troubleshooting.md`: mention schema validation errors and how to
   compare effective defaults.
-- `CHANGELOG.md` under `Unreleased`, then the v1.9.0 release entry.
+- `CHANGELOG.md` under `Unreleased`, then the v1.8.0 release entry.
 - Update `docs/ROADMAP.md` and the post-v1 backlog when the milestone status
   changes.
 
@@ -231,21 +232,21 @@ Add a Vitest test that:
 
 ## Exit criteria
 
-- [ ] Every documented server setting is present in `package.json` with the
+- [x] Every documented server setting is present in `package.json` with the
       correct type, default, enum, minimum, scope, and description.
-- [ ] Nested `limits`, `format`, `diagnostics`, `lint`, and `refactors` objects
+- [x] Nested `limits`, `format`, `diagnostics`, `lint`, and `refactors` objects
       reject unknown keys.
-- [ ] `pico8.glyphs` keeps its existing schema and behavior.
-- [ ] The Go drift test fails on a missing setting or changed default/enum and
+- [x] `pico8.glyphs` keeps its existing schema and behavior.
+- [x] The Go drift test fails on a missing setting or changed default/enum and
       passes on the current tree.
-- [ ] Extension unit and integration tests assert the contributed defaults.
+- [x] Extension unit and integration tests assert the contributed defaults.
 - [ ] A manual Settings search shows the full PICO-8 section, and invalid enum
       values are flagged.
-- [ ] README, configuration, troubleshooting, changelog, roadmap, and backlog
+- [x] README, configuration, troubleshooting, changelog, roadmap, and backlog
       are updated.
-- [ ] No server behavior, extension startup behavior, or LSP capability
+- [x] No server behavior, extension startup behavior, or LSP capability
       changes.
-- [ ] `v1.9.0` is tagged after the release PR merges (possibly with M22).
+- [ ] `v1.8.0` is tagged after the release PR merges (possibly with M22).
 
 ## Risks and mitigations
 

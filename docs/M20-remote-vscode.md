@@ -1,10 +1,14 @@
 # M20 — Remote VS Code Extension Hosts
 
-**Status:** Proposed — not started
+**Status:** Withdrawn — dropped from the roadmap; remote VS Code extension hosts
+are not planned.
 
 **Depends on:** M15  
-**Release target:** v1.8.0  
+**Release target:** None  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
+
+> This specification is retained for historical reference only. It is not part
+> of the roadmap and no work is planned.
 
 ## Outcome
 

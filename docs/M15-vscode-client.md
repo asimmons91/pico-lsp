@@ -1,9 +1,9 @@
 # M15 — VS Code Client
 
-**Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation,
-live first-run download verification, remote extension hosts, the full server
-settings schema, and server-health reporting remain follow-ups; the last three
-are specified by M20–M22.
+**Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation and
+live first-run download verification remain follow-ups. The full server settings
+schema is implemented in M21; server-health reporting is specified by M22.
+Remote extension hosts are not planned.
 
 **Depends on:** M14  
 **Release target:** v1.3.0  
@@ -38,8 +38,8 @@ These decisions were confirmed before the spec was written:
   server.
 - M15 publishes a VSIX only as a GitHub release asset. VS Code Marketplace and
   Open VSX publishing are deferred to a follow-up milestone.
-- M15 supports local desktop VS Code only. Remote extension hosts are
-  delivered by M20; web extension hosts remain out of scope.
+- M15 supports local desktop VS Code only. Remote extension hosts are not
+  supported; web extension hosts remain out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
 - Node.js 26.13.1 is pinned in `mise.toml`; the extension declares VS Code
   `^1.95.0` and integration tests run against that minimum version.
@@ -71,8 +71,8 @@ These decisions were confirmed before the spec was written:
 ### Out of scope
 
 - VS Code Marketplace and Open VSX publishing.
-- Web extension hosts. Remote SSH, WSL, Dev Containers, and Codespaces are
-  delivered by M20.
+- Web extension hosts. Remote SSH, WSL, Dev Containers, and Codespaces are not
+  supported.
 - Read-only `.p8.png` virtual documents.
 - Auto-updating the server independently of the extension.
 - Bundling platform binaries inside the VSIX.
@@ -462,7 +462,7 @@ Extend `.github/workflows/release.yml`:
       paths are implemented.
 - [x] Missing assets, checksum failures, and offline `serverPath` use fail with
       actionable messages; web hosts and `.p8.png` remain documented
-      unsupported paths; remote hosts are delivered by M20.
+      unsupported paths; remote hosts are not supported.
 - [x] No unverified binary is ever executed.
 - [x] CI runs extension checks and integration tests; the release workflow
       attaches the VSIX.
@@ -472,8 +472,6 @@ Extend `.github/workflows/release.yml`:
 
 ## Follow-ups
 
-- [M20 — Remote VS Code Extension Hosts](M20-remote-vscode.md) adds Remote -
-  SSH, WSL, Dev Containers, and Codespaces remote extension hosts.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
   surfaces the server's `pico8.*` settings in the Settings UI.
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
@@ -489,6 +487,6 @@ Extend `.github/workflows/release.yml`:
 | A malicious or corrupted archive is executed | HTTPS, checksum verification, safe extraction, atomic install, no unverified execution. |
 | VS Code API or languageclient drift | Pin the engine and dependencies, keep integration tests, and avoid editor-specific server changes. |
 | Marketplace publishing blocks the release | Ship the VSIX as a GitHub release asset; Marketplace/Open VSX remain a follow-up. |
-| Web expectations | Reject web extension hosts with a clear message; remote hosts are delivered by M20. |
+| Web expectations | Reject web extension hosts with a clear message; remote hosts are not supported. |
 | `.p8.png` opens as binary noise | Document the limitation and track virtual-document support separately. |
 | Large status-bar request traffic | Debounce, cancel superseded requests, and refresh only for cart-owned editors. |

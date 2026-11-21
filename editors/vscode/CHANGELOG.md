@@ -1,5 +1,12 @@
 # Change Log
 
+## Unreleased
+
+- Contribute the full `pico8.*` server settings schema to the VS Code Settings
+  UI, including types, enums, defaults, window scopes, and descriptions.
+- Reject unknown keys in the `limits`, `format`, `diagnostics`, `lint`, and
+  `refactors` settings objects.
+
 ## 1.7.0
 
 - Bundle `pico-lsp` 1.7.0 with the complete printable P8SCII glyph catalog for

@@ -142,10 +142,24 @@ document in both transports.
 Settings changes are applied without restarting the server. Open carts are
 re-analyzed and diagnostics are republished.
 
-## VS Code extension settings
+## VS Code settings
 
-The VS Code client reads four extension-owned settings. They are not sent to
-the language server as behavior settings.
+The VS Code extension contributes the full `pico8` schema. Every server setting
+documented above appears in **Settings** and in `settings.json` with its type,
+allowed values, default, and description. VS Code validates edits against the
+schema; for example, `pico8.typeChecking` accepts only `off`, `basic`, and
+`strict`, and the nested `limits`, `format`, `diagnostics`, `lint`, and
+`refactors` objects reject unknown keys.
+
+Server settings use `window` scope because the server pulls one workspace-level
+`pico8` section rather than per-resource settings. `pico8.serverPath` remains
+`machine`-scoped because it names an executable on the machine that runs the
+extension host. The extension forwards the same section through
+`initializationOptions.pico8` and the server's `workspace/configuration` pull,
+and other LSP clients can set the same keys.
+
+The VS Code client also reads four extension-owned settings. They are not sent
+to the language server as behavior settings.
 
 | Setting | Type | Default | Scope | Meaning |
 |---|---|---|---|---|
@@ -154,9 +168,10 @@ the language server as behavior settings.
 | `pico8.attachLua` | boolean | `true` | window | Attach to all `.lua` files in workspace folders that contain a `.p8` cart. |
 | `pico8.trace.server` | `off`, `messages`, `verbose` | `off` | window | LSP trace level in the **PICO-8 Language Server Trace** channel. |
 
-All other `pico8.*` settings are server settings documented above and are still
-forwarded through `workspace/configuration` and
-`initializationOptions.pico8`.
+All other `pico8.*` settings are server settings documented above, including
+`pico8.glyphs`. Defaults shown in the Settings UI match the server's
+`internal/config` defaults; a Go drift test fails if the extension manifest and
+server configuration diverge.
 
 See [diagnostics.md](diagnostics.md) for the complete code list and
 [api.md](api.md) for `pico8/cartInfo` and `pico8.showCartInfo`.

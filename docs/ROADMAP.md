@@ -1,7 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.7.0 released with the expanded P8SCII glyph catalog. M20–M22 are
-proposed VS Code client milestones.
+**Status:** v1.7.0 released with the expanded P8SCII glyph catalog. M21 is
+implemented and targets v1.8.0; M22 is proposed.
 
 **Last updated:** 2026-11-21
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -37,7 +37,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | Area | Decision | Notes |
 |---|---|---|
 | v1 scope | Core LSP + type features only | Formatter and `.p8.png` support are post-v1. |
-| Editors | Neovim + Helix | VS Code client is M15; M20 adds remote VS Code extension hosts; web extension hosts remain out of scope; Zed remains post-v1; the server remains editor-agnostic. |
+| Editors | Neovim + Helix | VS Code client is M15; M21 adds the full VS Code settings schema; M22 adds server health; remote and web extension hosts remain out of scope; Zed remains post-v1; the server remains editor-agnostic. |
 | Neovim helper | Helper plugin, optional at runtime | Auto-attaches to `.lua` files owned by a cart; avoids attaching to unrelated Lua buffers. |
 | Syntax highlighting | Vim syntax file + semantic tokens | Ship a small `.p8` syntax file for sections/dialect; semantic tokens cover Lua code. |
 | Project naming | `pico-lsp` + `pico8` | Binary/repo `pico-lsp`; primary language ID `pico8`; config section `pico8`; accept `pico-8` aliases. |
@@ -79,9 +79,8 @@ These decisions were made before milestone specs were written. Changing one requ
 | M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Done (v1.6.0) |
 | M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Done (v1.6.0) |
 | M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Done (v1.6.0) |
-| M20 | Remote VS Code Extension Hosts | VS Code remote windows download and run the matching server on the remote host | M15 | Proposed (v1.8.0) |
-| M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Proposed (v1.9.0) |
-| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Proposed (v1.9.0) |
+| M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0 pending) |
+| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Proposed (v1.8.0) |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -96,8 +95,8 @@ originally planned separate v1.7.0 and v1.8.0 milestones were folded into
 v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
 now the later, additive catalog-coverage release.
 
-M20 targets **v1.8.0**. M21 and M22 are independent and may ship together as
-**v1.9.0**; separate milestone specs do not require separate tags.
+M21 targets **v1.8.0**. M22 is independent and may ship with it; separate
+milestone specs do not require separate tags.
 
 Each milestone has a detailed spec:
 
@@ -121,7 +120,6 @@ Each milestone has a detailed spec:
 - [M17 — P8SCII Public Package](M17-p8scii.md)
 - [M18 — Cart Public Package](M18-cart.md)
 - [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
-- [M20 — Remote VS Code Extension Hosts](M20-remote-vscode.md)
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 
@@ -209,23 +207,19 @@ Rules:
   uppercase letters in code. PICO-8's `CTRL-J`/`CTRL-K`/`CTRL-P` input modes
   remain out of scope.
 
-## VS Code client follow-ups (proposed)
+## VS Code client follow-ups
 
-M20–M22 are separate, additive client milestones. They do not change the LSP
-wire contract, server defaults, or the editor-agnostic server contract.
+M21 and M22 are separate, additive client milestones. They do not change the
+LSP wire contract, server defaults, or the editor-agnostic server contract.
 
-- **M20 — Remote extension hosts:** Remote - SSH, WSL, Dev Containers, and
-  Codespaces remote windows run the extension and server remotely. Web
-  extension hosts remain unsupported.
-- **M21 — Settings schema:** the server's existing `pico8.*` settings become
+- **M21 — Settings schema:** the server's existing `pico8.*` settings are
   discoverable and validated in the VS Code Settings UI, with drift tests
   against `internal/config`.
 - **M22 — Server health:** the extension reports the running server version
   and source, warns once on a release-version mismatch, and copies diagnostics
   for issue reports.
 
-Each milestone has its own spec. M20 targets v1.8.0; M21 and M22 may batch as
-v1.9.0.
+Each milestone has its own spec. M21 targets v1.8.0; M22 may ship with it.
 
 ## Cross-cutting standards
 
@@ -365,7 +359,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M20 targets v1.8.0; M21 and M22 may ship together as v1.9.0. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21 targets v1.8.0; M22 may ship with it. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

@@ -3,7 +3,7 @@
 **Status:** Proposed — not started
 
 **Depends on:** M15  
-**Release target:** v1.9.0 (may ship with M21)  
+**Release target:** v1.8.0 (may ship with M21)  
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -38,7 +38,7 @@ binary path on the clipboard for an issue report. A development build reports
 | D7 | Show Server Info | Write a structured block to the existing **PICO-8 Language Server** output channel and reveal it. It works even when the server is not running. |
 | D8 | Copy Server Diagnostics | Copy the same information as Markdown to the clipboard and show a short confirmation. |
 | D9 | Privacy | Include versions, paths, platform, cache location, and last error; never include source text or cart contents. |
-| D10 | Release | M22 may ship together with M21 as v1.9.0; the milestones remain independently reviewable. |
+| D10 | Release | M22 may ship together with M21 as v1.8.0; the milestones remain independently reviewable. |
 
 ## Scope
 
@@ -62,7 +62,7 @@ binary path on the clipboard for an issue report. A development build reports
 - Downloading a different server version on demand.
 - New LSP requests, server commands, or server changes.
 - Telemetry, crash reporting, or network calls.
-- Remote host support and the full settings schema; those are M20 and M21.
+- Remote host support is not planned; the full settings schema is M21.
 - `.p8.png` virtual documents.
 
 ## Deliverables
@@ -247,7 +247,7 @@ Integration tests:
   before startup but produces a non-blocking warning afterward.
 - `docs/release-checklist.md`: verify the copied diagnostics on a release
   build.
-- `CHANGELOG.md` under `Unreleased`, then the v1.9.0 release entry.
+- `CHANGELOG.md` under `Unreleased`, then the v1.8.0 release entry.
 - Update `docs/ROADMAP.md` and the post-v1 backlog when the milestone status
   changes.
 
@@ -290,7 +290,7 @@ Integration tests:
 - [ ] README, troubleshooting, configuration, changelog, roadmap, and backlog
       are updated.
 - [ ] No LSP protocol, server behavior, telemetry, or download-security change.
-- [ ] `v1.9.0` is tagged after the release PR merges (possibly with M21).
+- [ ] `v1.8.0` is tagged after the release PR merges (possibly with M21).
 
 ## Risks and mitigations
 

@@ -11,6 +11,14 @@ export async function run(): Promise<void> {
   assert.ok(extension, 'PICO-8 extension was not installed in the test host');
   await extension.activate();
 
+  const configuration = vscode.workspace.getConfiguration('pico8');
+  assert.equal(configuration.inspect('typeChecking')?.defaultValue, 'basic');
+  assert.equal(configuration.inspect('diagnostics.undefinedGlobal')?.defaultValue, 'warning');
+  assert.equal(configuration.inspect('limits.codeLens')?.defaultValue, true);
+  assert.equal(configuration.inspect('format.maxBlankLines')?.defaultValue, 2);
+  assert.equal(configuration.inspect('autoDownload')?.defaultValue, true);
+  assert.equal(configuration.inspect('serverPath')?.defaultValue, '');
+
   const cartUri = vscode.Uri.file(path.join(pico8Workspace, 'cart.p8'));
   const cart = await vscode.workspace.openTextDocument(cartUri);
   assert.equal(cart.languageId, 'pico8');

@@ -91,34 +91,299 @@
     "configuration": {
       "title": "PICO-8",
       "properties": {
-        "pico8.serverPath": {
+        "pico8.apiVersion": {
           "type": "string",
-          "default": "",
-          "scope": "machine",
-          "markdownDescription": "Absolute path to a `pico-lsp` executable. When set, the extension does not download a server."
-        },
-        "pico8.autoDownload": {
-          "type": "boolean",
-          "default": true,
+          "enum": [
+            "0.2.7"
+          ],
+          "default": "0.2.7",
           "scope": "window",
-          "description": "Download the matching checksummed pico-lsp release when no cached server is available."
+          "markdownDescription": "PICO-8 API version. Only `0.2.7` is currently supported; unsupported values fall back to `0.2.7` with a one-time warning. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings)."
         },
-        "pico8.attachLua": {
-          "type": "boolean",
-          "default": true,
-          "scope": "window",
-          "description": "Attach pico-lsp to all .lua files in workspace folders that contain a .p8 cart."
-        },
-        "pico8.trace.server": {
+        "pico8.typeChecking": {
           "type": "string",
           "enum": [
             "off",
-            "messages",
-            "verbose"
+            "basic",
+            "strict"
           ],
-          "default": "off",
+          "default": "basic",
           "scope": "window",
-          "description": "Trace communication between VS Code and pico-lsp."
+          "markdownDescription": "Type-diagnostic mode. `off` keeps annotations for hover and completion but publishes no type diagnostics; `basic` checks explicit annotations and class inheritance; `strict` also checks nil access and missing fields for open records. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings)."
+        },
+        "pico8.inlayHints": {
+          "type": "boolean",
+          "default": false,
+          "scope": "window",
+          "description": "Show inferred local type hints."
+        },
+        "pico8.maxProblems": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 100,
+          "scope": "window",
+          "description": "Maximum diagnostics per document. Set to 0 to disable truncation."
+        },
+        "pico8.limits": {
+          "type": "object",
+          "default": {
+            "codeLens": true,
+            "diagnostics": true
+          },
+          "scope": "window",
+          "additionalProperties": false,
+          "markdownDescription": "Controls the cart-budget code lens and token, character, and compressed-size limit diagnostics. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
+          "properties": {
+            "codeLens": {
+              "type": "boolean",
+              "default": true,
+              "description": "Show the cart budget code lens."
+            },
+            "diagnostics": {
+              "type": "boolean",
+              "default": true,
+              "description": "Publish token, character, and compressed-size limit diagnostics."
+            }
+          }
+        },
+        "pico8.format": {
+          "type": "object",
+          "default": {
+            "maxBlankLines": 2
+          },
+          "scope": "window",
+          "additionalProperties": false,
+          "markdownDescription": "Formatter settings. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
+          "properties": {
+            "maxBlankLines": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2,
+              "description": "Maximum consecutive blank lines kept when formatting. Set to 0 to remove blank lines."
+            }
+          }
+        },
+        "pico8.diagnostics": {
+          "type": "object",
+          "default": {
+            "mode": "auto",
+            "undefinedGlobal": "warning",
+            "unusedLocal": "off",
+            "unreachableCode": "hint",
+            "duplicateTableField": "hint",
+            "callbackPrecedence": "hint",
+            "callbackParams": "warning",
+            "noStdlib": "hint",
+            "shadowedLocal": "off",
+            "emptyBlock": "off",
+            "globalInFunction": "off",
+            "includeOutsideWorkspace": "warning",
+            "includeUnusualType": "hint",
+            "includeDuplicate": "off"
+          },
+          "scope": "window",
+          "additionalProperties": false,
+          "markdownDescription": "Diagnostic transport and severity settings. Each severity rule accepts `off`, `hint`, `info`, `warning`, or `error`. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "push",
+                "pull"
+              ],
+              "default": "auto",
+              "description": "Diagnostic transport. auto pulls when the client supports pull diagnostics and publishes otherwise; push always publishes; pull suppresses duplicate push publication."
+            },
+            "undefinedGlobal": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "warning",
+              "markdownDescription": "Severity for undefined global reads. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "unusedLocal": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "off",
+              "markdownDescription": "Severity for unused local variables. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "unreachableCode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "hint",
+              "markdownDescription": "Severity for unreachable code. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "duplicateTableField": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "hint",
+              "markdownDescription": "Severity for duplicate table fields. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "callbackPrecedence": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "hint",
+              "markdownDescription": "Severity for PICO-8 callback precedence hints. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "callbackParams": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "warning",
+              "markdownDescription": "Severity for PICO-8 callback parameter checks. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "noStdlib": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "hint",
+              "markdownDescription": "Severity for PICO-8 no-standard-library hints. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "shadowedLocal": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "off",
+              "markdownDescription": "Severity for shadowed local variables. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "emptyBlock": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "off",
+              "markdownDescription": "Severity for empty blocks. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "globalInFunction": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "off",
+              "markdownDescription": "Severity for globals assigned inside functions. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "includeOutsideWorkspace": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "warning",
+              "markdownDescription": "Severity for includes outside the workspace. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "includeUnusualType": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "hint",
+              "markdownDescription": "Severity for includes with unusual file types. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            },
+            "includeDuplicate": {
+              "type": "string",
+              "enum": [
+                "off",
+                "hint",
+                "info",
+                "warning",
+                "error"
+              ],
+              "default": "off",
+              "markdownDescription": "Severity for duplicate includes. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
+            }
+          }
+        },
+        "pico8.lint": {
+          "type": "object",
+          "default": {
+            "apiRanges": false
+          },
+          "scope": "window",
+          "additionalProperties": false,
+          "markdownDescription": "Optional PICO-8 lint checks. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
+          "properties": {
+            "apiRanges": {
+              "type": "boolean",
+              "default": false,
+              "description": "Check literal API argument ranges."
+            }
+          }
+        },
+        "pico8.refactors": {
+          "type": "object",
+          "default": {
+            "enabled": true
+          },
+          "scope": "window",
+          "additionalProperties": false,
+          "markdownDescription": "Refactor and code-action settings. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Offer extract-function, rewrite, generated class, missing-field, and unused-removal code actions."
+            }
+          }
         },
         "pico8.glyphs": {
           "type": "array",
@@ -187,6 +452,35 @@
               }
             }
           }
+        },
+        "pico8.serverPath": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "markdownDescription": "Absolute path to a `pico-lsp` executable. When set, the extension does not download a server."
+        },
+        "pico8.autoDownload": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Download the matching checksummed pico-lsp release when no cached server is available."
+        },
+        "pico8.attachLua": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "Attach pico-lsp to all .lua files in workspace folders that contain a .p8 cart."
+        },
+        "pico8.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "scope": "window",
+          "description": "Trace communication between VS Code and pico-lsp."
         }
       }
     }
