@@ -27,7 +27,8 @@ bugs with a minimal reproduction so they can be verified and fixed.
 - Syntax, include, undefined-global, type, and PICO-8 lint diagnostics, with
   LSP 3.17 push/pull transport selection and related-file pull reports.
 - Document symbols, folding ranges, go-to-definition, references, highlights,
-  rename, and workspace symbols.
+  rename (including LuaCATS annotation names, class fields, and type
+  references), and workspace symbols.
 - Completion, hover, signature help, semantic tokens (including LuaCATS
   annotation highlighting), and inlay hints for user symbols and the PICO-8
   0.2.7 API.

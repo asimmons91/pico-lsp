@@ -8,6 +8,13 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- LuaCATS annotation navigation: `---@param`, `---@field`, `---@cast`,
+  `---@class`, `---@alias`, `---@enum`, annotation type references, and
+  `--[[@as Type]]` names now participate in go-to-definition, references,
+  highlights, and rename. Renaming a parameter updates its `---@param`;
+  renaming a class field updates the annotation and every annotated receiver,
+  including subclasses; renaming a class, alias, or enum updates annotation
+  type references without editing same-named code identifiers.
 - VS Code settings schema (M21): every documented `pico8.*` server setting now
   appears in the Settings UI and `settings.json` with its type, allowed values,
   default, window scope, and description. Nested `limits`, `format`,
