@@ -120,11 +120,23 @@ func TestPerformanceTargets(t *testing.T) {
 
 	tokenPos := positionAt(t, text, "score = score + 1", 0)
 	measure("token-saving code actions 64 KB", 10*time.Millisecond, func() {
-		if _, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+		actions, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
 			TextDocument: protocol.TextDocumentIdentifier{URI: root},
 			Range:        protocol.Range{Start: tokenPos, End: tokenPos},
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatalf("token-saving code actions: %v", err)
+		}
+		found := false
+		for _, action := range actions {
+			candidate, ok := action.(*protocol.CodeAction)
+			if ok && candidate.Kind != nil && string(*candidate.Kind) == "refactor.rewrite.token-saving.compound" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("token-saving compound action missing: %+v", actions)
 		}
 	})
 }

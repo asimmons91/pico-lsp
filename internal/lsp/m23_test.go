@@ -103,6 +103,11 @@ local a = peek(0x5f00)
 		if len(edits) != 1 || edits[0].NewText != tt.newText {
 			t.Fatalf("%s edits = %+v", tt.kind, edits)
 		}
+		wantStart := positionAt(t, text, tt.needle, 0)
+		wantEnd := positionAt(t, text, tt.needle, len(tt.needle))
+		if edits[0].Range.Start != wantStart || edits[0].Range.End != wantEnd {
+			t.Fatalf("%s range = %+v, want %+v-%+v", tt.kind, edits[0].Range, wantStart, wantEnd)
+		}
 		edited := applyProtocolEdit(t, text, edits[0])
 		if !strings.Contains(edited, tt.wantLine) {
 			t.Fatalf("%s result missing %q:\n%s", tt.kind, tt.wantLine, edited)
@@ -210,6 +215,7 @@ func TestM23DisabledAndMetaAndVirtual(t *testing.T) {
 	if findActionByKind(t, actions, "refactor.rewrite.token-saving.print") != nil {
 		t.Fatalf("token-saving action offered while refactors disabled: %+v", actions)
 	}
+	h.srv.cfg.ApplyInitializationOptions(protocol.LSPAny([]byte(`{"pico8":{"refactors":{"enabled":true}}}`)))
 
 	metaText := "---@meta\nprint(x)\n"
 	metaPath := writeTemp(t, dir, "stub.lua", metaText)
