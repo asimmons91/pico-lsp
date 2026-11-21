@@ -376,7 +376,7 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`).
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`). A documentation, listing, or publication-only milestone may use a patch release when no user-facing behavior changes; M24's tag is an open decision.
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. M24 proposes adding VS Code Marketplace and Open VSX listings for the extension. Homebrew and Mason packaging remain deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
 - **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21, M22, and M23 shipped together as v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.

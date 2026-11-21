@@ -35,8 +35,8 @@ v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 fol
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0.
-M24 is specified but not yet committed to a release. The items below are not
-part of these releases unless promoted to a milestone.
+M24 is specified but not yet committed to a release. The unpromoted items below
+are not part of these releases.
 
 ## Prioritization
 

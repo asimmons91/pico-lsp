@@ -327,8 +327,8 @@ it; the settings reference itself is already editor-agnostic.
 
 ## Manual verification on the VS Code machine
 
-The implementation branch is prepared in the repository, but registry and
-desktop checks must be performed on the maintainer's machine with a real VS Code
+Implementation changes are made in the repository, but registry and desktop
+checks must be performed on the maintainer's machine with a real VS Code
 installation. Do not mark these checks complete from CI, a headless shell, or a
 different editor.
 
@@ -387,7 +387,9 @@ as an open release item rather than implying it passed.
       AI disclosure, and trademark notice.
 - [ ] Root README, install, troubleshooting, and release-checklist docs describe
       Marketplace, Open VSX, VSIX, upgrade, uninstall, cache, and offline paths.
-- [ ] No public document says Marketplace/Open VSX publishing is a follow-up.
+- [ ] No current README, install, troubleshooting, extension listing, or release
+      document describes Marketplace/Open VSX publishing as pending; historical
+      milestone statements are marked superseded.
 - [ ] `package.json` listing metadata and icon are complete; the VSIX contains
       README, CHANGELOG, LICENSE, and icon but no source, tests, scripts, or
       internal notes.
@@ -398,8 +400,8 @@ as an open release item rather than implying it passed.
 - [ ] Marketplace and Open VSX publish the same verified VSIX, independently
       retryable, with a documented manual fallback and rollback path.
 - [ ] Marketplace and Open VSX listings show the correct version, README,
-      screenshots, icon, license, changelog, repository links, categories, and
-      keywords.
+      screenshots or recording, icon, license, changelog, repository links,
+      categories, and keywords.
 - [ ] The manual VS Code machine checklist is recorded for the available
       platforms: clean install, upgrade, uninstall, first-run download, offline
       server, cart features, settings, glyph picker, status bar, diagnostics,

@@ -37,7 +37,7 @@ These decisions were confirmed before the spec was written:
 - All `.lua` files in workspace folders that contain a `.p8` cart attach to the
   server.
 - M15 publishes a VSIX only as a GitHub release asset. VS Code Marketplace and
-  Open VSX publishing are deferred to a follow-up milestone.
+  Open VSX publishing are deferred to the M24 follow-up (proposed).
 - M15 supports local desktop VS Code only. Remote extension hosts are not
   supported; web extension hosts remain out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
@@ -489,7 +489,7 @@ Extend `.github/workflows/release.yml`:
 | LuaLS and pico-lsp both attach to `.lua` | Per-workspace `.lua` scoping, `pico8.attachLua`, and documented LuaLS guidance. |
 | A malicious or corrupted archive is executed | HTTPS, checksum verification, safe extraction, atomic install, no unverified execution. |
 | VS Code API or languageclient drift | Pin the engine and dependencies, keep integration tests, and avoid editor-specific server changes. |
-| Marketplace publishing blocks the release | Ship the VSIX as a GitHub release asset; Marketplace/Open VSX remain a follow-up. |
+| Marketplace publishing blocks the release | Ship the VSIX as a GitHub release asset; M24 proposes registry publishing and keeps the VSIX as the fallback. |
 | Web expectations | Reject web extension hosts with a clear message; remote hosts are not supported. |
 | `.p8.png` opens as binary noise | Document the limitation and track virtual-document support separately. |
 | Large status-bar request traffic | Debounce, cancel superseded requests, and refresh only for cart-owned editors. |
