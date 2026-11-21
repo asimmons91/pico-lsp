@@ -41,6 +41,9 @@ func (s *Server) Rename(ctx context.Context, params *protocol.RenameParams) (*pr
 		return nil, jsonrpc2.NewError(jsonrpc2.InvalidRequest, "rename: symbol cannot be renamed safely")
 	}
 	if !validRenameName(sym, params.NewName) {
+		if analysis.IsTypeSymbol(sym) {
+			return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "rename: %q is not a valid LuaCATS type name", params.NewName)
+		}
 		return nil, jsonrpc2.Errorf(jsonrpc2.InvalidParams, "rename: %q is not a valid PICO-8 identifier", params.NewName)
 	}
 
@@ -110,7 +113,7 @@ func validRenameName(sym *analysis.Symbol, name string) bool {
 	if !analysis.IsTypeSymbol(sym) {
 		return syntax.IsIdentifier(name)
 	}
-	if name == "" {
+	if name == "" || analysis.IsPrimitiveTypeName(name) {
 		return false
 	}
 	for _, part := range strings.Split(name, ".") {

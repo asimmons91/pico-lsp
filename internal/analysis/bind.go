@@ -93,6 +93,7 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	b.bindBlock(snap.Chunk.Block, chunkScope)
 	attachDocs(snap, result)
 	attachParamDocs(result)
+	attachClassFields(result)
 	attachTypeAnnotations(snap, result, opts)
 	bindAnnotationNames(snap, result)
 	result.finish()

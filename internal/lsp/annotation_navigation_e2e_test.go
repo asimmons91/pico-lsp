@@ -9,6 +9,7 @@ import (
 	"go.lsp.dev/protocol"
 	"go.lsp.dev/uri"
 
+	"github.com/asimmons91/pico-lsp/internal/analysis"
 	"github.com/asimmons91/pico-lsp/internal/source"
 )
 
@@ -44,6 +45,26 @@ func editLineIsAnnotation(t *testing.T, text string, edit protocol.TextEdit) boo
 		t.Fatalf("edit line = %d, want within document", line)
 	}
 	return strings.HasPrefix(strings.TrimSpace(lines[line]), "---@")
+}
+
+func TestValidRenameNameForTypes(t *testing.T) {
+	typeSymbol := &analysis.Symbol{Kind: analysis.SymbolClass}
+	if !validRenameName(typeSymbol, "Player") {
+		t.Fatal("Player should be a valid type name")
+	}
+	if !validRenameName(typeSymbol, "Player.State") {
+		t.Fatal("Player.State should be a valid qualified type name")
+	}
+	if validRenameName(typeSymbol, "number") {
+		t.Fatal("number is reserved by the LuaCATS type grammar")
+	}
+	if validRenameName(typeSymbol, "Player.") {
+		t.Fatal("Player. should not be a valid qualified type name")
+	}
+	codeSymbol := &analysis.Symbol{Kind: analysis.SymbolLocal}
+	if validRenameName(codeSymbol, "Player.State") {
+		t.Fatal("code identifiers must not accept qualified names")
+	}
 }
 
 func TestEndToEndAnnotationParamRenameAndNavigation(t *testing.T) {

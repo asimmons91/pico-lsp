@@ -351,14 +351,10 @@ func genericResolver(params []*types.GenericParam, fallback TypeResolver) TypeRe
 }
 
 func (r *Result) classGenericResolver(owner *Symbol, fallback TypeResolver) TypeResolver {
-	if r == nil || owner == nil || owner.Doc == nil {
+	if r == nil || owner == nil {
 		return fallback
 	}
-	className := owner.Doc.Class
-	if className == "" {
-		className = classTypeName(owner.Doc.Type)
-	}
-	class := r.Classes[CanonicalName(className)]
+	class := r.classForSymbol(owner)
 	if class == nil || class.Record == nil || len(class.Record.TypeParams) == 0 {
 		return fallback
 	}

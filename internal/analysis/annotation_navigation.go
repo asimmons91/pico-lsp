@@ -27,6 +27,13 @@ var annotationPrimitiveTypes = map[string]struct{}{
 	"fun":      {},
 }
 
+// IsPrimitiveTypeName reports whether name is reserved by the LuaCATS type
+// grammar and cannot be used as a user type name.
+func IsPrimitiveTypeName(name string) bool {
+	_, ok := annotationPrimitiveTypes[CanonicalName(name)]
+	return ok
+}
+
 // bindAnnotationNames adds navigation occurrences for LuaCATS declarations and
 // references that do not live in code: type declarations, type references,
 // class fields, and cast targets. Parameter annotations are bound by
@@ -151,23 +158,32 @@ func bindTypeReferences(snap *cart.Snapshot, result *Result) {
 	if snap == nil || snap.Cart == nil || result == nil || len(result.TypeSymbols) == 0 {
 		return
 	}
+	blockGenerics := result.annotationBlockGenerics()
 	var generics map[string]struct{}
 	var previous *syntax.Comment
+	var blockStart source.Span
 	for i := range snap.Comments {
 		comment := &snap.Comments[i]
 		if comment.Kind == syntax.CommentBlock {
 			result.bindTypeSegments(snap, asAnnotationSegments(*comment), nil)
 			generics = nil
 			previous = nil
+			blockStart = source.Span{}
 			continue
 		}
 		if comment.Kind != syntax.CommentDoc {
 			generics = nil
 			previous = nil
+			blockStart = source.Span{}
 			continue
 		}
 		if previous != nil && !commentsAdjacent(snap, *previous, *comment) {
 			generics = nil
+			blockStart = source.Span{}
+		}
+		if blockStart.IsEmpty() {
+			blockStart = comment.Span
+			generics = cloneGenericSet(blockGenerics[blockStart])
 		}
 		previous = comment
 
@@ -192,6 +208,72 @@ func bindTypeReferences(snap *cart.Snapshot, result *Result) {
 		}
 		result.bindTypeSegments(snap, segments, generics)
 	}
+}
+
+// annotationBlockGenerics maps the first comment span of an annotation block
+// to the generic parameters visible in that block. Function and method docs
+// see their own `@generic` names and, for methods, their class's generics.
+func (r *Result) annotationBlockGenerics() map[source.Span]map[string]struct{} {
+	out := make(map[source.Span]map[string]struct{})
+	add := func(span source.Span, names ...string) {
+		if r == nil || span.IsEmpty() {
+			return
+		}
+		for _, name := range names {
+			canonical := CanonicalName(name)
+			if canonical == "" {
+				continue
+			}
+			set := out[span]
+			if set == nil {
+				set = make(map[string]struct{})
+				out[span] = set
+			}
+			set[canonical] = struct{}{}
+		}
+	}
+	if r == nil || r.Table == nil {
+		return out
+	}
+	for _, class := range r.Classes {
+		if class == nil {
+			continue
+		}
+		names := make([]string, 0, len(class.GenericDecls))
+		for _, decl := range class.GenericDecls {
+			names = append(names, decl.Name)
+		}
+		add(class.DeclSpan, names...)
+	}
+	for _, sym := range r.Table.Symbols {
+		if sym == nil || sym.Doc == nil || sym.Doc.Span.IsEmpty() {
+			continue
+		}
+		names := make([]string, 0, len(sym.Doc.Generics))
+		for _, decl := range sym.Doc.Generics {
+			names = append(names, decl.Name)
+		}
+		if sym.Owner != nil {
+			if class := r.classForSymbol(sym.Owner); class != nil {
+				for _, decl := range class.GenericDecls {
+					names = append(names, decl.Name)
+				}
+			}
+		}
+		add(sym.Doc.Span, names...)
+	}
+	return out
+}
+
+func cloneGenericSet(source map[string]struct{}) map[string]struct{} {
+	if len(source) == 0 {
+		return nil
+	}
+	out := make(map[string]struct{}, len(source))
+	for name := range source {
+		out[name] = struct{}{}
+	}
+	return out
 }
 
 func (r *Result) bindTypeSegments(snap *cart.Snapshot, segments []AnnotationSegment, generics map[string]struct{}) {

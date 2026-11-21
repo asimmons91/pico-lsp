@@ -226,7 +226,6 @@ func attachDocs(snap *cart.Snapshot, result *Result) {
 		sym.Doc = doc
 	}
 	bindClassSymbols(snap, result)
-	attachClassFields(result)
 }
 
 func collectClasses(snap *cart.Snapshot) map[string]*Class {
@@ -714,26 +713,50 @@ func bindClassSymbols(snap *cart.Snapshot, result *Result) {
 	}
 }
 
+// classForSymbol returns the class named by a receiver's `@class` or `@type`
+// annotation. Implicit method self resolves through its function owner.
+func (r *Result) classForSymbol(sym *Symbol) *Class {
+	if r == nil || sym == nil {
+		return nil
+	}
+	className := ""
+	if sym.Doc != nil {
+		className = sym.Doc.Class
+		if className == "" {
+			className = singleClassTypeName(sym.Doc.Type)
+		}
+	}
+	if className == "" && sym.Kind == SymbolParam && sym.Canonical == "self" && sym.Function != nil && sym.Function.Owner != nil {
+		owner := sym.Function.Owner
+		if owner.Doc != nil {
+			className = owner.Doc.Class
+			if className == "" {
+				className = singleClassTypeName(owner.Doc.Type)
+			}
+		}
+	}
+	if className == "" {
+		return nil
+	}
+	return r.Classes[CanonicalName(className)]
+}
+
 func attachClassFields(result *Result) {
 	if result == nil || result.Table == nil || len(result.Classes) == 0 {
 		return
 	}
 	for _, sym := range result.Table.Symbols {
-		if sym == nil || sym.Builtin || sym.Doc == nil || isClassFieldDeclaration(sym) {
+		if sym == nil || sym.Builtin || isClassFieldDeclaration(sym) {
 			continue
 		}
-		className := sym.Doc.Class
-		if className == "" {
-			className = classTypeName(sym.Doc.Type)
-		}
-		class := result.Classes[CanonicalName(className)]
+		class := result.classForSymbol(sym)
 		if class == nil {
 			continue
 		}
 		if sym.Fields == nil {
 			sym.Fields = make(map[string]*Symbol)
 		}
-		classCanonical := CanonicalName(className)
+		classCanonical := CanonicalName(class.Name)
 		canonicalFields := result.ClassFields[classCanonical]
 		for _, field := range class.Fields {
 			canonical := CanonicalName(field.Name)
@@ -855,8 +878,9 @@ func fieldAtLineStart(file *cart.File, span source.Span) bool {
 	return true
 }
 
-// attachParamDocs copies matching `---@param` metadata onto parameter symbols.
-// The function-level doc block is still attached to the function itself.
+// attachParamDocs copies matching `---@param` metadata onto parameter symbols
+// and records the annotation names as uses. The function-level doc block is
+// still attached to the function itself.
 func attachParamDocs(result *Result) {
 	if result == nil || result.Table == nil {
 		return
@@ -912,6 +936,57 @@ func classTypeName(value string) string {
 		return value[:i]
 	}
 	return value
+}
+
+// singleClassTypeName resolves a type expression to one class name. A union
+// whose only non-nil member is the same class resolves to that class; unions
+// of multiple classes remain ambiguous.
+func singleClassTypeName(value string) string {
+	if name := classTypeName(value); name != "" {
+		return name
+	}
+	if !strings.Contains(value, "|") {
+		return ""
+	}
+	var name string
+	for _, part := range splitTopLevelUnion(value) {
+		part = strings.TrimSpace(part)
+		if part == "" || strings.EqualFold(part, "nil") {
+			continue
+		}
+		candidate := classTypeName(part)
+		if candidate == "" {
+			return ""
+		}
+		if name != "" && CanonicalName(name) != CanonicalName(candidate) {
+			return ""
+		}
+		name = candidate
+	}
+	return name
+}
+
+func splitTopLevelUnion(text string) []string {
+	var out []string
+	depth := 0
+	start := 0
+	for i, r := range text {
+		switch r {
+		case '<', '{', '[', '(':
+			depth++
+		case '>', '}', ']', ')':
+			if depth > 0 {
+				depth--
+			}
+		case '|':
+			if depth == 0 {
+				out = append(out, strings.TrimSpace(text[start:i]))
+				start = i + 1
+			}
+		}
+	}
+	out = append(out, strings.TrimSpace(text[start:]))
+	return out
 }
 
 // docCommentsFor returns the contiguous doc-comment block directly above

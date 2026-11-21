@@ -200,6 +200,110 @@ func TestAnnotationInheritedFieldOccurrences(t *testing.T) {
 	}
 }
 
+func TestAnnotationParamFieldOccurrences(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Player",
+		"---@field hp number",
+		"local Player = {}",
+		"---@param p Player",
+		"local function damage(p)",
+		"  p.hp = p.hp - 1",
+		"end",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	classField := result.ClassFields["player"]["hp"]
+	if classField == nil {
+		t.Fatal("missing canonical hp field")
+	}
+	damage := findSymbolByCanonical(result, "damage")
+	if damage == nil {
+		t.Fatal("missing damage function")
+	}
+	p := result.paramSymbolsFor(damage)["p"]
+	if p == nil {
+		t.Fatal("missing p parameter")
+	}
+	pField := p.Fields["hp"]
+	if pField == nil || pField.ClassField != classField {
+		t.Fatalf("parameter p.hp = %+v, want linked to Player.hp", pField)
+	}
+	occs := result.OccurrencesForSymbol(pField)
+	if len(occs) != 3 {
+		t.Fatalf("parameter field occurrences = %v, want annotation, write, read", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationOptionalClassReceiver(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Player",
+		"---@field hp number",
+		"---@class Enemy",
+		"---@field hp number",
+		"local Player = {}",
+		"---@type Player|nil",
+		"local p = Player",
+		"p.hp = 1",
+		"---@type Player|Enemy",
+		"local mixed = nil",
+		"mixed.hp = 1",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	playerField := result.ClassFields["player"]["hp"]
+	if playerField == nil {
+		t.Fatal("missing Player.hp")
+	}
+	p := findSymbolByCanonical(result, "p")
+	if p == nil || p.Fields["hp"] == nil || p.Fields["hp"].ClassField != playerField {
+		t.Fatalf("optional receiver p.hp = %+v, want Player.hp", p)
+	}
+	mixed := findSymbolByCanonical(result, "mixed")
+	if mixed == nil || mixed.Fields["hp"] == nil {
+		t.Fatalf("missing mixed.hp: %+v", mixed)
+	}
+	if mixed.Fields["hp"].ClassField != nil {
+		t.Fatalf("ambiguous union receiver linked to %+v", mixed.Fields["hp"].ClassField)
+	}
+}
+
+func TestAnnotationSelfFieldOccurrences(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class Player",
+		"---@field hp number",
+		"local Player = {}",
+		"function Player:hit()",
+		"  self.hp = 1",
+		"end",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	classField := result.ClassFields["player"]["hp"]
+	if classField == nil {
+		t.Fatal("missing canonical hp field")
+	}
+	player := findSymbolByCanonical(result, "player")
+	if player == nil {
+		t.Fatal("missing Player")
+	}
+	method := player.Fields["hit"]
+	if method == nil {
+		t.Fatalf("missing hit method: %+v", method)
+	}
+	self := result.paramSymbolsFor(method)["self"]
+	if self == nil {
+		t.Fatal("missing implicit self")
+	}
+	selfField := self.Fields["hp"]
+	if selfField == nil || selfField.ClassField != classField {
+		t.Fatalf("self.hp = %+v, want linked to Player.hp", selfField)
+	}
+	occs := result.OccurrencesForSymbol(selfField)
+	if len(occs) != 2 {
+		t.Fatalf("self field occurrences = %v, want annotation and write", occurrenceTexts(text, occs))
+	}
+}
+
 func TestAnnotationFieldDynamicAccessBlocksRename(t *testing.T) {
 	text := strings.Join([]string{
 		"---@class Player",
@@ -358,6 +462,39 @@ func TestAnnotationPrimitiveNamesDoNotBindToTypes(t *testing.T) {
 	occs := result.OccurrencesForSymbol(class)
 	if len(occs) != 1 {
 		t.Fatalf("string occurrences = %v, want only the class declaration", occurrenceTexts(text, occs))
+	}
+}
+
+func TestAnnotationClassGenericsDoNotBindInMethodDocs(t *testing.T) {
+	text := strings.Join([]string{
+		"---@class T",
+		"local Outside = {}",
+		"---@class Box<T>",
+		"---@field value T",
+		"local Box = {}",
+		"---@return T",
+		"function Box:get()",
+		"  return self.value",
+		"end",
+		"---@type T",
+		"local outside = nil",
+		"",
+	}, "\n")
+	result, _ := analyzeText(t, text)
+	classT := result.TypeSymbols["t"]
+	if classT == nil {
+		t.Fatal("missing T class")
+	}
+	classOffset := strings.Index(text, "---@class T") + len("---@class ")
+	typeOffset := strings.Index(text, "---@type T") + len("---@type ")
+	occs := result.OccurrencesForSymbol(classT)
+	if len(occs) != 2 {
+		t.Fatalf("T occurrences = %v, want class declaration and the @type T reference", occurrenceTexts(text, occs))
+	}
+	for _, occ := range occs {
+		if occ.Span.Start != classOffset && occ.Span.Start != typeOffset {
+			t.Fatalf("class T bound to a generic reference at %d: %+v", occ.Span.Start, occ)
+		}
 	}
 }
 

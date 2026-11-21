@@ -170,15 +170,16 @@ namespace separate from code identifiers.
 
 - `@param` names resolve to the function's parameter symbols and count as uses.
 - `@field` names declare canonical field symbols for the class. Runtime fields
-  on receivers annotated with that class, including receivers of subclasses,
-  link to the same canonical symbol.
+  on receivers typed by that class link to the same canonical symbol,
+  including locals, `@param` parameters, implicit method `self`, and receivers
+  of subclasses.
 - `@cast` names resolve to the visible local, parameter, or global.
 - `@class`, `@alias`, and `@enum` names declare type symbols. Type identifiers
   in annotation type expressions resolve to them, including `@param`, `@return`,
   `@field`, `@type`, `@cast`, `@operator`, `@generic` constraints and defaults,
   `@overload`, class parents, alias targets, and `--[[@as Type]]`.
-- Generic parameter names declared by `@generic` or a class header stay scoped
-  to their contiguous annotation block and are not type references.
+- Generic parameter names declared by `@generic`, a class header, or a method's
+  class stay scoped to their annotation context and are not type references.
 - Optional markers (`name?`), field scopes, and other annotation punctuation
   stay outside rename ranges.
 - Go-to-definition on an annotation name returns the declaration it annotates.
