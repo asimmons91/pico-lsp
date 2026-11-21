@@ -18,6 +18,11 @@ const (
 	KindTokenSavingPeek     = "refactor.rewrite.token-saving.peek"
 )
 
+// maxTokenSavingCandidates bounds the action list returned for a large
+// selection. Candidates are sorted deterministically before the limit is
+// applied.
+const maxTokenSavingCandidates = 100
+
 var compoundOperators = map[string]string{
 	"+":   "+=",
 	"-":   "-=",
@@ -104,6 +109,9 @@ func TokenSavingActions(ctx *Context, start, end int) []*Action {
 		}
 		return left.action.Title < right.action.Title
 	})
+	if len(candidates) > maxTokenSavingCandidates {
+		candidates = candidates[:maxTokenSavingCandidates]
+	}
 	actions := make([]*Action, 0, len(candidates))
 	for _, candidate := range candidates {
 		actions = append(actions, candidate.action)
@@ -200,7 +208,7 @@ func printAction(ctx *Context, call *syntax.CallExpr) *Action {
 		// PICO-8, so the action stays unavailable.
 		return nil
 	}
-	if call.Open.IsEmpty() || call.Close.IsEmpty() {
+	if !parenthesizedCall(ctx, call) {
 		return nil
 	}
 	text := ctx.currentText()
@@ -209,6 +217,10 @@ func printAction(ctx *Context, call *syntax.CallExpr) *Action {
 		return nil
 	}
 	if ctx.hasComment(call.Span().Start, call.Span().End) {
+		return nil
+	}
+	if ctx.printPrecedesOnLine(call) {
+		// An earlier `?` already consumes the rest of this line.
 		return nil
 	}
 	// `?` consumes the rest of its physical line. Refuse anything after the
@@ -302,11 +314,10 @@ func peekAction(ctx *Context, call *syntax.CallExpr) *Action {
 	if len(call.Args) != 1 {
 		return nil
 	}
-	if call.Open.IsEmpty() || call.Close.IsEmpty() {
+	if !parenthesizedCall(ctx, call) {
 		return nil
 	}
-	if parent, ok := ctx.parentOf(call).(*syntax.CallStmt); ok && parent.Call == call {
-		// `@x` is not a valid expression statement.
+	if !peekContextSafe(ctx, call) {
 		return nil
 	}
 	text := ctx.currentText()
@@ -338,6 +349,70 @@ func peekAction(ctx *Context, call *syntax.CallExpr) *Action {
 		Edits:        []Edit{{FileID: ctx.FileID, Start: call.Span().Start, End: call.Span().End, NewText: newText}},
 		TokenSavings: delta,
 	}
+}
+
+func (c *Context) printPrecedesOnLine(call *syntax.CallExpr) bool {
+	if c == nil || call == nil {
+		return false
+	}
+	if !c.printSpansBuilt {
+		c.printSpansBuilt = true
+		for _, node := range c.nodes() {
+			print, ok := node.(*syntax.PrintStmt)
+			if !ok {
+				continue
+			}
+			c.printSpans = append(c.printSpans, print.Span())
+		}
+		sort.Slice(c.printSpans, func(i, j int) bool {
+			return c.printSpans[i].Start < c.printSpans[j].Start
+		})
+	}
+	lineStart := c.lineStart(call.Span().Start)
+	index := sort.Search(len(c.printSpans), func(i int) bool {
+		return c.printSpans[i].Start >= lineStart
+	})
+	for ; index < len(c.printSpans) && c.printSpans[index].Start < call.Span().Start; index++ {
+		if c.printSpans[index].End <= call.Span().Start {
+			return true
+		}
+	}
+	return false
+}
+
+// peekContextSafe reports whether replacing the call with a prefix operator
+// preserves the surrounding expression. A unary peek binds looser than `^` and
+// tighter than suffixes, so a call used as a suffix receiver, call target, or
+// the left operand of `^` would regroup.
+func peekContextSafe(ctx *Context, call *syntax.CallExpr) bool {
+	switch parent := ctx.parentOf(call).(type) {
+	case *syntax.CallStmt:
+		// `@x` is not a valid expression statement.
+		return parent.Call != call
+	case *syntax.FieldExpr:
+		return parent.Base != call
+	case *syntax.IndexExpr:
+		return parent.Base != call
+	case *syntax.CallExpr:
+		return parent.Func != call
+	case *syntax.MethodCallExpr:
+		return parent.Receiver != call
+	case *syntax.BinaryExpr:
+		return parent.Left != call || !parent.Op.Is("^")
+	default:
+		return true
+	}
+}
+
+// parenthesizedCall reports whether the call used `(args)`. Calls written as
+// `f "x"` or `f {table}` also set Open/Close, but those spans cover the
+// argument itself and cannot be used as argument delimiters.
+func parenthesizedCall(ctx *Context, call *syntax.CallExpr) bool {
+	if ctx == nil || call == nil || call.Open.IsEmpty() || call.Close.IsEmpty() {
+		return false
+	}
+	text := ctx.currentText()
+	return spanText(text, call.Open) == "(" && spanText(text, call.Close) == ")"
 }
 
 func multiValueArg(expr syntax.Expr) bool {

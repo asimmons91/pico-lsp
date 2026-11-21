@@ -32,6 +32,9 @@ type Context struct {
 	nodesBuilt bool
 	nodeList   []syntax.Node
 	parents    map[syntax.Node]syntax.Node
+
+	printSpansBuilt bool
+	printSpans      []source.Span
 }
 
 // Edit replaces [Start, End) in FileID with NewText.

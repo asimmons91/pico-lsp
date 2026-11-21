@@ -232,6 +232,7 @@ positive token delta, for example `Use ? print shorthand (saves 1 token)` or
 `Use compound assignment += (saves 2 tokens)`. No action is offered when the
 delta is zero or negative. Actions are suppressed for virtual `.p8.png`
 documents, `---@meta` files, and stale analysis. They never set `isPreferred`.
+A selection returns at most 100 candidates in deterministic source order.
 Zero-argument `print()`, `flr(a / b)` → `a \ b`, redundant-parenthesis removal,
 bracket-index compound targets, and cart-wide fix-all edits are not offered.
 

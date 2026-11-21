@@ -262,7 +262,8 @@ Requirements:
   then pattern ID, then title.
 - If a selection contains multiple independent candidates, return one action
   per candidate and do not merge overlapping edits. The user applies one action
-  at a time.
+  at a time. A single request returns at most 100 candidates in the documented
+  deterministic order.
 
 ## Safety and semantics
 

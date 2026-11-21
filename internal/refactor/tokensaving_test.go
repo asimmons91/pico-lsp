@@ -1,6 +1,7 @@
 package refactor
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -37,6 +38,15 @@ func loadTokenBuiltins(t *testing.T) map[string]*analysis.Symbol {
 
 func tokenSavingTestContext(t *testing.T, text string) *Context {
 	t.Helper()
+	ctx, lexErrors, parseErrors := tokenSavingParseContext(t, text)
+	if len(lexErrors) > 0 || len(parseErrors) > 0 {
+		t.Fatalf("parse failed: lex=%v parse=%v", lexErrors, parseErrors)
+	}
+	return ctx
+}
+
+func tokenSavingParseContext(t *testing.T, text string) (*Context, []syntax.Error, []syntax.Error) {
+	t.Helper()
 	u := uri.File("/test/main.lua")
 	file := &cart.File{ID: 0, URI: u, Text: text, Index: source.New([]byte(text), protocol.PositionEncodingKindUTF16)}
 	c := &cart.Cart{RootURI: u, Files: []*cart.File{file}}
@@ -44,8 +54,8 @@ func tokenSavingTestContext(t *testing.T, text string) *Context {
 		return source.Span{FileID: 0, Start: start, End: end}
 	})
 	chunk, parseErrors := syntax.Parse(lexed.Tokens)
-	if len(lexed.Errors) > 0 || len(parseErrors) > 0 {
-		t.Fatalf("parse failed: lex=%v parse=%v", lexed.Errors, parseErrors)
+	if chunk == nil {
+		chunk = &syntax.Chunk{Block: &syntax.Block{}}
 	}
 	snap := &cart.Snapshot{Cart: c, Chunk: chunk, Comments: lexed.Comments, Index: syntax.NewCommentIndex(lexed.Comments)}
 	result := analysis.Analyze(snap, loadTokenBuiltins(t), analysis.Options{
@@ -55,7 +65,7 @@ func tokenSavingTestContext(t *testing.T, text string) *Context {
 			UnusedLocal: analysis.SeverityHint,
 		},
 	})
-	return &Context{Snap: snap, Result: result, FileID: 0, File: file}
+	return &Context{Snap: snap, Result: result, FileID: 0, File: file}, lexed.Errors, parseErrors
 }
 
 func findTokenSavingAction(actions []*Action, kind string) *Action {
@@ -140,27 +150,35 @@ func TestTokenSavingPrintRefusals(t *testing.T) {
 		{name: "same-line else", text: "if (x) print(a) else print(b)\n"},
 		{name: "final multi-value call", text: "print(f())\n"},
 		{name: "final vararg", text: "local function f(...)\n  print(...)\nend\n"},
+		{name: "table argument without parens", text: "print {x = 1}\n"},
+		{name: "string argument without parens", text: "print \"hi\"\n"},
+		{name: "earlier shorthand print", text: "if (x) ?a print(b)\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tokenSavingTestContext(t, tt.text)
-			offset := offsetOf(t, tt.text, "print")
-			action := TokenSavingPrint(ctx, offset)
-			if tt.name == "same-line else" {
+			if tt.name == "same-line else" || tt.name == "trailing statement" {
 				// The final print is the only safe candidate.
-				last := strings.LastIndex(tt.text, "print")
-				action = TokenSavingPrint(ctx, last)
-				if action == nil {
-					t.Fatal("final print action returned nil")
+				first := offsetOf(t, tt.text, "print")
+				if action := TokenSavingPrint(ctx, first); action != nil {
+					t.Fatalf("first print offered action: %+v", action)
 				}
-				first := TokenSavingPrint(ctx, offset)
-				if first != nil {
-					t.Fatalf("first print offered action: %+v", first)
+				last := strings.LastIndex(tt.text, "print")
+				if action := TokenSavingPrint(ctx, last); action == nil {
+					t.Fatal("final print action returned nil")
 				}
 				return
 			}
-			if action != nil {
-				t.Fatalf("action offered: %+v", action)
+			for start := 0; start < len(tt.text); {
+				offset := strings.Index(tt.text[start:], "print")
+				if offset < 0 {
+					break
+				}
+				offset += start
+				if action := TokenSavingPrint(ctx, offset); action != nil {
+					t.Fatalf("action offered at %d: %+v", offset, action)
+				}
+				start = offset + len("print")
 			}
 		})
 	}
@@ -307,6 +325,10 @@ func TestTokenSavingPeek(t *testing.T) {
 		{name: "unary argument", text: "local a = peek(-1)\n", call: "peek(", want: "local a = @-1\n", savings: 1},
 		{name: "exponent argument", text: "local a = peek(a ^ b)\n", call: "peek(", want: "local a = @a ^ b\n", savings: 1},
 		{name: "call argument", text: "local a = peek(f())\n", call: "peek(", want: "local a = @f()\n", savings: 1},
+		{name: "unary parent", text: "local a = -peek(addr)\n", call: "peek(", want: "local a = -@addr\n", savings: 1},
+		{name: "function argument", text: "local a = f(peek(addr))\n", call: "peek(", want: "local a = f(@addr)\n", savings: 1},
+		{name: "exponent right operand", text: "local a = 2 ^ peek(addr)\n", call: "peek(", want: "local a = 2 ^ @addr\n", savings: 1},
+		{name: "parenthesized exponent base", text: "local a = (peek(addr)) ^ 2\n", call: "peek(", want: "local a = (@addr) ^ 2\n", savings: 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -345,13 +367,32 @@ func TestTokenSavingPeekRefusals(t *testing.T) {
 		{name: "low precedence and", text: "local a = peek(a and b)\n", call: "peek("},
 		{name: "comment inside", text: "local a = peek(a --[[note]])\n", call: "peek("},
 		{name: "multi-line", text: "local a = peek(\n  a)\n", call: "peek("},
+		{name: "table argument without parens", text: "local a = peek {1}\n", call: "peek"},
+		{name: "string argument without parens", text: "local a = peek \"1\"\n", call: "peek"},
+		{name: "field suffix", text: "local a = peek(addr).x\n", call: "peek("},
+		{name: "index suffix", text: "local a = peek(addr)[1]\n", call: "peek("},
+		{name: "call suffix", text: "local a = peek(addr)(1)\n", call: "peek("},
+		{name: "method suffix", text: "local a = peek(addr):m()\n", call: "peek("},
+		{name: "exponent left operand", text: "local a = peek(addr) ^ 2\n", call: "peek("},
 		{name: "poke is not peek", text: "local a = poke(1)\n", call: "poke("},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tokenSavingTestContext(t, tt.text)
-			if action := TokenSavingPeek(ctx, offsetOf(t, tt.text, tt.call)); action != nil {
-				t.Fatalf("action offered: %+v", action)
+			name := "peek"
+			if strings.Contains(tt.text, "poke") {
+				name = "poke"
+			}
+			for start := 0; start < len(tt.text); {
+				offset := strings.Index(tt.text[start:], name)
+				if offset < 0 {
+					break
+				}
+				offset += start
+				if action := TokenSavingPeek(ctx, offset); action != nil {
+					t.Fatalf("action offered at %d: %+v", offset, action)
+				}
+				start = offset + len(name)
 			}
 		})
 	}
@@ -411,6 +452,50 @@ func TestTokenSavingActionsSelectionAndOrder(t *testing.T) {
 	}
 	if len(actions[0].Edits) != 1 || len(actions[1].Edits) != 1 {
 		t.Fatalf("actions must not merge edits: %+v", actions)
+	}
+}
+
+func TestTokenSavingCorruptInputDoesNotPanic(t *testing.T) {
+	inputs := []string{
+		"print(",
+		"print(a",
+		"peek(",
+		"peek(a",
+		"peek(a",
+		"x =",
+		"x = x +",
+		"x = x + 1 )",
+		"if (x) print(a",
+		"if (x) ?a print(",
+		"print {x = ",
+		"print \"unterminated",
+	}
+	for _, text := range inputs {
+		t.Run(text, func(t *testing.T) {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					t.Fatalf("panic on %q: %v", text, recovered)
+				}
+			}()
+			ctx, _, _ := tokenSavingParseContext(t, text)
+			_ = TokenSavingActions(ctx, 0, len(text))
+		})
+	}
+}
+
+func TestTokenSavingCandidateLimit(t *testing.T) {
+	var b strings.Builder
+	for i := 0; i < maxTokenSavingCandidates+5; i++ {
+		fmt.Fprintf(&b, "print(v%d)\n", i)
+	}
+	text := b.String()
+	ctx := tokenSavingTestContext(t, text)
+	actions := TokenSavingActions(ctx, 0, len(text))
+	if len(actions) != maxTokenSavingCandidates {
+		t.Fatalf("actions = %d, want %d", len(actions), maxTokenSavingCandidates)
+	}
+	if got := actions[len(actions)-1].Edits[0].Start; got >= offsetOf(t, text, fmt.Sprintf("print(v%d)", maxTokenSavingCandidates)) {
+		t.Fatalf("limit did not keep the first candidates in order: last start %d", got)
 	}
 }
 
