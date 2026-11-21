@@ -449,9 +449,11 @@ func TestAnnotationTypeNamespaceDoesNotCollideWithCode(t *testing.T) {
 func TestAnnotationPrimitiveNamesDoNotBindToTypes(t *testing.T) {
 	text := strings.Join([]string{
 		"---@class string",
+		"---@field hp number",
 		"local StringClass = {}",
 		"---@type string",
 		"local value = nil",
+		"value.hp = 1",
 		"",
 	}, "\n")
 	result, _ := analyzeText(t, text)
@@ -462,6 +464,13 @@ func TestAnnotationPrimitiveNamesDoNotBindToTypes(t *testing.T) {
 	occs := result.OccurrencesForSymbol(class)
 	if len(occs) != 1 {
 		t.Fatalf("string occurrences = %v, want only the class declaration", occurrenceTexts(text, occs))
+	}
+	value := findSymbolByCanonical(result, "value")
+	if value == nil || value.Fields["hp"] == nil {
+		t.Fatalf("missing value.hp: %+v", value)
+	}
+	if value.Fields["hp"].ClassField != nil {
+		t.Fatalf("primitive receiver linked to class string: %+v", value.Fields["hp"].ClassField)
 	}
 }
 

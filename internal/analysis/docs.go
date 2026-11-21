@@ -735,7 +735,7 @@ func (r *Result) classForSymbol(sym *Symbol) *Class {
 			}
 		}
 	}
-	if className == "" {
+	if className == "" || IsPrimitiveTypeName(className) {
 		return nil
 	}
 	return r.Classes[CanonicalName(className)]
