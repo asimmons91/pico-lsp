@@ -231,7 +231,8 @@ Rename rules:
 
 - Rename all declarations and uses in the cart.
 - New name must be a valid PICO-8 identifier and not a keyword. Type
-  declarations also accept qualified names such as `Player.State`.
+  declarations also accept qualified names such as `Player.State`, but cannot
+  use a reserved primitive type name such as `number` or `table`.
 - Preserve the user's original casing style where reasonable: if the symbol was consistently uppercase, uppercase the new name; otherwise use the typed spelling. If usages mix cases, replace all with the typed spelling (PICO-8 folds them anyway).
 - Do not rename inside comments or strings, except LuaCATS annotation names as
   described above.
