@@ -10,11 +10,12 @@
 
 The VS Code extension reports which `pico-lsp` binary is running, where it came
 from, and whether its version matches the extension. A custom
-`pico8.serverPath` that points at an older, newer, or development server
-produces one clear, non-blocking warning with actionable commands. Users and
-maintainers can copy a diagnostics block containing the extension version,
-server version, source, platform, cache path, and last startup error without
-opening a debugger. The LSP server and protocol do not change.
+`pico8.serverPath` that points at an older or newer release server produces one
+clear, non-blocking warning with actionable commands; development builds are
+labeled without a mismatch warning. Users and maintainers can copy a
+diagnostics block containing the extension version, server version, source,
+platform, cache path, and last startup error without opening a debugger. The
+LSP server and protocol do not change.
 
 **Demo:** Set `pico8.serverPath` to a `pico-lsp` v1.7.0 binary while running the
 1.9.0 extension. The server still starts, but VS Code shows one warning:
@@ -158,8 +159,9 @@ After a successful start:
   versions, with **Show Server Info**, **Open Settings**, and **Show Log**.
 - `mismatch` with source `cache` or `download`: show one warning containing
   both versions, with **Clear Server Cache**, **Show Server Info**, and
-  **Show Log**. Clearing the cache remains a user action; never clear it
-  automatically.
+  **Show Log**. Clearing the cache remains a user action and does not stop the
+  running server; the user restarts through the existing command and the next
+  start downloads again. Never clear the cache automatically.
 
 The warning appears at most once per client start. A manual restart may warn
 again. It must not block activation, change the document selector, stop the
