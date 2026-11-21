@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-21
+
 ### Added
 
 - Token-saving code actions (M23): convert safe `print(...)` statements to
@@ -34,11 +36,6 @@ All notable changes to this project are documented here. The format follows
   cache root, workspace-folders, Lua attachment, and the last startup error
   when present to the output channel; **PICO-8: Copy Server Diagnostics** copies
   the same metadata as Markdown without source text or cart contents.
-- The built-in P8SCII glyph catalog now covers every printable byte
-  (`0x10`–`0xff`). ASCII punctuation, digits, standard letters, puny-font
-  uppercase letters, Hiragana, and Katakana get stable names for
-  `pico8/glyphs`, glyph completion, and the picker. Existing symbol names and
-  aliases are unchanged.
 - Neovim: the optional ftplugin can install PICO-8's `Shift-A` through
   `Shift-Z` insert-mode shortcuts for the 26 typeable P8SCII symbols
   (`0x80`-`0x99`). The mappings use the server glyph catalog by byte and fall
@@ -46,6 +43,21 @@ All notable changes to this project are documented here. The format follows
   client; custom font slots still insert canonical Unicode. Enable them with
   `g:pico8_glyph_maps`; they are off by default because they replace uppercase
   letters in code.
+
+## [1.7.0] - 2026-11-20
+
+### Added
+
+- The built-in P8SCII glyph catalog now covers every printable byte
+  (`0x10`–`0xff`). ASCII punctuation, digits, standard letters, puny-font
+  uppercase letters, Hiragana, and Katakana get stable names for
+  `pico8/glyphs`, glyph completion, and the picker. Existing symbol names and
+  aliases are unchanged.
+
+### Fixed
+
+- Glyph insertion now escapes ASCII quotes and backslashes inside string
+  literals.
 
 ## [1.6.0] - 2026-11-19
 
@@ -250,7 +262,9 @@ unchanged.
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.0
+[1.7.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.7.0
 [1.6.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.6.0
 [1.5.1]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.5.1
 [1.5.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.5.0

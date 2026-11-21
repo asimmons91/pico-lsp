@@ -1,7 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.7.0 released with the expanded P8SCII glyph catalog. M21 and M22
-are implemented and target v1.8.0. M23 is implemented with a TBD release target.
+**Status:** v1.8.0 released with the VS Code settings schema and server health
+reporting, annotation-aware navigation, and token-saving code actions.
 
 **Last updated:** 2026-11-21
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -79,9 +79,9 @@ These decisions were made before milestone specs were written. Changing one requ
 | M17 | P8SCII Public Package | Stable `pkg/p8scii` with the full glyph table, widths, and encode/decode | M16 | Done (v1.6.0) |
 | M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Done (v1.6.0) |
 | M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Done (v1.6.0) |
-| M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0 pending) |
-| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0 pending) |
-| M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (release TBD) |
+| M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0) |
+| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
+| M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -96,14 +96,14 @@ originally planned separate v1.7.0 and v1.8.0 milestones were folded into
 v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
 now the later, additive catalog-coverage release.
 
-M21 and M22 target **v1.8.0** and are independently reviewable; separate
-milestone specs do not require separate tags.
+M21, M22, and M23 shipped together in **v1.8.0**; separate milestone specs do
+not require separate tags.
 
-M23 is implemented but not committed to a release. It adds cursor-local
-token-saving code actions on top of the M14 shorthand conversion; the pattern
-catalog, safety rules, deferred patterns, and resolved decisions are in
-[M23](M23-token-saving-quick-fixes.md). Zero-argument `print()`, `flr` division,
-redundant parentheses, and cart-wide fix-all remain deferred.
+M23 adds cursor-local token-saving code actions on top of the M14 shorthand
+conversion; the pattern catalog, safety rules, deferred patterns, and resolved
+decisions are in [M23](M23-token-saving-quick-fixes.md). Zero-argument
+`print()`, `flr` division, redundant parentheses, and cart-wide fix-all remain
+deferred.
 
 Each milestone has a detailed spec:
 
@@ -129,7 +129,7 @@ Each milestone has a detailed spec:
 - [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
-- [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — implemented, release TBD
+- [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
@@ -227,8 +227,7 @@ LSP wire contract, server defaults, or the editor-agnostic server contract.
   and source, warns once on a release-version mismatch, and copies diagnostics
   for issue reports.
 
-Each milestone has its own spec. M21 and M22 are implemented and target
-v1.8.0.
+Each milestone has its own spec. M21 and M22 shipped in v1.8.0.
 
 ## Cross-cutting standards
 
@@ -365,10 +364,10 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`).
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21 and M22 are implemented and target v1.8.0. M23 is implemented and has no release target yet. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21, M22, and M23 shipped together as v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
