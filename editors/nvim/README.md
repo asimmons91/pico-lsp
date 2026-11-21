@@ -149,6 +149,28 @@ Custom font slots are declared in `pico8.glyphs`; see the
 The server inserts the canonical Unicode spelling for the chosen byte because
 it cannot inspect custom font pixels.
 
+### PICO-8 Shift shortcuts
+
+The optional ftplugin can install PICO-8's six one-shot button glyph shortcuts.
+They are disabled by default because they replace uppercase letters in insert
+mode. Enable them before opening a cart:
+
+```lua
+vim.g.pico8_glyph_maps = 1
+```
+
+The Vimscript equivalent is `let g:pico8_glyph_maps = 1`. With the option
+enabled, `Shift-U`, `Shift-D`, `Shift-L`, `Shift-R`, `Shift-O`, and `Shift-X`
+insert `⬆️`, `⬇️`, `⬅️`, `➡️`, `🅾️`, and `❎` respectively. Use `CTRL-V`
+before a letter to insert a literal uppercase character. The mappings are
+buffer-local to `pico8` buffers; included `.lua` files do not receive them.
+
+These six shortcuts are the complete set of one-shot glyph shortcuts in the
+PICO-8 editor. The rest of the printable P8SCII set is available through
+`p8_` completion or `:Pico8InsertGlyph`. PICO-8's `CTRL-J` (Hiragana),
+`CTRL-K` (Katakana), and `CTRL-P` (puny font) input modes are not implemented;
+they conflict with Neovim's built-in insert-mode keys.
+
 ## Syntax highlighting
 
 The repository ships an editor-oriented tree-sitter grammar at

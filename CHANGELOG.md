@@ -13,6 +13,10 @@ All notable changes to this project are documented here. The format follows
   uppercase letters, Hiragana, and Katakana get stable names for
   `pico8/glyphs`, glyph completion, and the picker. Existing symbol names and
   aliases are unchanged.
+- Neovim: the optional ftplugin can install PICO-8's `Shift-L/R/U/D/O/X`
+  button-glyph shortcuts in insert mode. Enable them with
+  `g:pico8_glyph_maps`; they are off by default because they replace uppercase
+  letters.
 
 ## [1.6.0] - 2026-11-19
 

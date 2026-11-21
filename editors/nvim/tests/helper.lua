@@ -39,6 +39,18 @@ local function fail(message)
   vim.cmd("cquit 1")
 end
 
+local default_probe = vim.api.nvim_create_buf(false, true)
+vim.bo[default_probe].filetype = "pico8"
+local default_mapping = vim.api.nvim_buf_call(default_probe, function()
+  return vim.fn.maparg("U", "i", false, true)
+end)
+if next(default_mapping) ~= nil then
+  fail("pico8 glyph maps were installed without opt-in")
+end
+vim.api.nvim_buf_delete(default_probe, { force = true })
+
+vim.g.pico8_glyph_maps = 1
+
 vim.cmd.edit(vim.fn.fnameescape(cart))
 if not vim.wait(5000, function()
   return #vim.lsp.get_clients({ name = "pico_lsp" }) > 0
@@ -51,6 +63,30 @@ if vim.bo.commentstring ~= "-- %s" then
 end
 if vim.bo.comments ~= ":---,:--,://" then
   fail("ftplugin did not set comments")
+end
+
+local expected_glyphs = {
+  U = "⬆️",
+  D = "⬇️",
+  L = "⬅️",
+  R = "➡️",
+  O = "🅾️",
+  X = "❎",
+}
+for key, glyph in pairs(expected_glyphs) do
+  local mapping = vim.fn.maparg(key, "i", false, true)
+  if next(mapping) == nil or mapping.buffer ~= 1 or mapping.rhs ~= glyph then
+    fail("ftplugin did not install the " .. key .. " glyph mapping")
+  end
+end
+
+vim.api.nvim_buf_set_lines(0, -1, -1, false, { "" })
+vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(0), 0 })
+local esc = vim.api.nvim_replace_termcodes("<Esc>", true, false, true)
+vim.api.nvim_feedkeys("iUDLROX" .. esc, "xt", false)
+local inserted = vim.api.nvim_buf_get_lines(0, -2, -1, false)[1]
+if inserted ~= "⬆️⬇️⬅️➡️🅾️❎" then
+  fail("ftplugin glyph mappings inserted " .. vim.inspect(inserted))
 end
 
 local function check_wrap(leader, message)
