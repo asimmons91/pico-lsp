@@ -27,13 +27,15 @@ Items marked proposed are specified but not yet committed to a release.
 - [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — implemented, targets v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — implemented, targets v1.8.0
+- [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — proposed, post-v1.8
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21 and M22 are implemented and target
-v1.8.0. The items below are not part of these releases.
+v1.8.0. M23 is specified for post-v1.8 but is not committed to a release. The
+items below are not part of these releases.
 
 ## Prioritization
 
