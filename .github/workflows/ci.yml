@@ -127,7 +127,11 @@ jobs:
         working-directory: editors/vscode
 
       - name: Build test server
-        run: go build -o /tmp/pico-lsp ./cmd/pico-lsp
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./editors/vscode/package.json').version")"
+          go build -trimpath -ldflags "-X github.com/asimmons91/pico-lsp/internal/version.Version=${version}" -o /tmp/pico-lsp ./cmd/pico-lsp
 
       - name: Integration tests
         run: xvfb-run -a env PICO_LSP_TEST_SERVER=/tmp/pico-lsp npm run test:integration

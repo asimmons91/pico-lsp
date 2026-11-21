@@ -45,6 +45,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<unknow
     ),
     vscode.commands.registerCommand('pico8.client.restartServer', () => client.restart()),
     vscode.commands.registerCommand('pico8.client.showOutput', () => client.showOutput()),
+    vscode.commands.registerCommand('pico8.client.showServerInfo', () => client.showServerInfo()),
+    vscode.commands.registerCommand('pico8.client.copyServerDiagnostics', () =>
+      client.copyServerDiagnostics()
+    ),
     vscode.commands.registerCommand('pico8.client.clearServerCache', () => client.clearCache()),
     monitor.onDidChange(() => {
       void client.restart();
@@ -68,6 +72,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<unknow
   await client.start();
   return {
     getClient: () => client.current(),
+    getServerInfo: () => client.getServerInfo(),
     getStatusBar: () => ({ text: statusBar.text(), visible: statusBar.visible() })
   };
 }

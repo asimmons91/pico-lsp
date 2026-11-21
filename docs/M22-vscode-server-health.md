@@ -1,6 +1,7 @@
 # M22 — VS Code Server Health and Version Reporting
 
-**Status:** Proposed — not started
+**Status:** Done — implementation complete. The v1.8.0 tag remains an open
+release item.
 
 **Depends on:** M15  
 **Release target:** v1.8.0 (may ship with M21)  
@@ -39,6 +40,9 @@ binary path on the clipboard for an issue report. A development build reports
 | D8 | Copy Server Diagnostics | Copy the same information as Markdown to the clipboard and show a short confirmation. |
 | D9 | Privacy | Include versions, paths, platform, cache location, and last error; never include source text or cart contents. |
 | D10 | Release | M22 may ship together with M21 as v1.8.0; the milestones remain independently reviewable. |
+| D11 | Non-release extension versions | If either the extension or server version is not an exact release version, classify the pair as `development` and suppress the mismatch warning. Raw versions remain visible in Server Info. |
+| D12 | Last error lifetime | Retain the most recent startup error across restarts; clear it after a successful start and replace it when the next start fails. |
+| D13 | Integration server stamping | CI and release workflows stamp the test server with the extension manifest or release-tag version. Local unstamped servers are accepted as development builds. |
 
 ## Scope
 
@@ -103,7 +107,8 @@ Rules:
   pseudo-versions are not release versions.
 - `match` when both normalized values are release versions and equal.
 - `mismatch` when both are release versions and differ.
-- `development` when the server version is present but not a release version.
+- `development` when either normalized value is present but not a release
+  version.
 - `unknown` when the server does not report a version.
 - Do not use a semver library and do not implement range compatibility in this
   milestone.
@@ -142,7 +147,8 @@ Requirements:
   `client.start()` resolves.
 - Record `lastError` when server resolution or startup fails.
 - Clear stale details when a restart begins, but keep the last error available
-  to the info command if the next start fails.
+  to the info command until a start succeeds; a successful start clears it and
+  a failed start replaces it.
 - The details must be available through a method or extension export for the
   integration test, for example `getServerInfo()`.
 - Do not expose source text, cart contents, or environment variables.
@@ -222,10 +228,10 @@ Integration tests:
 
 - Build the test server with
   `-ldflags "-X github.com/asimmons91/pico-lsp/internal/version.Version=<extension package version>"`
-  so `initializeResult.serverInfo.version` reports a release version. Update
-  the CI and release integration build commands accordingly. If a stamped
-  server is unavailable, assert `development` instead and rely on the unit
-  tests for the release-status branches.
+  so `initializeResult.serverInfo.version` reports a release version. CI and
+  release workflows stamp the binary from the manifest or release tag. If a
+  stamped server is unavailable locally, assert `development` instead and rely
+  on the unit tests for the release-status branches.
 - Start the stamped test server through `pico8.serverPath`; assert
   `getServerInfo()` reports `source: serverPath`, a release server version, and
   `match` status.
@@ -274,22 +280,22 @@ Integration tests:
 
 ## Exit criteria
 
-- [ ] The extension reads the server version from `initializeResult` after
+- [x] The extension reads the server version from `initializeResult` after
       startup.
-- [ ] `v1.7.0` and `1.7.0` normalize to the same release version; pre-release,
+- [x] `v1.7.0` and `1.7.0` normalize to the same release version; pre-release,
       `dev`, and pseudo-versions are treated as development.
-- [ ] A release-version mismatch warns once with the correct actions and never
+- [x] A release-version mismatch warns once with the correct actions and never
       blocks startup.
-- [ ] The extension tracks `serverPath`, `cache`, and `download` sources.
-- [ ] **Show Server Info** works when the server is running, stopped, or
+- [x] The extension tracks `serverPath`, `cache`, and `download` sources.
+- [x] **Show Server Info** works when the server is running, stopped, or
       failed.
-- [ ] **Copy Server Diagnostics** copies versions, source, path, platform,
+- [x] **Copy Server Diagnostics** copies versions, source, path, platform,
       cache root, and last error, with no source text.
-- [ ] Unit tests cover matching, development, unknown, and mismatch statuses;
+- [x] Unit tests cover matching, development, unknown, and mismatch statuses;
       integration tests cover the matching server and both commands.
-- [ ] README, troubleshooting, configuration, changelog, roadmap, and backlog
+- [x] README, troubleshooting, configuration, changelog, roadmap, and backlog
       are updated.
-- [ ] No LSP protocol, server behavior, telemetry, or download-security change.
+- [x] No LSP protocol, server behavior, telemetry, or download-security change.
 - [ ] `v1.8.0` is tagged after the release PR merges (possibly with M21).
 
 ## Risks and mitigations

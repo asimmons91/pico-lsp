@@ -191,6 +191,37 @@ no effect, confirm it is a documented server setting and check the **PICO-8
 Language Server** output channel for a configuration warning. Server settings
 are window-scoped; `pico8.serverPath` is the only machine-scoped setting.
 
+### Version mismatch
+
+After a successful start, the extension compares the version reported in the
+LSP `initializeResult` with its own version. A release mismatch is advisory: the
+server keeps running and every feature remains available.
+
+- A custom `pico8.serverPath` mismatch offers **Show Server Info**, **Open
+  Settings**, and **Show Log**.
+- A cached or downloaded mismatch offers **Clear Server Cache**, **Show Server
+  Info**, and **Show Log**. Clearing the cache does not stop the running server;
+  run **PICO-8: Restart Language Server** afterwards to download a matching
+  server.
+- A server that does not report a version produces one warning and still
+  starts.
+- `dev`, empty, pre-release, and Go pseudo-versions are reported as development
+  builds and do not warn.
+
+The warning appears at most once per server start; a manual restart may warn
+again. To inspect the exact versions and source, run **PICO-8: Show Server
+Info** or **PICO-8: Copy Server Diagnostics**.
+
+### Copy server diagnostics
+
+Run **PICO-8: Copy Server Diagnostics** to place a Markdown block on the
+clipboard containing the extension version, server version, version status,
+server source, resolved path, platform and architecture, cache root,
+workspace-folder count, Lua attachment state, running state, and the last
+startup error when present. It works when the server is running, stopped, or
+failed, and it never copies source text or cart contents. Paste it into an issue
+report together with the steps to reproduce the problem.
+
 ## Logs and stdout
 
 Routine logs go to stderr or the `--log-file` path. The server never writes to
@@ -213,6 +244,7 @@ Include:
 
 - `pico-lsp --version`;
 - editor and version;
+- in VS Code, the **PICO-8: Copy Server Diagnostics** block;
 - operating system and architecture;
 - a minimal `.p8` cart or `.lua` include that reproduces the problem;
 - the relevant log lines from `--log-file`;

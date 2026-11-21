@@ -16,8 +16,8 @@ Marketplace publishing is not available yet. Install the
    **Install from VSIX...**.
 3. Open a folder containing a `.p8` cart.
 
-The extension version and server version are identical. For example, extension
-`1.7.0` downloads `pico-lsp` v1.7.0 on first use.
+By default, the extension version and server version are identical. For example,
+extension `1.7.0` downloads `pico-lsp` v1.7.0 on first use.
 
 ## Server installation
 
@@ -38,6 +38,16 @@ disables automatic downloads:
 
 If the download fails behind a proxy, configure VS Code's `http.proxy` and
 `http.proxyStrictSSL` settings, or use `pico8.serverPath`.
+
+The extension reads the running server's version after startup. A release
+server that does not match the extension version still starts and keeps all
+features; the extension shows one advisory warning with **Show Server Info**,
+**Open Settings** (for a custom `pico8.serverPath`), and **Show Log**. Cached or
+downloaded mismatches offer **Clear Server Cache** instead. Development builds
+report “development build” and do not produce a mismatch warning. Use
+**PICO-8: Copy Server Diagnostics** to copy the extension and server versions,
+source, path, platform, cache root, and last startup error when present for an
+issue report.
 
 ## Language support
 
@@ -93,7 +103,16 @@ test.
 - **PICO-8: Insert P8SCII Glyph** (`pico8.client.insertGlyph`)
 - **PICO-8: Restart Language Server** (`pico8.client.restartServer`)
 - **PICO-8: Show Language Server Output** (`pico8.client.showOutput`)
+- **PICO-8: Show Server Info** (`pico8.client.showServerInfo`)
+- **PICO-8: Copy Server Diagnostics** (`pico8.client.copyServerDiagnostics`)
 - **PICO-8: Clear Downloaded Server Cache** (`pico8.client.clearServerCache`)
+
+**PICO-8: Show Server Info** writes the current extension version, server
+version and source, path, platform, cache root, workspace-folder count, Lua
+attachment state, and last startup error when present to the **PICO-8 Language
+Server** output channel. Both info commands work when the server is stopped or failed.
+**PICO-8: Copy Server Diagnostics** copies the same block as Markdown to the
+clipboard.
 
 ## Logs and troubleshooting
 
@@ -126,11 +145,17 @@ npm run lint
 npm run test:unit
 ```
 
-Integration tests require a built `pico-lsp` and a Linux display server:
+Integration tests require a built `pico-lsp` and a Linux display server. CI
+stamps the binary with the extension manifest version so the suite can assert a
+release match; an unstamped local binary is accepted as a development build:
 
 ```sh
-PICO_LSP_TEST_SERVER=/path/to/pico-lsp npm run test:integration
-# On headless Linux: xvfb-run -a env PICO_LSP_TEST_SERVER=... npm run test:integration
+version="$(node -p "require('./package.json').version")"
+(cd ../.. && go build -trimpath \
+  -ldflags "-X github.com/asimmons91/pico-lsp/internal/version.Version=${version}" \
+  -o /tmp/pico-lsp ./cmd/pico-lsp)
+PICO_LSP_TEST_SERVER=/tmp/pico-lsp npm run test:integration
+# On headless Linux: xvfb-run -a env PICO_LSP_TEST_SERVER=/tmp/pico-lsp npm run test:integration
 ```
 
 See the [repository](https://github.com/asimmons91/pico-lsp) for source and

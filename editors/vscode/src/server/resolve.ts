@@ -3,8 +3,14 @@ import { access, lstat } from 'node:fs/promises';
 import path from 'node:path';
 import type { CancellationToken } from 'vscode';
 import { ensureServer, isUsableServerBinary } from './download';
+import type { ServerSource } from './info';
 import type { ServerTarget } from './platforms';
 import { serverBinaryPath } from './paths';
+
+export interface ResolvedServer {
+  path: string;
+  source: Exclude<ServerSource, 'unknown'>;
+}
 
 export interface ResolveServerOptions {
   version: string;
@@ -13,19 +19,23 @@ export interface ResolveServerOptions {
   serverPath: string;
   autoDownload: boolean;
   development: boolean;
+  baseUrl?: string;
   proxy?: string;
   strictSSL?: boolean;
   token?: CancellationToken;
 }
 
-export async function resolveServer(options: ResolveServerOptions): Promise<string> {
+export async function resolveServer(options: ResolveServerOptions): Promise<ResolvedServer> {
   if (options.serverPath.trim()) {
-    return validateServerPath(options.serverPath.trim());
+    return {
+      path: await validateServerPath(options.serverPath.trim()),
+      source: 'serverPath'
+    };
   }
 
   const cached = serverBinaryPath(options.cacheRoot, options.version, options.target);
   if (await isUsableServerBinary(cached)) {
-    return cached;
+    return { path: cached, source: 'cache' };
   }
 
   if (options.development) {
@@ -42,14 +52,18 @@ export async function resolveServer(options: ResolveServerOptions): Promise<stri
   const controller = new AbortController();
   const cancellation = options.token?.onCancellationRequested(() => controller.abort());
   try {
-    return await ensureServer({
-      version: options.version,
-      target: options.target,
-      cacheRoot: options.cacheRoot,
-      proxy: options.proxy,
-      strictSSL: options.strictSSL,
-      signal: controller.signal
-    });
+    return {
+      path: await ensureServer({
+        version: options.version,
+        target: options.target,
+        cacheRoot: options.cacheRoot,
+        baseUrl: options.baseUrl,
+        proxy: options.proxy,
+        strictSSL: options.strictSSL,
+        signal: controller.signal
+      }),
+      source: 'download'
+    };
   } finally {
     cancellation?.dispose();
   }

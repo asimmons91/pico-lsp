@@ -158,6 +158,20 @@ extension host. The extension forwards the same section through
 `initializationOptions.pico8` and the server's `workspace/configuration` pull,
 and other LSP clients can set the same keys.
 
+`pico8.serverPath` is not version-checked before startup. After the server
+starts, the extension reads the version from the LSP `initializeResult` and
+shows one non-blocking warning when a release server version differs from the
+extension version. The warning never stops the server or replaces a custom
+binary: a custom-path mismatch offers **Show Server Info**, **Open Settings**,
+and **Show Log**, while a cached or downloaded mismatch offers **Clear Server
+Cache**, **Show Server Info**, and **Show Log**. Development versions (`dev`,
+pre-release versions, and Go pseudo-versions) are labeled “development build”
+and do not warn. The comparison is an exact normalized `X.Y.Z` check, not a
+semver compatibility range. Use **PICO-8: Copy Server Diagnostics** to copy the
+versions, source, path, platform, cache root, workspace-folder count, Lua
+attachment state, and last startup error when present, without copying source
+text or cart contents.
+
 The VS Code client also reads four extension-owned settings. They are not sent
 to the language server as behavior settings.
 

@@ -6,6 +6,13 @@
   UI, including types, enums, defaults, window scopes, and descriptions.
 - Reject unknown keys in the `limits`, `format`, `diagnostics`, `lint`, and
   `refactors` settings objects.
+- Read the running server version from `initializeResult`, warn once when a
+  release server does not match the extension, and label development builds
+  without a mismatch warning.
+- Track whether the server came from `pico8.serverPath`, a cached download, or
+  a new download.
+- Add **PICO-8: Show Server Info** and **PICO-8: Copy Server Diagnostics** for
+  versions, source, path, platform, cache root, and the last startup error.
 
 ## 1.7.0
 
