@@ -151,25 +151,28 @@ it cannot inspect custom font pixels.
 
 ### PICO-8 Shift shortcuts
 
-The optional ftplugin can install PICO-8's six one-shot button glyph shortcuts.
-They are disabled by default because they replace uppercase letters in insert
-mode. Enable them before opening a cart:
+The optional ftplugin can install PICO-8's `Shift-A` through `Shift-Z`
+insert-mode glyph shortcuts. PICO-8 assigns the 26 typeable symbols at P8SCII
+`0x80`-`0x99` to those keys in alphabetical order, including the six button
+glyphs at `Shift-L/R/U/D/O/X`. They are disabled by default because they
+replace uppercase letters. Enable them before opening a cart:
 
 ```lua
 vim.g.pico8_glyph_maps = 1
 ```
 
-The Vimscript equivalent is `let g:pico8_glyph_maps = 1`. With the option
-enabled, `Shift-U`, `Shift-D`, `Shift-L`, `Shift-R`, `Shift-O`, and `Shift-X`
-insert `⬆️`, `⬇️`, `⬅️`, `➡️`, `🅾️`, and `❎` respectively. Use `CTRL-V`
-before a letter to insert a literal uppercase character. The mappings are
-buffer-local to `pico8` buffers; included `.lua` files do not receive them.
+The Vimscript equivalent is `let g:pico8_glyph_maps = 1`. The mappings fetch
+the canonical glyph text from the server's `pico8/glyphs` catalog by byte, so a
+custom `pico8.glyphs` entry that overrides one of those bytes is used, and an
+attached `pico_lsp` client is required. To insert a literal uppercase letter,
+use Neovim's character-code entry with the four-digit Unicode code point:
+`CTRL-V u0055` inserts `U`, `CTRL-V u004F` inserts `O`, and so on. The mappings
+are buffer-local to `pico8` buffers; included `.lua` files do not receive them.
 
-These six shortcuts are the complete set of one-shot glyph shortcuts in the
-PICO-8 editor. The rest of the printable P8SCII set is available through
-`p8_` completion or `:Pico8InsertGlyph`. PICO-8's `CTRL-J` (Hiragana),
-`CTRL-K` (Katakana), and `CTRL-P` (puny font) input modes are not implemented;
-they conflict with Neovim's built-in insert-mode keys.
+The remaining printable P8SCII characters are available through `p8_`
+completion or `:Pico8InsertGlyph`. PICO-8's `CTRL-J` (Hiragana), `CTRL-K`
+(Katakana), and `CTRL-P` (puny font) input modes are not implemented; they
+conflict with Neovim's built-in insert-mode keys.
 
 ## Syntax highlighting
 
