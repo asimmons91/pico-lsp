@@ -184,7 +184,7 @@ value outside a contributed enum, such as `"pico8.typeChecking": "stric"`, is
 flagged by VS Code before the server sees it. The server still falls back to its
 default if an invalid value arrives from another client.
 
-To compare effective defaults, search for `pico8` in Settings and hover a
+To compare effective defaults, search for `pico8` in Settings and reset a
 setting to see its default, or open **Preferences: Open Default Settings (JSON)**
 and search for `pico8`. If a setting is accepted by VS Code but appears to have
 no effect, confirm it is a documented server setting and check the **PICO-8

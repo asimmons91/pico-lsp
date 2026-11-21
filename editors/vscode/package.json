@@ -132,7 +132,7 @@
           },
           "scope": "window",
           "additionalProperties": false,
-          "markdownDescription": "Cart budget UI settings. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
+          "markdownDescription": "Controls the cart-budget code lens and token, character, and compressed-size limit diagnostics. See the [configuration reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/configuration.md#settings).",
           "properties": {
             "codeLens": {
               "type": "boolean",
@@ -205,7 +205,7 @@
                 "error"
               ],
               "default": "warning",
-              "description": "Severity for undefined global reads."
+              "markdownDescription": "Severity for undefined global reads. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "unusedLocal": {
               "type": "string",
@@ -217,7 +217,7 @@
                 "error"
               ],
               "default": "off",
-              "description": "Severity for unused local variables."
+              "markdownDescription": "Severity for unused local variables. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "unreachableCode": {
               "type": "string",
@@ -229,7 +229,7 @@
                 "error"
               ],
               "default": "hint",
-              "description": "Severity for unreachable code."
+              "markdownDescription": "Severity for unreachable code. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "duplicateTableField": {
               "type": "string",
@@ -241,7 +241,7 @@
                 "error"
               ],
               "default": "hint",
-              "description": "Severity for duplicate table fields."
+              "markdownDescription": "Severity for duplicate table fields. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "callbackPrecedence": {
               "type": "string",
@@ -253,7 +253,7 @@
                 "error"
               ],
               "default": "hint",
-              "description": "Severity for PICO-8 callback precedence hints."
+              "markdownDescription": "Severity for PICO-8 callback precedence hints. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "callbackParams": {
               "type": "string",
@@ -265,7 +265,7 @@
                 "error"
               ],
               "default": "warning",
-              "description": "Severity for PICO-8 callback parameter checks."
+              "markdownDescription": "Severity for PICO-8 callback parameter checks. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "noStdlib": {
               "type": "string",
@@ -277,7 +277,7 @@
                 "error"
               ],
               "default": "hint",
-              "description": "Severity for PICO-8 no-standard-library hints."
+              "markdownDescription": "Severity for PICO-8 no-standard-library hints. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "shadowedLocal": {
               "type": "string",
@@ -289,7 +289,7 @@
                 "error"
               ],
               "default": "off",
-              "description": "Severity for shadowed local variables."
+              "markdownDescription": "Severity for shadowed local variables. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "emptyBlock": {
               "type": "string",
@@ -301,7 +301,7 @@
                 "error"
               ],
               "default": "off",
-              "description": "Severity for empty blocks."
+              "markdownDescription": "Severity for empty blocks. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "globalInFunction": {
               "type": "string",
@@ -313,7 +313,7 @@
                 "error"
               ],
               "default": "off",
-              "description": "Severity for globals assigned inside functions."
+              "markdownDescription": "Severity for globals assigned inside functions. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "includeOutsideWorkspace": {
               "type": "string",
@@ -325,7 +325,7 @@
                 "error"
               ],
               "default": "warning",
-              "description": "Severity for includes outside the workspace."
+              "markdownDescription": "Severity for includes outside the workspace. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "includeUnusualType": {
               "type": "string",
@@ -337,7 +337,7 @@
                 "error"
               ],
               "default": "hint",
-              "description": "Severity for includes with unusual file types."
+              "markdownDescription": "Severity for includes with unusual file types. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             },
             "includeDuplicate": {
               "type": "string",
@@ -349,7 +349,7 @@
                 "error"
               ],
               "default": "off",
-              "description": "Severity for duplicate includes."
+              "markdownDescription": "Severity for duplicate includes. See the [diagnostic reference](https://github.com/asimmons91/pico-lsp/blob/main/docs/diagnostics.md)."
             }
           }
         },
