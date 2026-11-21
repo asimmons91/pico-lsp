@@ -79,6 +79,13 @@ publishing are deferred to post-v1. The current release is **v1.7.0**.
       client setting appears with a description and the expected default.
 - [ ] Set `pico8.typeChecking` to an invalid value in `settings.json` and
       confirm VS Code flags it; set it to `strict` and confirm it is accepted.
+- [ ] On a release build, run **PICO-8: Copy Server Diagnostics** and confirm
+      the block contains the extension and server versions, source, path,
+      platform, cache root, and the last error when present, with no cart
+      source text.
+- [ ] Point `pico8.serverPath` at an older release server and confirm one
+      non-blocking mismatch warning with **Show Server Info**, **Open
+      Settings**, and **Show Log**; confirm language features still work.
 
 ## Rollback
 

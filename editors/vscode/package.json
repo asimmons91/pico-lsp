@@ -32,6 +32,8 @@
     "onCommand:pico8.client.insertGlyph",
     "onCommand:pico8.client.restartServer",
     "onCommand:pico8.client.showOutput",
+    "onCommand:pico8.client.showServerInfo",
+    "onCommand:pico8.client.copyServerDiagnostics",
     "onCommand:pico8.client.clearServerCache"
   ],
   "main": "./dist/extension.js",
@@ -82,6 +84,14 @@
       {
         "command": "pico8.client.showOutput",
         "title": "PICO-8: Show Language Server Output"
+      },
+      {
+        "command": "pico8.client.showServerInfo",
+        "title": "PICO-8: Show Server Info"
+      },
+      {
+        "command": "pico8.client.copyServerDiagnostics",
+        "title": "PICO-8: Copy Server Diagnostics"
       },
       {
         "command": "pico8.client.clearServerCache",

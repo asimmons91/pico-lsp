@@ -1,7 +1,7 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.7.0 released with the expanded P8SCII glyph catalog. M21 is
-implemented and targets v1.8.0; M22 is proposed.
+**Status:** v1.7.0 released with the expanded P8SCII glyph catalog. M21 and M22
+are implemented and target v1.8.0.
 
 **Last updated:** 2026-11-21
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -80,7 +80,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M18 | Cart Public Package | Public cart document, byte-preserving `ReplaceCode`, and include ownership | M17 | Done (v1.6.0) |
 | M19 | LSP and Glyph Public Packages | In-process `pkg/lsp` server and public glyph catalog | M18 | Done (v1.6.0) |
 | M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0 pending) |
-| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Proposed (v1.8.0) |
+| M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0 pending) |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -95,7 +95,7 @@ originally planned separate v1.7.0 and v1.8.0 milestones were folded into
 v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
 now the later, additive catalog-coverage release.
 
-M21 targets **v1.8.0**. M22 is independent and may ship with it; separate
+M21 and M22 target **v1.8.0** and are independently reviewable; separate
 milestone specs do not require separate tags.
 
 Each milestone has a detailed spec:
@@ -219,7 +219,8 @@ LSP wire contract, server defaults, or the editor-agnostic server contract.
   and source, warns once on a release-version mismatch, and copies diagnostics
   for issue reports.
 
-Each milestone has its own spec. M21 targets v1.8.0; M22 may ship with it.
+Each milestone has its own spec. M21 and M22 are implemented and target
+v1.8.0.
 
 ## Cross-cutting standards
 
@@ -359,7 +360,7 @@ These defaults were confirmed for the v1 release.
 - **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`).
 - **Install channels:** v1 publishes GitHub release archives and documents `go install`. Homebrew and Mason packaging are deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21 targets v1.8.0; M22 may ship with it. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21 and M22 are implemented and target v1.8.0. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 

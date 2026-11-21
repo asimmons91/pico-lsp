@@ -7,10 +7,18 @@ import {
 } from 'vscode-languageclient/node';
 import { Trace } from 'vscode-jsonrpc';
 import { extensionSettings, httpSettings, pico8InitializationOptions } from './config';
+import {
+  formatServerDiagnostics,
+  formatServerInfo,
+  serverVersionWarning,
+  type ServerDetails,
+  type ServerSource
+} from './server/info';
 import { targetFor } from './server/platforms';
 import { clearServerCache, isUsableServerBinary } from './server/download';
-import { resolveServer } from './server/resolve';
+import { resolveServer, type ResolvedServer } from './server/resolve';
 import { serverBinaryPath } from './server/paths';
+import { classifyServerVersion } from './server/version';
 import type { CartStatusBar } from './statusBar';
 import { buildDocumentSelector, isPico8Document, type Pico8WorkspaceMonitor } from './workspace';
 
@@ -74,6 +82,7 @@ export class PicoClient implements vscode.Disposable {
   private running: LanguageClient | undefined;
   private operation = Promise.resolve();
   private disposed = false;
+  private serverDetails: ServerDetails;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -81,10 +90,32 @@ export class PicoClient implements vscode.Disposable {
     private readonly trace: vscode.LogOutputChannel,
     private readonly monitor: Pico8WorkspaceMonitor,
     private readonly statusBar: CartStatusBar
-  ) {}
+  ) {
+    this.serverDetails = {
+      extensionVersion: String(context.extension.packageJSON.version),
+      versionStatus: 'unknown',
+      source: 'unknown',
+      platform: process.platform,
+      arch: process.arch,
+      cacheRoot: context.globalStorageUri.fsPath,
+      workspaceFolders: monitor.current().length,
+      attachLua: extensionSettings().attachLua,
+      running: false
+    };
+  }
 
   current(): LanguageClient | undefined {
     return this.client;
+  }
+
+  getServerInfo(): ServerDetails {
+    return {
+      ...this.serverDetails,
+      extensionVersion: this.extensionVersion(),
+      cacheRoot: this.context.globalStorageUri.fsPath,
+      workspaceFolders: this.monitor.current().length,
+      attachLua: extensionSettings().attachLua
+    };
   }
 
   start(): Promise<void> {
@@ -212,6 +243,31 @@ export class PicoClient implements vscode.Disposable {
     this.output.show(true);
   }
 
+  showServerInfo(): void {
+    try {
+      this.output.appendLine('');
+      this.output.appendLine(formatServerInfo(this.getServerInfo()));
+      this.output.show(true);
+    } catch (error) {
+      void this.showActionableError(
+        `Unable to show PICO-8 server info: ${errorMessage(error)}`
+      );
+    }
+  }
+
+  async copyServerDiagnostics(): Promise<void> {
+    try {
+      await vscode.env.clipboard.writeText(formatServerDiagnostics(this.getServerInfo()));
+      void vscode.window.showInformationMessage(
+        'PICO-8 server diagnostics copied to the clipboard.'
+      );
+    } catch (error) {
+      await this.showActionableError(
+        `Unable to copy PICO-8 server diagnostics: ${errorMessage(error)}`
+      );
+    }
+  }
+
   refreshTrace(setting: 'off' | 'messages' | 'verbose'): void {
     if (this.client) {
       void this.applyTrace(this.client, setting).catch((error) => {
@@ -234,11 +290,36 @@ export class PicoClient implements vscode.Disposable {
     const target = targetFor(process.platform, process.arch);
     const cacheRoot = this.context.globalStorageUri.fsPath;
     const version = this.extensionVersion();
+    const folders = this.monitor.current();
 
-    let serverPath: string;
+    // Clear stale run details but keep the most recent error until a start
+    // succeeds, so Server Info remains useful if this attempt fails early.
+    this.serverDetails = {
+      ...this.serverDetails,
+      extensionVersion: version,
+      serverVersion: undefined,
+      versionStatus: 'unknown',
+      source: 'unknown',
+      serverPath: undefined,
+      platform: process.platform,
+      arch: process.arch,
+      cacheRoot,
+      workspaceFolders: folders.length,
+      attachLua: settings.attachLua,
+      running: false
+    };
+
+    let resolved: ResolvedServer;
     try {
-      serverPath = await this.resolveWithProgress(settings, target, cacheRoot, version);
+      resolved = await this.resolveWithProgress(settings, target, cacheRoot, version);
     } catch (error) {
+      const attempted = this.attemptedSource(settings, target, cacheRoot, version);
+      this.serverDetails = {
+        ...this.serverDetails,
+        source: attempted.source,
+        serverPath: attempted.serverPath,
+        lastError: errorMessage(error)
+      };
       this.output.error(`unable to start pico-lsp: ${errorMessage(error)}`);
       const choice = await vscode.window.showErrorMessage(
         `Unable to start pico-lsp: ${errorMessage(error)}`,
@@ -259,11 +340,15 @@ export class PicoClient implements vscode.Disposable {
     if (this.disposed) {
       return;
     }
+    this.serverDetails = {
+      ...this.serverDetails,
+      source: resolved.source,
+      serverPath: resolved.path
+    };
 
-    const folders = this.monitor.current();
     const documentSelector = buildDocumentSelector(folders, settings.attachLua);
     const serverOptions: ServerOptions = {
-      command: serverPath,
+      command: resolved.path,
       args: [],
       options: {
         cwd: folders.length === 1 ? folders[0].uri.fsPath : undefined
@@ -283,6 +368,7 @@ export class PicoClient implements vscode.Disposable {
       if (event.newState === State.Stopped && this.running === client && !this.disposed) {
         this.output.warn('pico-lsp stopped unexpectedly.');
         this.running = undefined;
+        this.serverDetails = { ...this.serverDetails, running: false };
         this.statusBar.updateNow();
         void vscode.window
           .showWarningMessage('pico-lsp stopped unexpectedly.', 'Show Log', 'Restart')
@@ -308,11 +394,31 @@ export class PicoClient implements vscode.Disposable {
       } catch (error) {
         this.output.warn(`unable to set LSP trace level: ${errorMessage(error)}`);
       }
-      this.output.info(`pico-lsp ${version} started from ${serverPath}`);
+      const reportedVersion: unknown = client.initializeResult?.serverInfo?.version;
+      const serverVersion = typeof reportedVersion === 'string' ? reportedVersion : undefined;
+      const versionStatus = classifyServerVersion(version, serverVersion);
+      this.serverDetails = {
+        ...this.serverDetails,
+        serverVersion,
+        versionStatus,
+        running: true,
+        lastError: undefined
+      };
+      this.output.info(
+        `pico-lsp ${serverVersion ?? 'unknown version'} started from ${resolved.path} (${versionStatus})`
+      );
       this.statusBar.updateNow();
+      void this.warnAboutVersion();
     } catch (error) {
       this.client = undefined;
       this.running = undefined;
+      this.serverDetails = {
+        ...this.serverDetails,
+        serverVersion: undefined,
+        versionStatus: 'unknown',
+        running: false,
+        lastError: errorMessage(error)
+      };
       this.output.error(`unable to start pico-lsp: ${errorMessage(error)}`);
       void vscode.window.showErrorMessage(`Unable to start pico-lsp: ${errorMessage(error)}`);
     }
@@ -323,7 +429,7 @@ export class PicoClient implements vscode.Disposable {
     target: ReturnType<typeof targetFor>,
     cacheRoot: string,
     version: string
-  ): Promise<string> {
+  ): Promise<ResolvedServer> {
     const cached = serverBinaryPath(cacheRoot, version, target);
     if (settings.serverPath || (await isUsableServerBinary(cached))) {
       return resolveServer({
@@ -366,10 +472,53 @@ export class PicoClient implements vscode.Disposable {
     await client.setTrace(trace);
   }
 
+  private attemptedSource(
+    settings: ReturnType<typeof extensionSettings>,
+    target: ReturnType<typeof targetFor>,
+    cacheRoot: string,
+    version: string
+  ): { source: ServerSource; serverPath?: string } {
+    if (settings.serverPath.trim()) {
+      return { source: 'serverPath', serverPath: settings.serverPath.trim() };
+    }
+    if (settings.autoDownload) {
+      return {
+        source: 'download',
+        serverPath: serverBinaryPath(cacheRoot, version, target)
+      };
+    }
+    return { source: 'unknown' };
+  }
+
+  private async warnAboutVersion(): Promise<void> {
+    const warning = serverVersionWarning(this.getServerInfo());
+    if (!warning) {
+      return;
+    }
+    const choice = await vscode.window.showWarningMessage(warning.message, ...warning.actions);
+    if (choice === 'Show Server Info') {
+      this.showServerInfo();
+    } else if (choice === 'Open Settings') {
+      await vscode.commands.executeCommand('workbench.action.openSettings', 'pico8.serverPath');
+    } else if (choice === 'Show Log') {
+      this.showOutput();
+    } else if (choice === 'Clear Server Cache') {
+      await this.clearCache();
+    }
+  }
+
+  private async showActionableError(message: string): Promise<void> {
+    const choice = await vscode.window.showErrorMessage(message, 'Show Log');
+    if (choice === 'Show Log') {
+      this.showOutput();
+    }
+  }
+
   private async stopNow(): Promise<void> {
     const client = this.client;
     this.client = undefined;
     this.running = undefined;
+    this.serverDetails = { ...this.serverDetails, running: false };
     if (!client) {
       return;
     }

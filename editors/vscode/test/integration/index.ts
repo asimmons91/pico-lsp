@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import * as vscode from 'vscode';
+import type { ServerDetails } from '../../src/server/info';
+import { isReleaseVersion } from '../../src/server/version';
 
 const SOURCE = 'pico-lsp';
 
@@ -28,6 +30,7 @@ export async function run(): Promise<void> {
     diagnostics.some((diagnostic) => diagnostic.source === SOURCE)
   );
   const api = extension.exports as {
+    getServerInfo?: () => ServerDetails;
     getStatusBar?: () => { text: string; visible: boolean };
   };
   await waitFor(
@@ -37,6 +40,24 @@ export async function run(): Promise<void> {
     },
     'cart status bar'
   );
+
+  const serverInfo = await waitForServerInfo(api);
+  assert.equal(serverInfo.extensionVersion, String(extension.packageJSON.version));
+  assert.equal(serverInfo.source, 'serverPath');
+  assert.equal(serverInfo.running, true);
+  const serverVersion = serverInfo.serverVersion;
+  const serverPath = serverInfo.serverPath;
+  assert.ok(serverPath, 'server path was not recorded');
+  assert.ok(serverVersion, 'server version was not read from initializeResult');
+  if (isReleaseVersion(serverVersion)) {
+    assert.equal(serverInfo.versionStatus, 'match');
+  } else {
+    assert.equal(serverInfo.versionStatus, 'development');
+  }
+  assert.equal(serverInfo.platform, process.platform);
+  assert.equal(serverInfo.arch, process.arch);
+  assert.equal(serverInfo.workspaceFolders, 1);
+  assert.equal(serverInfo.attachLua, true);
 
   const codeLenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
     'vscode.executeCodeLensProvider',
@@ -92,6 +113,26 @@ export async function run(): Promise<void> {
   );
 
   await vscode.commands.executeCommand('pico8.client.showCartInfo');
+  await vscode.commands.executeCommand('pico8.client.showServerInfo');
+  await vscode.commands.executeCommand('pico8.client.copyServerDiagnostics');
+  const copiedDiagnostics = await vscode.env.clipboard.readText();
+  for (const expected of [
+    '### PICO-8 language server',
+    serverInfo.extensionVersion,
+    serverVersion,
+    'custom path (pico8.serverPath)',
+    serverPath,
+    process.platform
+  ]) {
+    assert.ok(
+      copiedDiagnostics.includes(expected),
+      `copied diagnostics are missing ${expected}: ${copiedDiagnostics}`
+    );
+  }
+  assert.ok(
+    !copiedDiagnostics.includes('missing_global()'),
+    'copied diagnostics contain cart source text'
+  );
 
   const libUri = vscode.Uri.file(path.join(pico8Workspace, 'lib.lua'));
   const lib = await vscode.workspace.openTextDocument(libUri);
@@ -116,6 +157,12 @@ export async function run(): Promise<void> {
   await waitForDiagnostics(cartUri, (diagnostics) =>
     diagnostics.some((diagnostic) => diagnostic.source === SOURCE)
   );
+  const restartedInfo = await waitForServerInfo(api);
+  assert.equal(restartedInfo.running, true);
+  assert.equal(restartedInfo.source, 'serverPath');
+  assert.equal(restartedInfo.serverPath, serverPath);
+  assert.equal(restartedInfo.extensionVersion, serverInfo.extensionVersion);
+  assert.equal(restartedInfo.serverVersion, serverVersion);
 }
 
 function requiredEnvironment(name: string): string {
@@ -140,6 +187,21 @@ async function waitForDiagnostics(
     await delay(100);
   }
   throw new Error(`timed out waiting for diagnostics on ${uri.toString()}`);
+}
+
+async function waitForServerInfo(
+  api: { getServerInfo?: () => ServerDetails },
+  timeout = 15_000
+): Promise<ServerDetails> {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    const info = api.getServerInfo?.();
+    if (info?.running) {
+      return info;
+    }
+    await delay(100);
+  }
+  throw new Error('timed out waiting for server info');
 }
 
 async function waitFor(
