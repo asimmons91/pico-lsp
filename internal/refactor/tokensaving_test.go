@@ -280,6 +280,54 @@ func TestTokenSavingCompoundTargets(t *testing.T) {
 	}
 }
 
+func TestTokenSavingCompoundOperatorAndLValueMatrix(t *testing.T) {
+	lvalues := []struct {
+		target  string
+		savings int
+	}{
+		{"x", 2},
+		{"t.x", 3},
+		{"t.x.y", 4},
+	}
+	operators := []struct {
+		op       string
+		compound string
+	}{
+		{"+", "+="}, {"-", "-="}, {"*", "*="}, {"/", "/="}, {"\\", "\\="},
+		{"%", "%="}, {"^", "^="}, {"..", "..="}, {"&", "&="}, {"|", "|="},
+		{"^^", "^^="}, {"<<", "<<="}, {">>", ">>="}, {">>>", ">>>="},
+		{"<<>", "<<>="}, {">><", ">><="},
+	}
+	for _, lvalue := range lvalues {
+		for _, operator := range operators {
+			name := lvalue.target + " " + operator.op
+			t.Run(name, func(t *testing.T) {
+				text := "local t = {x = {y = 1}}\n" + lvalue.target + " = " + lvalue.target + " " + operator.op + " 2\n"
+				ctx := tokenSavingTestContext(t, text)
+				action := TokenSavingCompound(ctx, offsetOf(t, text, "\n"+lvalue.target+" =")+1)
+				if action == nil {
+					t.Fatal("TokenSavingCompound returned nil")
+				}
+				if action.TokenSavings != lvalue.savings {
+					t.Fatalf("savings = %d, want %d", action.TokenSavings, lvalue.savings)
+				}
+				got := applyAction(t, text, action)
+				want := lvalue.target + " " + operator.compound + " 2\n"
+				if !strings.HasSuffix(got, want) {
+					t.Fatalf("result = %q, want suffix %q", got, want)
+				}
+				lexed := syntax.Lex([]byte(got), nil)
+				if len(lexed.Errors) > 0 {
+					t.Fatalf("result lex errors: %v", lexed.Errors)
+				}
+				if _, parseErrors := syntax.Parse(lexed.Tokens); len(parseErrors) > 0 {
+					t.Fatalf("result parse errors: %v", parseErrors)
+				}
+			})
+		}
+	}
+}
+
 func TestTokenSavingCompoundRefusals(t *testing.T) {
 	tests := []struct {
 		name string
