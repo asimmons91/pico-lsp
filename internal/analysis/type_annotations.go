@@ -23,12 +23,14 @@ const (
 
 // CastDirective narrows or widens a named symbol from its line onward.
 type CastDirective struct {
-	Name   string
-	Type   types.Type
-	Mode   CastMode
-	Span   source.Span
-	Line   int
-	FileID source.FileID
+	Name string
+	Type types.Type
+	Mode CastMode
+	Span source.Span
+	// NameSpan is the byte range of the cast target in the annotation.
+	NameSpan source.Span
+	Line     int
+	FileID   source.FileID
 }
 
 // AsDirective forces the preceding expression on its line to a type.
@@ -49,11 +51,13 @@ type DiagnosticDirective struct {
 }
 
 type typeDeclarationSet struct {
-	aliases   map[string]*types.Alias
-	enums     map[string]*types.Record
-	aliasRaw  map[string]string
-	aliasSpan map[string]source.Span
-	enumSpan  map[string]source.Span
+	aliases       map[string]*types.Alias
+	enums         map[string]*types.Record
+	aliasRaw      map[string]string
+	aliasSpan     map[string]source.Span
+	aliasNameSpan map[string]source.Span
+	enumSpan      map[string]source.Span
+	enumNameSpan  map[string]source.Span
 }
 
 func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
@@ -65,6 +69,8 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 	result.Aliases = decls.aliases
 	result.Enums = decls.enums
 	result.aliasRaw = decls.aliasRaw
+	result.aliasNameSpan = decls.aliasNameSpan
+	result.enumNameSpan = decls.enumNameSpan
 
 	buildTypeNamespace(result)
 	resolver := result.resolveType
@@ -243,11 +249,13 @@ func attachTypeAnnotations(snap *cart.Snapshot, result *Result, opts Options) {
 
 func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 	set := &typeDeclarationSet{
-		aliases:   make(map[string]*types.Alias),
-		enums:     make(map[string]*types.Record),
-		aliasRaw:  make(map[string]string),
-		aliasSpan: make(map[string]source.Span),
-		enumSpan:  make(map[string]source.Span),
+		aliases:       make(map[string]*types.Alias),
+		enums:         make(map[string]*types.Record),
+		aliasRaw:      make(map[string]string),
+		aliasSpan:     make(map[string]source.Span),
+		aliasNameSpan: make(map[string]source.Span),
+		enumSpan:      make(map[string]source.Span),
+		enumNameSpan:  make(map[string]source.Span),
 	}
 	if snap == nil {
 		return set
@@ -276,6 +284,7 @@ func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 			set.aliases[canonical] = &types.Alias{Name: name, Underlying: types.AnyType}
 			set.aliasRaw[canonical] = typeText
 			set.aliasSpan[canonical] = comment.Span
+			set.aliasNameSpan[canonical] = annotationRoleSpan(comment, AnnotationTypeName)
 		case "@enum":
 			rest := strings.TrimSpace(text[len("@enum"):])
 			name, _ := cutFirstField(rest)
@@ -291,6 +300,7 @@ func collectTypeDeclarations(snap *cart.Snapshot) *typeDeclarationSet {
 			record.Enum = true
 			set.enums[canonical] = record
 			set.enumSpan[canonical] = comment.Span
+			set.enumNameSpan[canonical] = annotationRoleSpan(comment, AnnotationEnumName)
 		}
 	}
 	return set
@@ -614,6 +624,8 @@ func collectCastDirective(result *Result, text string, comment syntax.Comment, r
 		result.addTypeDiagnostic(mode, CodeAnnotationInvalid, "cast requires a name and a type", comment.Span, SeverityWarning)
 		return
 	}
+	nameSpan := trimAnnotationNameSpan(
+		comment, annotationRoleSpan(comment, AnnotationVariableName), ":")
 	for {
 		rest = strings.TrimSpace(rest)
 		if rest == "" {
@@ -634,12 +646,13 @@ func collectCastDirective(result *Result, text string, comment syntax.Comment, r
 			return
 		}
 		result.Casts = append(result.Casts, CastDirective{
-			Name:   name,
-			Type:   parsed,
-			Mode:   castMode,
-			Span:   comment.Span,
-			Line:   result.lineForSpan(comment.Span),
-			FileID: comment.Span.FileID,
+			Name:     name,
+			Type:     parsed,
+			Mode:     castMode,
+			Span:     comment.Span,
+			NameSpan: nameSpan,
+			Line:     result.lineForSpan(comment.Span),
+			FileID:   comment.Span.FileID,
 		})
 		rest = strings.TrimSpace(rest[end:])
 		if !strings.HasPrefix(rest, ",") {

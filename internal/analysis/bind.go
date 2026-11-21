@@ -94,6 +94,7 @@ func Analyze(snap *cart.Snapshot, builtins map[string]*Symbol, opts Options) *Re
 	attachDocs(snap, result)
 	attachParamDocs(result)
 	attachTypeAnnotations(snap, result, opts)
+	bindAnnotationNames(snap, result)
 	result.finish()
 	inferTypes(snap, result, opts)
 	runLint(snap, result, opts.Lint)
