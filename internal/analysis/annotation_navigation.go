@@ -152,8 +152,8 @@ func bindCastNames(result *Result) {
 
 // bindTypeReferences resolves type identifiers in annotation type expressions
 // to `---@class`, `---@alias`, and `---@enum` declarations. Generic parameter
-// names are scoped to their contiguous annotation block and never bind to a
-// same-named type declaration.
+// names are scoped to their annotation context and never bind to a same-named
+// type declaration.
 func bindTypeReferences(snap *cart.Snapshot, result *Result) {
 	if snap == nil || snap.Cart == nil || result == nil || len(result.TypeSymbols) == 0 {
 		return
