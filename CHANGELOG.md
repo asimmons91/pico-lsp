@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- Token-saving code actions (M23): convert safe `print(...)` statements to
+  PICO-8 `?`, self-assignments such as `score = score + 1` to compound
+  assignments, and built-in `peek`/`peek2`/`peek4` calls to `@`/`%`/`$`.
+  Actions are cursor/selection-local, report the exact positive token delta in
+  the title, use original-file coordinates, and refuse unsafe or zero-savings
+  cases. They follow `pico8.refactors.enabled`; no new setting is required.
 - LuaCATS annotation navigation: `---@param`, `---@field`, `---@cast`,
   `---@class`, `---@alias`, `---@enum`, annotation type references, and
   `--[[@as Type]]` names now participate in go-to-definition, references,

@@ -79,6 +79,9 @@ func (s *Server) refactorActions(nav *navContext, diagnostics []protocol.Diagnos
 	if action := refactorAtOccurrence(rctx, start, end, refactor.RemoveUnused); action != nil {
 		add(action)
 	}
+	for _, action := range refactor.TokenSavingActions(rctx, start, end) {
+		add(action)
+	}
 	return actions
 }
 

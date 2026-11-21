@@ -55,9 +55,11 @@ bugs with a minimal reproduction so they can be verified and fixed.
   highlighting, managed checksummed server downloads, `.p8`/Lua attachment, and
   cart-budget status bar.
 - Conservative refactors: extract to local function, safe global-to-local,
-  generated `---@class`, `if`/`while` shorthand conversion, exact-class
-  missing-field inserts, and confirmed unused-local removal. All edits are
-  previewable workspace edits in original source coordinates.
+  generated `---@class`, `if`/`while` shorthand conversion, token-saving
+  rewrites (`print` → `?`, self-assignment → compound assignment,
+  `peek`/`peek2`/`peek4` → `@`/`%`/`$`), exact-class missing-field inserts, and
+  confirmed unused-local removal. All edits are previewable workspace edits in
+  original source coordinates.
 - Optional auto-attachment to cart-owned `.lua` buffers in Neovim, plus opt-in
   `Shift-A`..`Shift-Z` glyph input backed by the server catalog.
 

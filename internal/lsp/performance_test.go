@@ -24,7 +24,7 @@ func largeCartText() string {
 	for b.Len() < 64*1024 {
 		b.WriteString("padding padding padding padding padding padding ")
 	}
-	b.WriteString("\nfunction _update()\n  local speed = 1\n  \nend\n")
+	b.WriteString("\nfunction _update()\n  local speed = 1\n  score = score + 1\n  \nend\n")
 	return b.String()
 }
 
@@ -115,6 +115,28 @@ func TestPerformanceTargets(t *testing.T) {
 			Range:        protocol.Range{Start: actionPos, End: actionPos},
 		}); err != nil {
 			t.Fatalf("code actions: %v", err)
+		}
+	})
+
+	tokenPos := positionAt(t, text, "score = score + 1", 0)
+	measure("token-saving code actions 64 KB", 10*time.Millisecond, func() {
+		actions, err := h.server.CodeAction(ctx, &protocol.CodeActionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: root},
+			Range:        protocol.Range{Start: tokenPos, End: tokenPos},
+		})
+		if err != nil {
+			t.Fatalf("token-saving code actions: %v", err)
+		}
+		found := false
+		for _, action := range actions {
+			candidate, ok := action.(*protocol.CodeAction)
+			if ok && candidate.Kind != nil && string(*candidate.Kind) == "refactor.rewrite.token-saving.compound" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("token-saving compound action missing: %+v", actions)
 		}
 	})
 }

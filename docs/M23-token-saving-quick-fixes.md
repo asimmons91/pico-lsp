@@ -1,8 +1,11 @@
 # M23 — Token-Saving Quick Fixes
 
-**Status:** Proposed — specified, not committed to a release.  
-**Depends on:** M14 (code actions and the M1/M5 token rules)  
-**Release target:** Post-v1.8 (TBD)  
+**Status:** Implemented — release target TBD.
+
+**Depends on:** M14 (code actions and the M1/M5 token rules)
+
+**Release target:** TBD
+
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -61,7 +64,7 @@ family without changing its semantics.
 
 | ID | Decision | Choice |
 |---|---|---|
-| D1 | Milestone identity | M23, **Proposed**, post-v1.8. |
+| D1 | Milestone identity | M23, **Done**, release target TBD. |
 | D2 | Code-action kind | `refactor.rewrite.token-saving.*`, with subkinds for `print`, `compound`, and `peek`. Existing shorthand keeps `refactor.rewrite.shorthand`. |
 | D3 | Trigger model | Only cursor/selection-local candidates. No cart-wide fix-all in the first version. |
 | D4 | Configuration | Reuse `pico8.refactors.enabled`; do not add a new setting initially. |
@@ -259,7 +262,8 @@ Requirements:
   then pattern ID, then title.
 - If a selection contains multiple independent candidates, return one action
   per candidate and do not merge overlapping edits. The user applies one action
-  at a time.
+  at a time. A single request returns at most 100 candidates in the documented
+  deterministic order.
 
 ## Safety and semantics
 
@@ -379,18 +383,18 @@ kind family.
 
 ## Exit criteria
 
-- [ ] `print(...)` → `?` is available for safe statement-level calls.
-- [ ] Self-assignment → compound assignment is available for all supported
+- [x] `print(...)` → `?` is available for safe statement-level calls.
+- [x] Self-assignment → compound assignment is available for all supported
   operators and safe lvalues.
-- [ ] `peek`/`peek2`/`peek4` → `@`/`%`/`$` is available for built-in calls.
-- [ ] Existing shorthand if/while conversion remains available and unchanged.
-- [ ] No action is offered when behavior, comments, line boundaries, source
+- [x] `peek`/`peek2`/`peek4` → `@`/`%`/`$` is available for built-in calls.
+- [x] Existing shorthand if/while conversion remains available and unchanged.
+- [x] No action is offered when behavior, comments, line boundaries, source
   maps, read-only status, or token savings are unsafe.
-- [ ] New action titles report exact token deltas computed with the PICO-8
+- [x] New action titles report exact token deltas computed with the PICO-8
   token rules.
-- [ ] Unit, LSP e2e, corpus, safety, and performance tests pass.
-- [ ] API/docs/roadmap/changelog updates are complete.
-- [ ] Existing v1 through v1.8 behavior and performance budgets do not regress.
+- [x] Unit, LSP e2e, corpus, safety, and performance tests pass.
+- [x] API/docs/roadmap/changelog updates are complete.
+- [x] Existing v1 through v1.8 behavior and performance budgets do not regress.
 
 ## Risks and mitigations
 
@@ -406,15 +410,17 @@ kind family.
 | Read-only or stale buffers receive edits | Suppress actions for virtual/meta documents and stale snapshots. |
 | Shorthand line-boundary regression | Keep M14's existing safety checks and add regression tests. |
 
-## Open decisions for review
+## Resolved decisions
 
-1. **Zero-argument `print()`:** include only if a PICO-8 fixture proves `?` and
-   the token counter agree. Recommended: refuse until proven.
-2. **`flr(a / b)` → `a \ b`:** include after negative/non-integer parity tests.
-   Recommended: defer.
-3. **Redundant parentheses removal:** include after a complete precedence and
-   multi-value safety review. Recommended: defer.
-4. **Bulk token-limit review:** add a cart-wide preview/confirmation flow only
-   after local actions prove stable. Recommended: defer.
-5. **Commitment:** M23 is specified but not committed to a release tag until
-   these decisions are accepted and the milestone is promoted.
+These decisions were accepted on 2026-11-21 before implementation started.
+
+1. **Zero-argument `print()`:** refused until a PICO-8 fixture proves `?` and
+   the token counter agree. Only calls with one or more arguments are offered.
+2. **`flr(a / b)` → `a \ b`:** deferred to the deferred-pattern table until
+   negative and non-integer operand behavior is verified against PICO-8.
+3. **Redundant parentheses removal:** deferred until a complete precedence,
+   associativity, multi-value, and table/call-context safety proof exists.
+4. **Bulk token-limit review:** deferred. M23 ships cursor/selection-local
+   actions only; a cart-wide preview/confirmation flow is a separate decision.
+5. **Commitment:** M23 is marked **Done** with no release target yet. The
+   milestone stays uncommitted to a tag until release planning assigns one.

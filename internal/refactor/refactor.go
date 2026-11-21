@@ -32,6 +32,9 @@ type Context struct {
 	nodesBuilt bool
 	nodeList   []syntax.Node
 	parents    map[syntax.Node]syntax.Node
+
+	printSpansBuilt bool
+	printSpans      []source.Span
 }
 
 // Edit replaces [Start, End) in FileID with NewText.
@@ -56,6 +59,9 @@ type Action struct {
 	Kind         string
 	Edits        []Edit
 	Confirmation *Confirmation
+	// TokenSavings is the exact positive token delta for token-saving actions.
+	// Other actions leave it at zero.
+	TokenSavings int
 }
 
 func (c *Context) currentText() string {
