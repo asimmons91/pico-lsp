@@ -1,6 +1,9 @@
 # M15 — VS Code Client
 
-**Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation and live first-run download verification remain follow-ups.
+**Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation,
+live first-run download verification, remote extension hosts, the full server
+settings schema, and server-health reporting remain follow-ups; the last three
+are specified by M20–M22.
 
 **Depends on:** M14  
 **Release target:** v1.3.0  
@@ -35,8 +38,8 @@ These decisions were confirmed before the spec was written:
   server.
 - M15 publishes a VSIX only as a GitHub release asset. VS Code Marketplace and
   Open VSX publishing are deferred to a follow-up milestone.
-- M15 supports local desktop VS Code only. Remote extension hosts and web
-  extension hosts are out of scope.
+- M15 supports local desktop VS Code only. Remote extension hosts are
+  delivered by M20; web extension hosts remain out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
 - Node.js 26.13.1 is pinned in `mise.toml`; the extension declares VS Code
   `^1.95.0` and integration tests run against that minimum version.
@@ -68,7 +71,8 @@ These decisions were confirmed before the spec was written:
 ### Out of scope
 
 - VS Code Marketplace and Open VSX publishing.
-- Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts.
+- Web extension hosts. Remote SSH, WSL, Dev Containers, and Codespaces are
+  delivered by M20.
 - Read-only `.p8.png` virtual documents.
 - Auto-updating the server independently of the extension.
 - Bundling platform binaries inside the VSIX.
@@ -311,6 +315,8 @@ The server's existing `pico8.*` settings remain authoritative in
 [configuration.md](configuration.md). The extension must forward the whole
 `pico8` section through configuration requests; it must not invent parallel
 server settings. Extension-only keys are ignored by the server.
+M15 contributes only `pico8.glyphs` from the server section; M21 adds the full
+settings schema so the remaining server settings appear in the Settings UI.
 
 Changing `pico8.serverPath`, `pico8.autoDownload`, or `pico8.attachLua` prompts
 or offers a restart through `pico8.client.restartServer`; the extension must not leave a
@@ -455,14 +461,23 @@ Extend `.github/workflows/release.yml`:
 - [x] Restart is covered by the integration suite; output and cache-cleanup
       paths are implemented.
 - [x] Missing assets, checksum failures, and offline `serverPath` use fail with
-      actionable messages; remote/web hosts and `.p8.png` remain documented
-      unsupported paths.
+      actionable messages; web hosts and `.p8.png` remain documented
+      unsupported paths; remote hosts are delivered by M20.
 - [x] No unverified binary is ever executed.
 - [x] CI runs extension checks and integration tests; the release workflow
       attaches the VSIX.
 - [x] Documentation, configuration, troubleshooting, release checklist, roadmap,
       and backlog are updated.
 - [x] Existing v1/v1.1/v1.2 behavior and performance budgets do not regress.
+
+## Follow-ups
+
+- [M20 — Remote VS Code Extension Hosts](M20-remote-vscode.md) adds Remote -
+  SSH, WSL, Dev Containers, and Codespaces remote extension hosts.
+- [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
+  surfaces the server's `pico8.*` settings in the Settings UI.
+- [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
+  adds server version checks and copyable diagnostics.
 
 ## Risks and mitigations
 
@@ -474,6 +489,6 @@ Extend `.github/workflows/release.yml`:
 | A malicious or corrupted archive is executed | HTTPS, checksum verification, safe extraction, atomic install, no unverified execution. |
 | VS Code API or languageclient drift | Pin the engine and dependencies, keep integration tests, and avoid editor-specific server changes. |
 | Marketplace publishing blocks the release | Ship the VSIX as a GitHub release asset; Marketplace/Open VSX remain a follow-up. |
-| Remote/web expectations | Detect and reject remote hosts with a clear message; do not declare web support. |
+| Web expectations | Reject web extension hosts with a clear message; remote hosts are delivered by M20. |
 | `.p8.png` opens as binary noise | Document the limitation and track virtual-document support separately. |
 | Large status-bar request traffic | Debounce, cancel superseded requests, and refresh only for cart-owned editors. |

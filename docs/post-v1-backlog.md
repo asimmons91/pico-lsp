@@ -7,9 +7,10 @@ This file is the prioritized backlog for work that is not part of the committed
 milestone sequence. It is not a commitment to ship every item. Selected items
 move into their own milestone specs.
 
-## Committed post-v1 work
+## Promoted post-v1 work
 
-The following backlog items have been promoted and split into milestone specs:
+The following backlog items have been promoted and split into milestone specs.
+Items marked proposed are specified but not yet committed to a release.
 
 - [M7 — AST-Aware Formatter](M7-formatter.md)
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
@@ -24,13 +25,17 @@ The following backlog items have been promoted and split into milestone specs:
 - [M17 — P8SCII Public Package](M17-p8scii.md)
 - [M18 — Cart Public Package](M18-cart.md)
 - [M19 — LSP and Glyph Public Packages](M19-lsp-and-glyphs.md)
+- [M20 — Remote VS Code Extension Hosts](M20-remote-vscode.md) — proposed
+- [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — proposed
+- [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — proposed
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
-later additive catalog-coverage release. The items below are not part of these
-releases.
+later additive catalog-coverage release. M20–M22 are proposed VS Code client
+follow-ups: M20 targets v1.8.0, and M21/M22 may ship together as v1.9.0. The
+items below are not part of these releases.
 
 ## Prioritization
 
@@ -100,7 +105,8 @@ Requirements:
 
 ## Cross-cutting requirements
 
-- No regressions in v1, v1.1, v1.2, or v1.3 behavior or performance budgets.
+- No regressions in existing v1 through v1.7.0 behavior or performance
+  budgets.
 - Every feature is additive or explicitly opt-in.
 - Update the roadmap, README, configuration docs, diagnostic reference, and
   changelog.
