@@ -17,7 +17,7 @@ Marketplace publishing is not available yet. Install the
 3. Open a folder containing a `.p8` cart.
 
 By default, the extension version and server version are identical. For example,
-extension `1.7.0` downloads `pico-lsp` v1.7.0 on first use.
+extension `1.8.0` downloads `pico-lsp` v1.8.0 on first use.
 
 ## Server installation
 

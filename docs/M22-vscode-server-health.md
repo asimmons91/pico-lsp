@@ -1,10 +1,9 @@
 # M22 — VS Code Server Health and Version Reporting
 
-**Status:** Done — implementation complete. The v1.8.0 tag remains an open
-release item.
+**Status:** Done — shipped in v1.8.0.
 
-**Depends on:** M15  
-**Release target:** v1.8.0 (may ship with M21)  
+**Depends on:** M15
+**Release target:** v1.8.0 (shipped with M21 and M23)
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -296,7 +295,7 @@ Integration tests:
 - [x] README, troubleshooting, configuration, changelog, roadmap, and backlog
       are updated.
 - [x] No LSP protocol, server behavior, telemetry, or download-security change.
-- [ ] `v1.8.0` is tagged after the release PR merges (possibly with M21).
+- [x] `v1.8.0` is tagged after the release PR merges (with M21 and M23).
 
 ## Risks and mitigations
 

@@ -1,10 +1,10 @@
 # M21 — Full Server Settings Schema in the VS Code Client
 
-**Status:** Done — implementation complete. The manual Settings UI check and the
-v1.8.0 tag remain open release items.
+**Status:** Done — shipped in v1.8.0. The manual Settings UI check remains an
+open release item.
 
-**Depends on:** M15  
-**Release target:** v1.8.0 (may ship with M22)  
+**Depends on:** M15
+**Release target:** v1.8.0 (shipped with M22 and M23)
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ## Outcome
@@ -246,7 +246,7 @@ Add a Vitest test that:
       are updated.
 - [x] No server behavior, extension startup behavior, or LSP capability
       changes.
-- [ ] `v1.8.0` is tagged after the release PR merges (possibly with M22).
+- [x] `v1.8.0` is tagged after the release PR merges (with M22 and M23).
 
 ## Risks and mitigations
 

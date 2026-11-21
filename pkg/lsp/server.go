@@ -11,7 +11,7 @@
 // LSP-native, arriving through initializationOptions.pico8 and
 // workspace/configuration; this package exposes no settings types.
 //
-// The package is additive from v1.8.0 and stable under semver.
+// The package is additive from v1.6.0 and stable under semver.
 package lsp
 
 import (

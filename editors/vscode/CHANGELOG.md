@@ -1,7 +1,9 @@
 # Change Log
 
-## Unreleased
+## 1.8.0
 
+- Bundle `pico-lsp` 1.8.0 with annotation-aware navigation, token-saving code
+  actions, and the full server settings schema.
 - Contribute the full `pico8.*` server settings schema to the VS Code Settings
   UI, including types, enums, defaults, window scopes, and descriptions.
 - Reject unknown keys in the `limits`, `format`, `diagnostics`, `lint`, and

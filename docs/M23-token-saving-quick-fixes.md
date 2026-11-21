@@ -1,10 +1,10 @@
 # M23 — Token-Saving Quick Fixes
 
-**Status:** Implemented — release target TBD.
+**Status:** Done — shipped in v1.8.0.
 
 **Depends on:** M14 (code actions and the M1/M5 token rules)
 
-**Release target:** TBD
+**Release target:** v1.8.0
 
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
@@ -64,7 +64,7 @@ family without changing its semantics.
 
 | ID | Decision | Choice |
 |---|---|---|
-| D1 | Milestone identity | M23, **Done**, release target TBD. |
+| D1 | Milestone identity | M23, **Done**, shipped in v1.8.0. |
 | D2 | Code-action kind | `refactor.rewrite.token-saving.*`, with subkinds for `print`, `compound`, and `peek`. Existing shorthand keeps `refactor.rewrite.shorthand`. |
 | D3 | Trigger model | Only cursor/selection-local candidates. No cart-wide fix-all in the first version. |
 | D4 | Configuration | Reuse `pico8.refactors.enabled`; do not add a new setting initially. |
@@ -422,5 +422,5 @@ These decisions were accepted on 2026-11-21 before implementation started.
    associativity, multi-value, and table/call-context safety proof exists.
 4. **Bulk token-limit review:** deferred. M23 ships cursor/selection-local
    actions only; a cart-wide preview/confirmation flow is a separate decision.
-5. **Commitment:** M23 is marked **Done** with no release target yet. The
-   milestone stays uncommitted to a tag until release planning assigns one.
+5. **Commitment:** M23 was marked **Done** and shipped in v1.8.0 with M21 and
+   M22.
