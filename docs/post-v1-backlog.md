@@ -10,7 +10,8 @@ move into their own milestone specs.
 ## Promoted post-v1 work
 
 The following backlog items have been promoted and split into milestone specs.
-M24 is implemented and awaiting its v1.8.1 publication and manual verification.
+M24 prepared the GitHub-only v1.8.1 release; registry publication and manual
+verification follow in a later patch.
 
 - [M7 — AST-Aware Formatter](M7-formatter.md)
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
@@ -28,15 +29,15 @@ M24 is implemented and awaiting its v1.8.1 publication and manual verification.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — shipped in v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress for v1.8.1
+- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress (v1.8.1 GitHub-only; registry launch later)
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
-later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0.
-M24 is in progress for v1.8.1. The unpromoted items below are not part of these
-releases.
+later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 is a GitHub-only release; the
+registry launch follows in a later patch. The unpromoted items below are not part
+of these releases.
 
 ## Prioritization
 

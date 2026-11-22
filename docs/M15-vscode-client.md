@@ -3,9 +3,9 @@
 **Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation and
 live first-run download verification remain follow-ups. The full server settings
 schema is implemented in M21; server-health reporting is specified by M22.
-Remote extension hosts are not planned. M24 (in progress for v1.8.1) supersedes
-the Marketplace/Open VSX deferral and carries the registry and manual
-verification work.
+Remote extension hosts are not planned. M24 (v1.8.1 is GitHub-only; registry
+launch follows in a later patch) supersedes the Marketplace/Open VSX deferral
+and carries the registry and manual verification work.
 
 **Depends on:** M14  
 **Release target:** v1.3.0  
@@ -39,7 +39,8 @@ These decisions were confirmed before the spec was written:
 - All `.lua` files in workspace folders that contain a `.p8` cart attach to the
   server.
 - M15 publishes a VSIX only as a GitHub release asset. VS Code Marketplace and
-  Open VSX publishing were deferred to M24, which is in progress for v1.8.1.
+  Open VSX publishing were deferred to M24, which prepares the GitHub-only
+  v1.8.1 release and the later registry patch.
 - M15 supports local desktop VS Code only. Remote extension hosts are not
   supported; web extension hosts remain out of scope.
 - Read-only `.p8.png` virtual documents are out of scope.
@@ -47,8 +48,9 @@ These decisions were confirmed before the spec was written:
   `^1.95.0` and integration tests run against that minimum version.
 
 > **Superseded by M24:** the Marketplace/Open VSX deferral in this decision is
-> implemented for v1.8.1. The GitHub release VSIX remains the offline, pinned,
-> and registry-lag fallback.
+> addressed by the opt-in registry automation. v1.8.1 is a GitHub-only release;
+> the registry launch follows in a later patch. The GitHub release VSIX remains
+> the offline, pinned, and registry-lag fallback.
 
 ## Scope
 
@@ -76,8 +78,8 @@ These decisions were confirmed before the spec was written:
 
 ### Out of scope
 
-- VS Code Marketplace and Open VSX publishing (superseded by M24; implemented
-  for v1.8.1).
+- VS Code Marketplace and Open VSX publishing (superseded by M24; v1.8.1 is
+  GitHub-only, with registry publication in a later patch).
 - Web extension hosts. Remote SSH, WSL, Dev Containers, and Codespaces are not
   supported.
 - Read-only `.p8.png` virtual documents.
@@ -436,8 +438,8 @@ Extend `.github/workflows/release.yml`:
 - `editors/vscode/README.md`: install from VSIX, first-run download, proxy/offline
   behavior, `pico8.serverPath`, Lua/LuaLS guidance, commands, status bar,
   settings, logs, limitations, and manual server setup.
-- Root `README.md`: VS Code install section pointing at the release VSIX,
-  Marketplace deferred (superseded by M24; the registry paths are now primary).
+- Root `README.md`: VS Code install section pointing at the release VSIX for
+  v1.8.1, with registry paths primary once the later patch is live.
 - `docs/install.md`: VSIX installation and upgrade/uninstall path.
 - `docs/configuration.md`: extension-only settings and their scope.
 - `docs/troubleshooting.md`: download/checksum failures, proxy/offline use,
@@ -447,7 +449,7 @@ Extend `.github/workflows/release.yml`:
 - `CHANGELOG.md`: M15 entry.
 - `docs/ROADMAP.md` and [post-v1-backlog.md](post-v1-backlog.md): mark the VS
   Code client complete; Marketplace/Open VSX publishing was left as the
-  remaining follow-up and is implemented by M24 for v1.8.1.
+  remaining follow-up and is prepared by M24 for the later registry patch.
 
 ## Exit criteria
 
@@ -486,7 +488,8 @@ Extend `.github/workflows/release.yml`:
   adds server version checks and copyable diagnostics.
 - [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md)
   implements Marketplace/Open VSX publication, public-documentation cleanup, and
-  manual VS Code verification for v1.8.1.
+  manual VS Code verification. v1.8.1 is GitHub-only; the registry launch and
+  manual verification follow in a later patch.
 
 ## Risks and mitigations
 
