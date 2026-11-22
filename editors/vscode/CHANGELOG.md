@@ -2,13 +2,14 @@
 
 ## 1.8.1
 
-- Publish the extension to the VS Code Marketplace and Open VSX as
-  `asimmons91.pico-lsp`.
+- Prepare the extension for the VS Code Marketplace and Open VSX. v1.8.1 ships
+  as `pico-lsp-vscode-1.8.1.vsix` on the GitHub release; registry publication
+  follows in a later patch once the publisher and tokens are configured.
 - Rename the display name to **PICO-8 LSP** and replace the official PICO-8
   logo with original artwork for the listing icon and the `.p8` file icon.
-- Rewrite the packaged README as the Marketplace/Open VSX listing, including
-  install paths, requirements, privacy, limitations, support links, the AI
-  disclosure, and the trademark notice.
+- Rewrite the packaged README as the future Marketplace/Open VSX listing,
+  including the v1.8.1 VSIX install path, requirements, privacy, limitations,
+  support links, the AI disclosure, and the trademark notice.
 - Add listing metadata: homepage, issue tracker, gallery banner, and search
   keywords.
 - Exclude internal icon notes and image sources from the VSIX.

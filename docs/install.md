@@ -11,9 +11,9 @@ Homebrew and Mason packaging are deferred to post-v1; see the
 | Server | GitHub release archive | Manual, pinned, or air-gapped installs |
 | Server | `go install` | Development and Go users |
 | Server | VS Code extension download | Normal VS Code use; the extension fetches the matching release |
-| Extension | VS Code Marketplace | Local desktop VS Code |
-| Extension | Open VSX | VSCodium and other Open VSX-compatible editors |
-| Extension | GitHub release VSIX | Pinned or registry-lag installs; offline use requires a local server |
+| Extension | VS Code Marketplace | Planned for a later patch after publisher and token setup |
+| Extension | Open VSX | Planned for a later patch after publisher and token setup |
+| Extension | GitHub release VSIX | Supported for v1.8.1; pinned, offline, or registry-lag installs |
 
 The extension and server versions match. Extension `1.8.1` downloads
 `pico-lsp` v1.8.1.
@@ -30,31 +30,16 @@ Every release also publishes `checksums.txt` with SHA-256 hashes.
 
 ## VS Code
 
-The v1.8.1 release publishes the VS Code extension to the VS Code Marketplace
-and Open VSX. The GitHub release VSIX remains available for pinned or
-registry-lag use; offline use also requires a local server binary and
-`pico8.serverPath`. The extension supports local desktop VS Code and Open
+v1.8.1 is a GitHub-only release: the extension ships as a VSIX asset. Install it
+with the steps below. The extension supports local desktop VS Code and Open
 VSX-compatible editors only; remote extension hosts, web extension hosts, and
-Codespaces are not supported. If a registry does not list the matching version
-yet, use the manual VSIX installation below.
+Codespaces are not supported. Offline use also requires a local server binary
+and `pico8.serverPath`.
 
-### Marketplace
-
-Search for `PICO-8 LSP` or `asimmons91.pico-lsp` in the Extensions view, select
-**Install**, or run:
-
-```sh
-code --install-extension asimmons91.pico-lsp
-```
-
-Marketplace listing:
-[Open the PICO-8 LSP Marketplace listing](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
-
-### Open VSX
-
-VSCodium and other editors that use Open VSX can install the same extension ID
-from their Extensions view or their `--install-extension` CLI. Open VSX listing:
-[Open the PICO-8 LSP Open VSX listing](https://open-vsx.org/extension/asimmons91/pico-lsp)
+Marketplace and Open VSX listing is planned for a later patch. When those
+listings are live, install the same extension ID (`asimmons91.pico-lsp`) from
+the editor's Extensions view. The GitHub release VSIX remains available for
+pinned, registry-lag, and offline use.
 
 ### Manual VSIX install
 
@@ -132,9 +117,10 @@ confirm the versions.
 
 ### Upgrade
 
-- **Marketplace and Open VSX:** VS Code updates the extension automatically.
-  The updated extension downloads its matching server on the next start.
-  Previously cached server versions are not removed automatically.
+- **Registry listings (planned for a later patch):** when the listings are live,
+  VS Code updates the extension automatically. The updated extension downloads
+  its matching server on the next start. Previously cached server versions are
+  not removed automatically.
 - **VSIX:** install the newer VSIX over the existing extension. The same
   matching-server download applies.
 - **Server only:** replace the binary and run `pico-lsp --version`. If you use
@@ -150,12 +136,13 @@ is intentional; the extension warns once but keeps working.
 3. Delete the global storage directory from the table above if it remains.
 4. Remove any binary you configured with `pico8.serverPath` separately.
 
-### Registry lag and VSIX fallback
+### Registry listings and VSIX fallback
 
-Marketplace and Open VSX processing can lag behind the GitHub release. When the
-version you need is not listed yet, install the matching VSIX from the GitHub
-release. A registry listing may also lag during an outage; the VSIX does not
-depend on either registry.
+v1.8.1 is GitHub-release-only. When the later Marketplace and Open VSX listings
+are live, registry processing can lag behind the GitHub release. Until the
+matching version is listed, use the VSIX from the GitHub release. A registry
+listing may also lag during an outage; the VSIX does not depend on either
+registry.
 
 ## Download a release
 

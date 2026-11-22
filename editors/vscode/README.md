@@ -9,57 +9,29 @@ budgets without installing Go or managing a server binary.
 
 ## Install
 
-Registry processing can lag after a release. If the matching version is not
-listed in a registry yet, use the manual VSIX installation below.
+v1.8.1 is a GitHub-release-only release. Install the VSIX:
 
-### VS Code Marketplace
-
-1. Open the Extensions view (`Ctrl+Shift+X` on Windows and Linux, `Cmd+Shift+X`
-   on macOS).
-2. Search for `PICO-8 LSP` or `asimmons91.pico-lsp`.
-3. Select **Install**.
-
-Or install from a terminal:
-
-```sh
-code --install-extension asimmons91.pico-lsp
-```
-
-Marketplace listing:
-[Open the PICO-8 LSP Marketplace listing](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
-
-### Open VSX
-
-VSCodium and other editors that use the Open VSX registry can install the same
-extension ID:
-
-1. Open the editor's Extensions view.
-2. Search for `PICO-8 LSP` or `asimmons91.pico-lsp`.
-3. Select **Install**.
-
-Open VSX listing:
-[Open the PICO-8 LSP Open VSX listing](https://open-vsx.org/extension/asimmons91/pico-lsp)
-
-### Manual VSIX installation
-
-Install the VSIX when you need to pin a specific version or the registry
-version is behind GitHub. For offline use, also install a local `pico-lsp`
-binary and set `pico8.serverPath`; the VSIX does not bundle the server.
-
-1. Download `pico-lsp-vscode-<version>.vsix` and
-   `pico-lsp-vscode-<version>.vsix.sha256` from the matching
+1. Download `pico-lsp-vscode-1.8.1.vsix` and
+   `pico-lsp-vscode-1.8.1.vsix.sha256` from the matching
    [GitHub release](https://github.com/asimmons91/pico-lsp/releases).
 2. Verify the checksum:
 
    ```sh
-   sha256sum -c pico-lsp-vscode-<version>.vsix.sha256
+   sha256sum -c pico-lsp-vscode-1.8.1.vsix.sha256
    ```
 
 3. In VS Code, open the Extensions view, select **...**, and choose
    **Install from VSIX...**.
 
-See the [install guide](https://github.com/asimmons91/pico-lsp/blob/main/docs/install.md#vs-code)
-for platform-specific checksum commands.
+Marketplace and Open VSX listing is planned for a later patch. When those
+listings are live, search for `PICO-8 LSP` or `asimmons91.pico-lsp` in the
+Extensions view and select **Install**. The VSIX remains available for pinned,
+registry-lag, and offline use.
+
+Offline use also requires a local `pico-lsp` binary and `pico8.serverPath`; the
+VSIX does not bundle the server. See the
+[install guide](https://github.com/asimmons91/pico-lsp/blob/main/docs/install.md#vs-code)
+for platform-specific checksum commands and offline setup.
 
 ## Requirements
 
@@ -194,9 +166,9 @@ If a download fails behind a proxy, configure VS Code's `http.proxy` and
 - `.p8.png` virtual documents are not supported in this extension. Decode a PNG
   cart with `pico-lsp decode --output cart.p8 cart.p8.png` and open the text
   cart.
-- Marketplace and Open VSX processing can lag behind the GitHub release. Use the
-  matching VSIX from the GitHub release when you need a specific version
-  immediately.
+- Marketplace and Open VSX listings are planned for a later patch. v1.8.1 is a
+  GitHub-release-only VSIX; use the matching VSIX when you need a specific
+  version immediately.
 - Offline use requires `pico8.serverPath` (and usually
   `pico8.autoDownload: false`).
 - The extension downloads the server version that matches its own version. It

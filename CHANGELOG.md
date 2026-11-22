@@ -10,27 +10,30 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- The v1.8.1 release publishes the VS Code extension to the VS Code Marketplace
-  and Open VSX as `asimmons91.pico-lsp`. Both registry jobs publish the same
-  CI-built VSIX and can be retried independently; the GitHub release VSIX
-  remains the pinned and registry-lag fallback. Offline use also requires a
-  local server binary and `pico8.serverPath`.
-- The release workflow validates the extension version against the tag and
-  verifies the VSIX checksum before publishing to either registry.
+- v1.8.1 is a GitHub-only release: it publishes the server archives and the
+  `pico-lsp-vscode-1.8.1.vsix` extension asset. The VS Code Marketplace and Open
+  VSX listing is planned for a later patch after publisher verification and PAT
+  setup.
+- Added opt-in Marketplace and Open VSX publication jobs, gated by the
+  `PUBLISH_REGISTRIES` repository variable. Both jobs publish the same verified
+  VSIX and can be retried independently.
+- The release workflow validates the extension version against the tag, verifies
+  the VSIX checksum, and re-runs the packaged-file assertions before uploading
+  the artifact.
 
 ### Changed
 
 - Renamed the extension display name to **PICO-8 LSP** and replaced the official
   PICO-8 logo with original artwork for the listing icon and `.p8` file icon.
   The new artwork is covered by the project's MIT license.
-- Rewrote the packaged extension README as the Marketplace/Open VSX listing,
-  with install paths, requirements, quick start, privacy, limitations, support
-  links, the AI-assisted development disclosure, and the trademark notice.
+- Rewrote the packaged extension README as the future Marketplace/Open VSX
+  listing, with the v1.8.1 VSIX install path plus requirements, quick start,
+  privacy, limitations, support links, the AI-assisted development disclosure,
+  and the trademark notice.
 - Added listing metadata for homepage, issue tracker, gallery banner, and search
   keywords, and excluded internal notes and image sources from the VSIX.
-- Added registry install, upgrade, uninstall, cache, offline, and troubleshooting
-  documentation, and removed stale "Marketplace/Open VSX are follow-ups"
-  wording from public documents.
+- Updated install, troubleshooting, upgrade, uninstall, cache, offline, and
+  release documentation for the GitHub-only release.
 - No LSP, server, parser, analysis, formatter, or extension feature behavior
   changed. The extension bundles the matching `pico-lsp` 1.8.1 release.
 

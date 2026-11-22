@@ -159,31 +159,29 @@ removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
 
 ## VS Code extension
 
-The v1.8.1 release publishes the VS Code extension as
-`asimmons91.pico-lsp` to the
-[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
-and [Open VSX](https://open-vsx.org/extension/asimmons91/pico-lsp). It downloads
-the server version matching its own version from the GitHub release and verifies
-SHA-256. If a registry does not list the matching version yet, install the VSIX
-from the GitHub release.
+v1.8.1 is a GitHub-release-only release. Install
+`pico-lsp-vscode-1.8.1.vsix` from the
+[GitHub release](https://github.com/asimmons91/pico-lsp/releases) after verifying
+its `.vsix.sha256` checksum. Marketplace and Open VSX listing is planned for a
+later patch; the registry troubleshooting below applies once those listings are
+live. The extension downloads the server version matching its own version from
+the GitHub release and verifies SHA-256. Offline use also requires a local server
+binary and `pico8.serverPath`.
 
 The extension attaches to `.p8` files and to all `.lua` files in workspace
 folders that contain a `.p8` cart. Disable another Lua language server for those
 folders to avoid duplicate diagnostics. `.lua` files outside PICO-8 workspaces
 are intentionally not attached.
 
-### The extension is not listed, or the registry version is behind
+### The registry listing is not live, or the registry version is behind
 
-- Search the Extensions view for `PICO-8 LSP` or the exact ID
-  `asimmons91.pico-lsp`.
-- Registry processing can lag behind the GitHub release. Check the
-  [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
-  or [Open VSX listing](https://open-vsx.org/extension/asimmons91/pico-lsp) for
-  the published version.
-- When you need a version that is not listed yet, install the matching VSIX from
-  the [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after
-  verifying its `.vsix.sha256` checksum. The VSIX is the registry-lag fallback;
-  offline use also requires a local server binary and `pico8.serverPath`.
+- For v1.8.1, install the VSIX from the GitHub release. The Marketplace and Open
+  VSX listings are planned for a later patch.
+- Once the listings are live, search the Extensions view for `PICO-8 LSP` or the
+  exact ID `asimmons91.pico-lsp`.
+- Registry processing can lag behind the GitHub release. When you need a version
+  that is not listed yet, install the matching VSIX from the GitHub release after
+  verifying its `.vsix.sha256` checksum.
 - If only one registry lists the extension, only that registry's install path is
   currently available; use the VSIX elsewhere and retry the registry later.
 

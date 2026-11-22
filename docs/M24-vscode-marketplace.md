@@ -1,13 +1,15 @@
 # M24 — VS Code Marketplace Launch and Documentation Cleanup
 
-**Status:** In progress — the listing, documentation, package metadata, and
-release automation are implemented. Registry publication and manual VS Code
-verification are pending.
+**Status:** In progress — `v1.8.1` is prepared as a GitHub-only release (server
+archives and VSIX). Registry publication and manual VS Code verification remain
+pending for a later patch.
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health)
 
-**Release target:** `v1.8.1` (resolved). The server tag and extension version are
-coordinated: extension `X.Y.Z` downloads server tag `vX.Y.Z`.
+**Release target:** `v1.8.1` is a GitHub-only patch. Registry publication is
+deferred to a later patch once `asimmons91` is verified in both registries and
+`VSCE_PAT`/`OVSX_PAT` are configured. Extension `X.Y.Z` downloads server tag
+`vX.Y.Z`.
 
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
@@ -25,6 +27,9 @@ installation.
 No LSP protocol, server behavior, type analysis, formatting, or extension
 feature changes are in scope.
 
+The `v1.8.1` GitHub-only release is an intermediate step. The discoverability,
+listing, and registry outcomes complete with the later registry patch.
+
 **Demo:** On a clean VS Code 1.95+ install, search for “PICO-8 LSP”, install
 `asimmons91.pico-lsp`, and open `testdata/smoke.p8`. The extension downloads the
 matching `pico-lsp` server, attaches to the cart, and provides diagnostics,
@@ -36,14 +41,18 @@ upgrade replaces the extension and downloads the matching server; the
 uninstall path removes the extension and explains how to clear the cached
 server.
 
+The `v1.8.1` release is GitHub-only: install the VSIX from the GitHub release.
+The Marketplace/Open VSX install steps in this demo apply once the later
+registry patch is live.
+
 ## Decisions
 
 | ID | Decision | Choice |
 |---|---|---|
-| D1 | Milestone identity | M24, **In progress** for v1.8.1. |
+| D1 | Milestone identity | M24, **In progress** (v1.8.1 GitHub-only; registry launch later). |
 | D2 | Listing source | `editors/vscode/README.md` is the Marketplace/Open VSX listing. The root `README.md` remains the repository landing page and is updated separately. |
 | D3 | Registries | Publish to both the VS Code Marketplace and Open VSX. The publishers are independent and independently retryable. If registry processing is delayed, the VSIX remains the documented fallback. |
-| D4 | Release version | **`v1.8.1`.** A coordinated patch release containing the server tag and rebuilt extension. The 1.8.0 artifact is not republished. |
+| D4 | Release version | **`v1.8.1`** is the GitHub-only release containing the server tag and rebuilt extension. The registry patch uses a later tag. The 1.8.0 artifact is not republished. |
 | D5 | Release order | Publish and verify the server release first, then the extension. Extension version `X.Y.Z` downloads server tag `vX.Y.Z`. |
 | D6 | Publication automation | Add Marketplace and Open VSX publishers to the tag-only release workflow, backed by repository secrets and a documented manual fallback. |
 | D7 | Icon and trademark | **Original artwork.** `editors/vscode/icons/pico-lsp.png` replaces the official PICO-8 logo for the listing and `.p8` file icon and is covered by the project's MIT license. The FAQ places a separate software product in the "write first" category, so the official logo is not published without written permission. |
@@ -55,23 +64,30 @@ server.
 | D13 | Listing disclosure | Include a short AI-assisted-development note and a link to the project README, matching the root README's existing disclosure. |
 | D14 | VSIX fallback | Keep the GitHub release VSIX and `.vsix.sha256` as the pinned and registry-lag fallback. Offline use also requires a local server binary and `pico8.serverPath`. |
 | D15 | Listing display name | **PICO-8 LSP.** The extension ID remains `asimmons91.pico-lsp`. |
+| D16 | v1.8.1 release scope | **GitHub server archives and VSIX only.** Registry publication is deferred to a later patch because the publisher and PAT secrets are not configured. Set the repository variable `PUBLISH_REGISTRIES` to `true` and add `VSCE_PAT`/`OVSX_PAT` for that later release. |
 
 ### Resolved decisions
 
 1. **Release tag:** `v1.8.1`.
 2. **Icon:** original artwork; no official Lexaloffle logo is published.
-3. **Registry sequence:** both registries, with independent publication jobs and
-   the VSIX fallback documented.
+3. **Registry sequence:** both registries, with independent publication jobs,
+   gated by the `PUBLISH_REGISTRIES` repository variable, and the VSIX fallback
+   documented.
 4. **Listing name:** `PICO-8 LSP`.
+5. **v1.8.1 scope:** GitHub release archives and VSIX only; registry publication
+   follows in a later patch.
 
 ### Pending publication items
 
-- Claim and verify the `asimmons91` publisher in both registries.
-- Configure the `VSCE_PAT` and `OVSX_PAT` repository secrets.
+- Publish `v1.8.1` as a GitHub-only release with the server archives and VSIX.
+- After the GitHub-only release, claim and verify the `asimmons91` publisher in
+  both registries.
+- Configure the `VSCE_PAT` and `OVSX_PAT` repository secrets and set
+  `PUBLISH_REGISTRIES=true`.
 - Add a real screenshot or short recording from the manual verification to
-  `editors/vscode/images/` and the listing before publishing.
-- Publish `v1.8.1`, verify both listings, and record the manual VS Code
-  verification in `docs/release-checklist.md`.
+  `editors/vscode/images/` and the listing before the registry patch.
+- Publish the later registry patch, verify both listings, and record the manual
+  VS Code verification in `docs/release-checklist.md`.
 
 ## Scope
 
@@ -146,8 +162,8 @@ server.
 5. [x] Add registry publication and manual fallback to the release workflow.
 6. [x] Update release checklist, changelogs, roadmap, backlog, and version pins.
 7. [x] Build and verify the server and extension; inspect the VSIX contents.
-8. [ ] Add real screenshots from the manual verification, then publish the server
-       release and the extension to each registry.
+8. [ ] Publish `v1.8.1` as a GitHub-only release. Add real screenshots and
+       publish the later registry patch after the publisher and tokens are ready.
 9. [ ] Run the manual verification checklist on the VS Code machine and record
        the results.
 10. [ ] Verify both listings, update `AGENTS.md`, and mark M24 Done.
@@ -160,6 +176,11 @@ server.
 registries. Editing the root README does not update the listing.
 
 The listing must contain, in this order:
+
+> **v1.8.1 exception:** the registries are not live for this release, so the
+> packaged README leads with manual VSIX installation and marks the registry
+> sections as planned for a later patch. Restore the Marketplace-first order
+> when the later registry patch ships.
 
 1. A short value statement and an image near the top. The committed banner is
    original illustrative artwork; a real screenshot or recording from the manual
@@ -195,20 +216,20 @@ listing after publication.
 ### 2. Root README and install docs
 
 `README.md` must gain a dedicated `## VS Code` section before the Neovim and
-Helix sections. It must distinguish:
+Helix sections. For v1.8.1 it must distinguish:
 
 - **server** channels: GitHub release archives and `go install`;
-- **extension** channels: Marketplace, Open VSX, and the GitHub release VSIX.
+- **extension** channels: the GitHub release VSIX now, with Marketplace and Open
+  VSX listed as planned for a later patch.
 
-Include the exact extension ID and CLI install command. Keep the VSIX path for
-pinned and registry-lag versions; offline use requires a local server and
-`pico8.serverPath`. Remove the sentence that says Marketplace and Open VSX
-publishing are follow-ups.
+Include the exact extension ID. The `code --install-extension` command returns
+with the registry patch. Keep the VSIX path for pinned, offline, and registry-lag
+versions; offline use requires a local server and `pico8.serverPath`.
 
 `docs/install.md` must add a channel table and document:
 
-- Marketplace and Open VSX UI/CLI installation;
-- VSIX installation and checksum verification;
+- VSIX installation and checksum verification as the v1.8.1 path;
+- Marketplace and Open VSX UI/CLI installation as planned for a later patch;
 - first-run server download and cache behavior;
 - `pico8.serverPath` for offline or air-gapped installs;
 - extension upgrade behavior for each channel;
@@ -269,17 +290,19 @@ obtained and recorded here.
 The extension version pins the server release: extension `X.Y.Z` downloads
 `https://github.com/asimmons91/pico-lsp/releases/download/vX.Y.Z/...`.
 
-The release tag is resolved as `v1.8.1`. The manifest and version pins are
-already updated. The remaining order is:
+The release tag is resolved as `v1.8.1` for the GitHub-only release. The registry
+patch uses a later tag. The order is:
 
-1. Publish the server release and verify archives and `checksums.txt`.
-2. Build and verify the VSIX.
-3. Publish the same VSIX to both registries.
-4. Verify first-run download from the public release.
+1. Publish `v1.8.1` server archives and the VSIX with `PUBLISH_REGISTRIES`
+   unset, so the registry jobs are skipped.
+2. Verify the GitHub release assets, VSIX checksum, and first-run download.
+3. For the later registry patch: claim and verify the publisher, add
+   `VSCE_PAT`/`OVSX_PAT`, set `PUBLISH_REGISTRIES=true`, tag the patch, and
+   verify both listings.
 
-Do not publish the extension before the matching server release exists. Do not
-rebuild and replace the already-published 1.8.0 GitHub asset; cut the new
-`v1.8.1` tag instead. Update any remaining version pins in `README.md`,
+Do not publish the extension to a registry before the matching server release
+exists. Do not rebuild and replace the already-published 1.8.0 GitHub asset; cut
+the new `v1.8.1` tag instead. Update any remaining version pins in `README.md`,
 `docs/install.md`, the changelogs, and release notes.
 
 ### 7. Registry publication
@@ -289,6 +312,10 @@ jobs after the server release job:
 
 - `publish-marketplace` uses the `VSCE_PAT` secret.
 - `publish-openvsx` uses the `OVSX_PAT` secret.
+
+Registry publishing is gated by the repository variable `PUBLISH_REGISTRIES`.
+When it is unset or not `true`, both jobs are skipped. `v1.8.1` is published
+with the variable unset; the later registry patch sets it to `true`.
 
 Both jobs download the `vscode-vsix` CI artifact, validate the manifest version
 against the tag, verify the VSIX checksum, fail clearly when the token is
@@ -333,10 +360,10 @@ reference remains editor-agnostic.
 
 ### 9. Changelogs and repository state
 
-- `CHANGELOG.md`: the marketplace launch, listing cleanup, and release
-  automation are in the `1.8.1` section.
-- `editors/vscode/CHANGELOG.md`: the extension `1.8.1` section is present for
-  Marketplace display.
+- `CHANGELOG.md`: the GitHub-only v1.8.1 release, listing preparation, and
+  opt-in registry automation are in the `1.8.1` section.
+- `editors/vscode/CHANGELOG.md`: the extension `1.8.1` section describes the
+  VSIX release and the prepared Marketplace/Open VSX listing.
 - `docs/release-checklist.md`: registry steps and manual verification are part
   of the standard release.
 - `docs/ROADMAP.md`: M24 stays **In progress** until the release and
@@ -409,21 +436,26 @@ unverified platform as an open release item rather than implying it passed.
       recorded in this spec and `docs/ROADMAP.md`.
 - [x] `editors/vscode/README.md` is a complete Marketplace/Open VSX listing with
       install paths, requirements, privacy, support, limitations, AI disclosure,
-      and trademark notice. An illustrative banner is committed.
+      and trademark notice, using the v1.8.1 VSIX-first install path. An
+      illustrative banner is committed.
 - [ ] A real screenshot or recording from the manual verification is added to the
       listing before publication.
 - [x] Root README, install, troubleshooting, and release-checklist docs describe
       Marketplace, Open VSX, VSIX, upgrade, uninstall, cache, and offline paths.
-- [x] No current README, install, troubleshooting, extension listing, or release
+- [ ] No current README, install, troubleshooting, extension listing, or release
       document describes Marketplace/Open VSX publishing as pending; historical
-      milestone statements are marked superseded.
+      milestone statements are marked superseded. This is met when the later
+      registry patch ships; `v1.8.1` accurately says registry publication is
+      planned for a later patch.
 - [x] `package.json` listing metadata and icon are complete; the VSIX contains
       README, CHANGELOG, LICENSE, and icon but no source, tests, scripts, or
       internal notes. Verified locally with `vsce ls`.
 - [x] The icon/trademark question is resolved without publishing an unlicensed
       PICO-8 logo.
-- [ ] The chosen release tag is cut after the release PR merges, with the server
-      release published and verified before the extension.
+- [ ] The `v1.8.1` GitHub-only release is cut with server archives and the VSIX;
+      the registry jobs are skipped because `PUBLISH_REGISTRIES` is unset.
+- [ ] The later registry patch is tagged after the release PR merges, with the
+      server release published and verified before the extension.
 - [ ] Marketplace and Open VSX publish the same verified VSIX, independently
       retryable, with a documented manual fallback and rollback path.
 - [ ] Marketplace and Open VSX listings show the correct version, README,
