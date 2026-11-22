@@ -91,10 +91,16 @@ release:
     # Linux/macOS: download the matching archive from this release, verify
     # checksums.txt, and place pico-lsp on PATH.
     # Windows: use the .zip archive.
-    # VS Code: install pico-lsp-vscode-<version>.vsix from this release.
+    # VS Code: install "PICO-8 LSP" (asimmons91.pico-lsp) from the Marketplace
+    # or Open VSX, or install pico-lsp-vscode-<version>.vsix from this release.
     # Developers: go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@{{ .Tag }}
     ```
 
     Release binaries are unsigned. See the installation and troubleshooting
-    documentation in the repository. Homebrew and Mason packaging are deferred
-    to post-v1; Marketplace and Open VSX publishing are follow-ups.
+    documentation in the repository. Homebrew and Mason packaging remain
+    deferred to post-v1.
+
+    VS Code users can install **PICO-8 LSP** (`asimmons91.pico-lsp`) from the
+    [Marketplace](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
+    or [Open VSX](https://open-vsx.org/extension/asimmons91/pico-lsp), or install
+    `pico-lsp-vscode-<version>.vsix` from this release.

@@ -44,6 +44,10 @@ includes, completes the PICO-8 API, and reports type diagnostics.
 - Homebrew tap and Mason registry packaging (deferred to post-v1).
 - A hosted package registry or Docker image.
 
+> **Superseded by later milestones:** the VS Code client shipped in M15, and M24
+> (in progress for v1.8.1) adds VS Code Marketplace and Open VSX publishing for
+> that extension. Homebrew and Mason remain deferred.
+
 ## Release versioning
 
 - Milestones M0–M5 produce `v0.x.y` prereleases as needed.

@@ -10,7 +10,7 @@ move into their own milestone specs.
 ## Promoted post-v1 work
 
 The following backlog items have been promoted and split into milestone specs.
-Items marked proposed are specified but not yet committed to a release.
+M24 is implemented and awaiting its v1.8.1 publication and manual verification.
 
 - [M7 — AST-Aware Formatter](M7-formatter.md)
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
@@ -28,15 +28,15 @@ Items marked proposed are specified but not yet committed to a release.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — shipped in v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — proposed
+- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress for v1.8.1
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0.
-M24 is specified but not yet committed to a release. The unpromoted items below
-are not part of these releases.
+M24 is in progress for v1.8.1. The unpromoted items below are not part of these
+releases.
 
 ## Prioritization
 
@@ -60,14 +60,7 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 2. VS Code Marketplace and Open VSX publishing
-
-Promoted to [M24 — VS Code Marketplace Launch and Documentation
-Cleanup](M24-vscode-marketplace.md) as a proposed milestone. The milestone spec
-owns the scope, release decisions, documentation deliverables, publication
-automation, and manual VS Code verification checklist.
-
-## 3. Zed extension
+## 2. Zed extension
 
 Provide PICO-8 support in Zed.
 
@@ -79,7 +72,7 @@ Requirements:
 - Binary architecture detection and clear installation errors.
 - Document manual binary configuration.
 
-## 4. API version selection
+## 3. API version selection
 
 Support additional PICO-8 API versions.
 

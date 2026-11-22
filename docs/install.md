@@ -1,8 +1,22 @@
 # Install
 
-v1 release binaries are static and require no Go toolchain or runtime. The
-supported v1 install channels are GitHub release archives and `go install` for
-developers. Homebrew and Mason packaging are deferred to post-v1.
+`pico-lsp` release binaries are static and require no Go toolchain or runtime.
+Homebrew and Mason packaging are deferred to post-v1; see the
+[roadmap](ROADMAP.md).
+
+## Install channels
+
+| Component | Channel | Use when |
+|---|---|---|
+| Server | GitHub release archive | Manual, pinned, or air-gapped installs |
+| Server | `go install` | Development and Go users |
+| Server | VS Code extension download | Normal VS Code use; the extension fetches the matching release |
+| Extension | VS Code Marketplace | Local desktop VS Code |
+| Extension | Open VSX | VSCodium and other Open VSX-compatible editors |
+| Extension | GitHub release VSIX | Offline, pinned, or registry-lag installs |
+
+The extension and server versions match. Extension `1.8.1` downloads
+`pico-lsp` v1.8.1.
 
 ## Supported platforms
 
@@ -16,35 +30,141 @@ Every release also publishes `checksums.txt` with SHA-256 hashes.
 
 ## VS Code
 
-The VS Code extension is distributed as `pico-lsp-vscode-<version>.vsix` with a
-`.vsix.sha256` checksum. Marketplace and Open VSX publishing are follow-ups.
+The VS Code extension is published to the VS Code Marketplace and Open VSX. The
+GitHub release VSIX remains available for offline, pinned, or registry-lag use.
+The extension supports local desktop VS Code and Open VSX-compatible editors
+only; remote extension hosts, web extension hosts, and Codespaces are not
+supported.
 
-1. Download both files from the matching
+### Marketplace
+
+Search for `PICO-8 LSP` or `asimmons91.pico-lsp` in the Extensions view, select
+**Install**, or run:
+
+```sh
+code --install-extension asimmons91.pico-lsp
+```
+
+Marketplace listing:
+[Open the PICO-8 LSP Marketplace listing](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
+
+### Open VSX
+
+VSCodium and other editors that use Open VSX can install the same extension ID
+from their Extensions view or their `--install-extension` CLI. Open VSX listing:
+[Open the PICO-8 LSP Open VSX listing](https://open-vsx.org/extension/asimmons91/pico-lsp)
+
+### Manual VSIX install
+
+1. Download `pico-lsp-vscode-<version>.vsix` and
+   `pico-lsp-vscode-<version>.vsix.sha256` from the matching
    [GitHub release](https://github.com/asimmons91/pico-lsp/releases).
-2. Verify the VSIX:
+2. Verify the checksum:
 
    ```sh
    sha256sum -c pico-lsp-vscode-<version>.vsix.sha256
    ```
 
+   On macOS without `sha256sum`:
+
+   ```sh
+   shasum -a 256 -c pico-lsp-vscode-<version>.vsix.sha256
+   ```
+
+   On Windows PowerShell:
+
+   ```powershell
+   $Expected = (Get-Content pico-lsp-vscode-<version>.vsix.sha256).Split()[0]
+   $Actual = (Get-FileHash pico-lsp-vscode-<version>.vsix -Algorithm SHA256).Hash.ToLower()
+   if ($Actual -ne $Expected) { throw "checksum mismatch" }
+   ```
+
 3. In VS Code, open **Extensions**, select **...**, and choose
    **Install from VSIX...**.
-4. Open a folder containing a `.p8` cart. The extension downloads the matching
-   server version on first use, or use `pico8.serverPath` for a manual install.
 
-See [../editors/vscode/README.md](../editors/vscode/README.md) for extension
-settings, Lua attachment behavior, and limitations.
+### First-run server download
+
+In a trusted workspace, the extension downloads the matching release archive for
+the current platform on first use, verifies its SHA-256 from `checksums.txt`,
+caches it in the extension's global storage, and starts it. No download occurs
+in an untrusted workspace; the extension disables itself there.
+
+If the download fails, check the **PICO-8 Language Server** output channel,
+configure VS Code's `http.proxy` and `http.proxyStrictSSL` settings when behind a
+proxy, or set `pico8.serverPath`.
+
+### Cache location and cleanup
+
+The extension stores downloaded servers under its global storage directory:
+
+| OS | Directory |
+|---|---|
+| Linux | `~/.config/Code/User/globalStorage/asimmons91.pico-lsp` |
+| macOS | `~/Library/Application Support/Code/User/globalStorage/asimmons91.pico-lsp` |
+| Windows | `%APPDATA%\Code\User\globalStorage\asimmons91.pico-lsp` |
+
+VSCodium and other VS Code-compatible editors use their own product directory
+instead of `Code`. Run **PICO-8: Show Server Info** or **PICO-8: Copy Server
+Diagnostics** to see the exact cache root for the running extension.
+
+Cached servers live under `servers/v<version>/<platform>-<arch>/`. **PICO-8:
+Clear Downloaded Server Cache** removes the cached server for the installed
+extension version. Older version directories remain; delete the entire
+`asimmons91.pico-lsp` directory to remove every cached version and download
+temporary files.
+
+### Offline or air-gapped use
+
+Set an absolute path to an existing server and disable downloads:
+
+```json
+{
+  "pico8.serverPath": "/usr/local/bin/pico-lsp",
+  "pico8.autoDownload": false
+}
+```
+
+The server binary must match the extension version, or the extension will show
+its advisory version-mismatch warning. Use **PICO-8: Copy Server Diagnostics** to
+confirm the versions.
+
+### Upgrade
+
+- **Marketplace and Open VSX:** VS Code updates the extension automatically.
+  The updated extension downloads its matching server on the next start.
+  Previously cached server versions are not removed automatically.
+- **VSIX:** install the newer VSIX over the existing extension. The same
+  matching-server download applies.
+- **Server only:** replace the binary and run `pico-lsp --version`. If you use
+  `pico8.serverPath`, the extension keeps using that binary until you change it.
+
+Do not mix an extension with a server release that does not match it unless that
+is intentional; the extension warns once but keeps working.
+
+### Uninstall
+
+1. Optionally run **PICO-8: Clear Downloaded Server Cache** before uninstalling.
+2. Uninstall the extension from the Extensions view.
+3. Delete the global storage directory from the table above if it remains.
+4. Remove any binary you configured with `pico8.serverPath` separately.
+
+### Registry lag and VSIX fallback
+
+Marketplace and Open VSX processing can lag behind the GitHub release. When the
+version you need is not listed yet, install the matching VSIX from the GitHub
+release. A registry listing may also lag during an outage; the VSIX does not
+depend on either registry.
 
 ## Download a release
 
-Set `VERSION` to the release without the leading `v` (for example `1.8.0`) and
+Set `VERSION` to the release without the leading `v` (for example `1.8.1`) and
 choose the archive for your platform from the
 [releases page](https://github.com/asimmons91/pico-lsp/releases).
 
 ### Linux and macOS
 
 ```sh
-VERSION=1.8.0
+VERSION=1.8.1
 OS=linux          # or darwin
 ARCH=amd64        # or arm64
 ASSET="pico-lsp_${VERSION}_${OS}_${ARCH}.tar.gz"
@@ -72,7 +192,7 @@ In PowerShell, set the version and architecture, download the zip and
 checksums, and compare the SHA-256 hash:
 
 ```powershell
-$Version = "1.8.0"
+$Version = "1.8.1"
 $Arch = "amd64" # or arm64
 $Asset = "pico-lsp_${Version}_windows_${Arch}.zip"
 $Base = "https://github.com/asimmons91/pico-lsp/releases/download/v$Version"
@@ -97,7 +217,7 @@ Add `%LOCALAPPDATA%\pico-lsp` to your user `PATH` permanently to use
 For developers with Go 1.27.4 or newer:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.0
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1
 ```
 
 `go install` reports the module version from Go build information when no
@@ -127,13 +247,14 @@ pico-lsp decode --output /tmp/cart.p8 path/to/cart.p8.png
 
 The decoder never writes PNG files.
 
-## Upgrade
+## Upgrade the server binary
 
 Download the new archive for the same platform, replace the existing binary,
 and run `pico-lsp --version` to confirm the new version. There is no auto-update
-mechanism in v1.
+mechanism in v1. VS Code users normally receive the server through the extension
+instead; see [Upgrade](#upgrade).
 
-## Uninstall
+## Uninstall the server binary
 
 Remove the `pico-lsp` binary from the directory where you installed it. Server
 logs created with `--log-file` and editor configuration are separate; remove
@@ -153,5 +274,5 @@ v1 release binaries are not code-signed or notarized.
 ## Homebrew and Mason
 
 Homebrew and Mason packages are not available for v1. They are tracked as
-post-v1 distribution work in the [roadmap](ROADMAP.md). Use a release archive or
-`go install` until then.
+post-v1 distribution work in the [roadmap](ROADMAP.md). Use a release archive,
+`go install`, or the VS Code extension until then.

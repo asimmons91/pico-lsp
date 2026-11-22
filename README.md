@@ -53,7 +53,7 @@ bugs with a minimal reproduction so they can be verified and fixed.
   suppression.
 - A VS Code extension with a contributed `pico8` language, TextMate
   highlighting, managed checksummed server downloads, `.p8`/Lua attachment, and
-  cart-budget status bar.
+  cart-budget status bar, published to the VS Code Marketplace and Open VSX.
 - Conservative refactors: extract to local function, safe global-to-local,
   generated `---@class`, `if`/`while` shorthand conversion, token-saving
   rewrites (`print` → `?`, self-assignment → compound assignment,
@@ -65,15 +65,17 @@ bugs with a minimal reproduction so they can be verified and fixed.
 
 ## Install
 
-v1 is distributed as checksummed GitHub release archives. Homebrew and Mason
-packaging are deferred to post-v1; see the [roadmap](docs/ROADMAP.md).
+v1 is distributed as checksummed GitHub release archives and `go install` for
+developers. The VS Code extension is published to the VS Code Marketplace and
+Open VSX. Homebrew and Mason packaging remain deferred to post-v1; see the
+[roadmap](docs/ROADMAP.md).
 
 Download the archive for your OS and architecture from the
-[v1.8.0 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.0), or
+[v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1), or
 install with Go:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.0
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1
 ```
 
 Verify the binary:
@@ -85,10 +87,30 @@ pico-lsp --version
 See [docs/install.md](docs/install.md) for per-OS instructions, checksums,
 upgrades, and uninstalling.
 
-VS Code support ships as `pico-lsp-vscode-<version>.vsix` with the matching
-release. Install it with **Extensions: Install from VSIX...**; see
-[editors/vscode/README.md](editors/vscode/README.md). Marketplace and Open VSX
-publishing are follow-ups.
+## VS Code
+
+The PICO-8 LSP extension (`asimmons91.pico-lsp`) adds PICO-8 support to local
+desktop VS Code and Open VSX-compatible editors and downloads the matching
+server on first use. No Go toolchain or manual server install is required.
+
+- **VS Code Marketplace:** search for `PICO-8 LSP` or
+  `asimmons91.pico-lsp` in the Extensions view, or run:
+
+  ```sh
+  code --install-extension asimmons91.pico-lsp
+  ```
+
+- **Open VSX:** install `asimmons91.pico-lsp` in VSCodium or another
+  Open VSX-compatible editor from
+  [open-vsx.org](https://open-vsx.org/extension/asimmons91/pico-lsp).
+- **Pinned or offline:** install `pico-lsp-vscode-<version>.vsix` from the
+  matching [GitHub release](https://github.com/asimmons91/pico-lsp/releases)
+  after verifying its `.vsix.sha256` checksum.
+
+Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts are not
+supported. See [editors/vscode/README.md](editors/vscode/README.md) for the
+extension listing and [docs/install.md](docs/install.md#vs-code) for upgrade,
+uninstall, cache, and offline instructions.
 
 ## Neovim 0.11+
 
@@ -176,7 +198,9 @@ documented in [docs/api.md](docs/api.md).
 
 - `.p8.png` carts are supported read-only. Edit and save an exported text `.p8`
   when you need to change the cart; the server never writes PNG carts.
-- VS Code is supported by the M15 extension; Zed remains in the
+- VS Code and Open VSX-compatible editors are supported by the PICO-8 LSP
+  extension for local desktop windows only. Remote SSH, WSL, Dev Containers,
+  Codespaces, and web extension hosts are not supported. Zed remains in the
   [post-v1 backlog](docs/post-v1-backlog.md). The server remains
   editor-agnostic.
 - Included `.lua` auto-attachment is a Neovim helper; Helix users open the

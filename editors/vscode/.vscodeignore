@@ -7,10 +7,12 @@ test/**
 scripts/**
 node_modules/**
 coverage/**
+images/**
 esbuild.mjs
 eslint.config.mjs
 tsconfig.json
 package-lock.json
+icons/README.md
 **/*.map
 **/*.ts
 !dist/extension.js

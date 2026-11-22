@@ -95,6 +95,17 @@ jobs:
           )
         working-directory: editors/vscode
 
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vscode-vsix
+          path: |
+            pico-lsp-vscode-*.vsix
+            pico-lsp-vscode-*.vsix.sha256
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+
       - name: Validate version injection
         shell: bash
         run: |
@@ -142,3 +153,99 @@ jobs:
           (cd "$work" && sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256")
           tar -xzf "$work/pico-lsp_${version}_linux_amd64.tar.gz" -C "$work"
           test "$("$work/pico-lsp" --version)" = "$GITHUB_REF_NAME"
+
+  publish-marketplace:
+    name: publish marketplace
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up mise tools
+        uses: jdx/mise-action@v5
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: vscode-vsix
+          path: vsix
+
+      - name: Validate VSIX and extension version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          test "$(node -p "require('./editors/vscode/package.json').version")" = "$version"
+          test -f "vsix/pico-lsp-vscode-${version}.vsix"
+          (cd vsix && sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256")
+
+      - name: Require Marketplace token
+        shell: bash
+        run: |
+          if [ -z "${VSCE_PAT}" ]; then
+            echo "::error::VSCE_PAT is not configured. See docs/release-checklist.md."
+            exit 1
+          fi
+
+      - name: Publish to VS Code Marketplace
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          npx --yes @vscode/vsce@4.1.1 publish \
+            --packagePath "vsix/pico-lsp-vscode-${version}.vsix" \
+            --pat "${VSCE_PAT}" \
+            --skip-duplicate
+
+  publish-openvsx:
+    name: publish open vsx
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+
+      - name: Set up mise tools
+        uses: jdx/mise-action@v5
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: vscode-vsix
+          path: vsix
+
+      - name: Validate VSIX and extension version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          test "$(node -p "require('./editors/vscode/package.json').version")" = "$version"
+          test -f "vsix/pico-lsp-vscode-${version}.vsix"
+          (cd vsix && sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256")
+
+      - name: Require Open VSX token
+        shell: bash
+        run: |
+          if [ -z "${OVSX_PAT}" ]; then
+            echo "::error::OVSX_PAT is not configured. See docs/release-checklist.md."
+            exit 1
+          fi
+
+      - name: Publish to Open VSX
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          npx --yes ovsx@1.4.0 publish \
+            "vsix/pico-lsp-vscode-${version}.vsix" \
+            --pat "${OVSX_PAT}" \
+            --skip-duplicate
