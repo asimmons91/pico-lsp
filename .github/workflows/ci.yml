@@ -153,13 +153,22 @@ jobs:
             extension/language-configuration.json \
             extension/readme.md \
             extension/changelog.md \
-            extension/LICENSE.txt; do
+            extension/LICENSE.txt \
+            extension/icons/pico-lsp.png; do
             unzip -Z1 "$archive" | grep -qx "$entry"
           done
-          if unzip -Z1 "$archive" | grep -q '^extension/src/'; then
-            echo "VSIX contains extension source" >&2
-            exit 1
-          fi
+          for pattern in \
+            '^extension/src/' \
+            '^extension/test/' \
+            '^extension/scripts/' \
+            '^extension/images/' \
+            '^extension/icons/README.md$' \
+            '^extension/.*\.map$'; do
+            if unzip -Z1 "$archive" | grep -qE "$pattern"; then
+              echo "VSIX contains excluded path matching $pattern" >&2
+              exit 1
+            fi
+          done
 
       - name: Upload VSIX
         uses: actions/upload-artifact@v7
