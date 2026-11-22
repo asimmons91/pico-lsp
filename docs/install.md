@@ -30,11 +30,12 @@ Every release also publishes `checksums.txt` with SHA-256 hashes.
 
 ## VS Code
 
-The VS Code extension is published to the VS Code Marketplace and Open VSX. The
-GitHub release VSIX remains available for offline, pinned, or registry-lag use.
-The extension supports local desktop VS Code and Open VSX-compatible editors
-only; remote extension hosts, web extension hosts, and Codespaces are not
-supported.
+The v1.8.1 release publishes the VS Code extension to the VS Code Marketplace
+and Open VSX. The GitHub release VSIX remains available for offline, pinned, or
+registry-lag use. The extension supports local desktop VS Code and Open
+VSX-compatible editors only; remote extension hosts, web extension hosts, and
+Codespaces are not supported. If a registry does not list the matching version
+yet, use the manual VSIX installation below.
 
 ### Marketplace
 

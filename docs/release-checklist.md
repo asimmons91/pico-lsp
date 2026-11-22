@@ -18,6 +18,7 @@ and Mason publishing are deferred to post-v1. This checklist prepares
       (`PICO_LSP_PERF=1 go test -count=1 -p 1 -run Performance ./...`).
 - [x] `goreleaser check` validates `.goreleaser.yaml`.
 - [x] `goreleaser release --snapshot --clean` builds archives and checksums.
+- [x] `actionlint` validates both GitHub Actions workflows.
 - [x] `pico-lsp --version` reports the intended release tag in the stamped test
       build.
 - [x] README, install, configuration, diagnostics, and troubleshooting docs are
@@ -46,7 +47,8 @@ and Mason publishing are deferred to post-v1. This checklist prepares
 - [x] The listing icon is original artwork, not the official Lexaloffle logo.
       `editors/vscode/icons/README.md` records the artwork's license.
 - [x] `editors/vscode/README.md` uses absolute `https://` links and image URLs.
-      The rendered listing has no broken links or images.
+- [ ] The rendered listing has no broken links or images. Verify both registry
+      pages after publication.
 - [x] The listing states local desktop VS Code and Open VSX-compatible editors
       only, no Go requirement, no telemetry, no cart execution, and the offline
       `pico8.serverPath` path.
@@ -102,29 +104,44 @@ and Mason publishing are deferred to post-v1. This checklist prepares
 - The `publish-marketplace` and `publish-openvsx` jobs are independent. Re-run
   only the failed job from the workflow run; do not republish the other registry.
 - The jobs validate that the extension manifest version matches the tag, verify
-  the VSIX checksum from the CI artifact, and publish that exact VSIX.
+  the VSIX checksum from the CI artifact, and publish that exact VSIX. The
+  release job also re-runs the packaged-file assertions before uploading the
+  artifact.
 - The jobs fail clearly when the token is missing or rejected. Add or rotate the
   secret and re-run the failed job.
 - Manual fallback, using the verified VSIX downloaded from the GitHub release:
 
-  ```sh
+  ```bash
+  set -euo pipefail
   version=1.8.1
   sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256"
+  # On macOS without sha256sum:
+  # shasum -a 256 -c "pico-lsp-vscode-${version}.vsix.sha256"
 
-  VSCE_PAT=... npx --yes @vscode/vsce@4.1.1 publish \
+  export VSCE_PAT='<marketplace-pat>'
+  npx --yes @vscode/vsce@4.1.1 publish \
     --packagePath "pico-lsp-vscode-${version}.vsix" \
     --pat "$VSCE_PAT" \
     --skip-duplicate
 
-  OVSX_PAT=... npx --yes ovsx@1.4.0 publish \
+  export OVSX_PAT='<open-vsx-pat>'
+  npx --yes ovsx@1.4.0 publish \
     "pico-lsp-vscode-${version}.vsix" \
     --pat "$OVSX_PAT" \
     --skip-duplicate
   ```
 
+- Exporting the tokens before the `npx` commands is required. A same-line
+  assignment such as `VSCE_PAT=... npx ... --pat "$VSCE_PAT"` expands the
+  variable before the assignment takes effect and passes an empty token.
+
 - `--skip-duplicate` makes a retry safe when the same version was already
   published. It does not replace verifying that the published version is the
   intended VSIX; check the listing version and contents after a retry.
+
+- The `vscode-vsix` artifact is retained for 90 days. If a delayed retry finds
+  it expired, use the manual fallback above with the VSIX and checksum from the
+  GitHub release.
 
 - Registry processing can lag. Verify the version in both registries before
   announcing the release. Until both are live, the release notes and README must

@@ -10,10 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- The VS Code extension is published to the VS Code Marketplace and Open VSX as
-  `asimmons91.pico-lsp`. Both registry jobs publish the same CI-built VSIX and
-  can be retried independently; the GitHub release VSIX remains the offline,
-  pinned, and registry-lag fallback.
+- The v1.8.1 release publishes the VS Code extension to the VS Code Marketplace
+  and Open VSX as `asimmons91.pico-lsp`. Both registry jobs publish the same
+  CI-built VSIX and can be retried independently; the GitHub release VSIX
+  remains the offline, pinned, and registry-lag fallback.
 - The release workflow validates the extension version against the tag and
   verifies the VSIX checksum before publishing to either registry.
 

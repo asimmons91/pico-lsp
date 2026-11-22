@@ -9,6 +9,9 @@ budgets without installing Go or managing a server binary.
 
 ## Install
 
+Registry processing can lag after a release. If the matching version is not
+listed in a registry yet, use the manual VSIX installation below.
+
 ### VS Code Marketplace
 
 1. Open the Extensions view (`Ctrl+Shift+X` on Windows and Linux, `Cmd+Shift+X`

@@ -288,8 +288,10 @@ jobs after the server release job:
 
 Both jobs download the `vscode-vsix` CI artifact, validate the manifest version
 against the tag, verify the VSIX checksum, fail clearly when the token is
-missing, and publish that exact VSIX. They never run for pull requests or
-branches because the workflow only triggers on `v*` tags.
+missing, and publish that exact VSIX. The release job also re-runs the packaged
+file assertions before uploading the artifact, and retains it for 90 days. The
+jobs never run for pull requests or branches because the workflow only triggers
+on `v*` tags.
 
 The manual fallback commands and token scopes are in
 [release-checklist.md](release-checklist.md#registry-automation). Both commands

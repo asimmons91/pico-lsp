@@ -66,9 +66,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
 ## Install
 
 v1 is distributed as checksummed GitHub release archives and `go install` for
-developers. The VS Code extension is published to the VS Code Marketplace and
-Open VSX. Homebrew and Mason packaging remain deferred to post-v1; see the
-[roadmap](docs/ROADMAP.md).
+developers. The v1.8.1 release also publishes the VS Code extension to the VS
+Code Marketplace and Open VSX. Homebrew and Mason packaging remain deferred to
+post-v1; see the [roadmap](docs/ROADMAP.md).
 
 Download the archive for your OS and architecture from the
 [v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1), or
@@ -108,9 +108,11 @@ server on first use. No Go toolchain or manual server install is required.
   after verifying its `.vsix.sha256` checksum.
 
 Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts are not
-supported. See [editors/vscode/README.md](editors/vscode/README.md) for the
-extension listing and [docs/install.md](docs/install.md#vs-code) for upgrade,
-uninstall, cache, and offline instructions.
+supported. Registry processing can lag after a release; if the matching version
+is not listed yet, install the VSIX from the GitHub release. See
+[editors/vscode/README.md](editors/vscode/README.md) for the extension listing
+and [docs/install.md](docs/install.md#vs-code) for upgrade, uninstall, cache,
+and offline instructions.
 
 ## Neovim 0.11+
 
