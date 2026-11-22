@@ -1,14 +1,23 @@
 {
   "name": "pico-lsp",
-  "displayName": "PICO-8",
-  "description": "PICO-8 language support powered by pico-lsp",
-  "version": "1.8.0",
+  "displayName": "PICO-8 LSP",
+  "description": "PICO-8 language support for VS Code: diagnostics, completion, navigation, formatting, and cart budgets, powered by pico-lsp.",
+  "version": "1.8.1",
   "publisher": "asimmons91",
   "license": "MIT",
+  "icon": "./icons/pico-lsp.png",
+  "homepage": "https://github.com/asimmons91/pico-lsp#readme",
+  "bugs": {
+    "url": "https://github.com/asimmons91/pico-lsp/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/asimmons91/pico-lsp.git",
     "directory": "editors/vscode"
+  },
+  "galleryBanner": {
+    "color": "#1D2B53",
+    "theme": "dark"
   },
   "engines": {
     "vscode": "^1.95.0"
@@ -21,9 +30,13 @@
   "keywords": [
     "pico-8",
     "pico8",
+    "pico",
+    "fantasy console",
     "lua",
     "language-server",
-    "lsp"
+    "lsp",
+    "formatter",
+    "linter"
   ],
   "activationEvents": [
     "onLanguage:pico8",
@@ -56,8 +69,8 @@
         ],
         "configuration": "./language-configuration.json",
         "icon": {
-          "light": "./icons/pico8.png",
-          "dark": "./icons/pico8.png"
+          "light": "./icons/pico-lsp.png",
+          "dark": "./icons/pico-lsp.png"
         }
       }
     ],
