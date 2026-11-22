@@ -42,8 +42,9 @@ Open VSX listing:
 
 ### Manual VSIX installation
 
-Install the VSIX when you are offline, need to pin a specific version, or the
-registry version is behind GitHub.
+Install the VSIX when you need to pin a specific version or the registry
+version is behind GitHub. For offline use, also install a local `pico-lsp`
+binary and set `pico8.serverPath`; the VSIX does not bundle the server.
 
 1. Download `pico-lsp-vscode-<version>.vsix` and
    `pico-lsp-vscode-<version>.vsix.sha256` from the matching

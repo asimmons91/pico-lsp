@@ -103,9 +103,11 @@ server on first use. No Go toolchain or manual server install is required.
 - **Open VSX:** install `asimmons91.pico-lsp` in VSCodium or another
   Open VSX-compatible editor from
   [open-vsx.org](https://open-vsx.org/extension/asimmons91/pico-lsp).
-- **Pinned or offline:** install `pico-lsp-vscode-<version>.vsix` from the
-  matching [GitHub release](https://github.com/asimmons91/pico-lsp/releases)
-  after verifying its `.vsix.sha256` checksum.
+- **Pinned, registry-lag, or offline:** install
+  `pico-lsp-vscode-<version>.vsix` from the matching
+  [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after
+  verifying its `.vsix.sha256` checksum. Offline use also requires a local
+  `pico-lsp` binary and `pico8.serverPath`.
 
 Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts are not
 supported. Registry processing can lag after a release; if the matching version

@@ -182,8 +182,8 @@ are intentionally not attached.
   the published version.
 - When you need a version that is not listed yet, install the matching VSIX from
   the [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after
-  verifying its `.vsix.sha256` checksum. The VSIX is the offline and registry-lag
-  fallback for both registries.
+  verifying its `.vsix.sha256` checksum. The VSIX is the registry-lag fallback;
+  offline use also requires a local server binary and `pico8.serverPath`.
 - If only one registry lists the extension, only that registry's install path is
   currently available; use the VSIX elsewhere and retry the registry later.
 
