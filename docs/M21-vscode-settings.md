@@ -1,7 +1,7 @@
 # M21 — Full Server Settings Schema in the VS Code Client
 
 **Status:** Done — shipped in v1.8.0. The manual Settings UI check remains an
-open release item.
+open release item; M24 carries it in the v1.8.1 manual verification.
 
 **Depends on:** M15
 **Release target:** v1.8.0 (shipped with M22 and M23)

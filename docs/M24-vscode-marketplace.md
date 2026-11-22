@@ -1,12 +1,13 @@
 # M24 — VS Code Marketplace Launch and Documentation Cleanup
 
-**Status:** Proposed — specification only. Implementation, registry publishing,
-and manual VS Code verification are pending.
+**Status:** In progress — the listing, documentation, package metadata, and
+release automation are implemented. Registry publication and manual VS Code
+verification are pending.
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health)
 
-**Release target:** Next patch or minor after v1.8.0. The exact tag is an open
-decision; coordinated `v1.8.1` is recommended.
+**Release target:** `v1.8.1` (resolved). The server tag and extension version are
+coordinated: extension `X.Y.Z` downloads server tag `vX.Y.Z`.
 
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 
@@ -24,7 +25,7 @@ installation.
 No LSP protocol, server behavior, type analysis, formatting, or extension
 feature changes are in scope.
 
-**Demo:** On a clean VS Code 1.95+ install, search for “PICO-8”, install
+**Demo:** On a clean VS Code 1.95+ install, search for “PICO-8 LSP”, install
 `asimmons91.pico-lsp`, and open `testdata/smoke.p8`. The extension downloads the
 matching `pico-lsp` server, attaches to the cart, and provides diagnostics,
 completion, the cart-budget status bar, and the glyph picker without requiring
@@ -34,36 +35,42 @@ upgrade replaces the extension and downloads the matching server; the
 uninstall path removes the extension and explains how to clear the cached
 server.
 
-## Decisions proposed
+## Decisions
 
 | ID | Decision | Choice |
 |---|---|---|
-| D1 | Milestone identity | M24, **Proposed**. |
+| D1 | Milestone identity | M24, **In progress** for v1.8.1. |
 | D2 | Listing source | `editors/vscode/README.md` is the Marketplace/Open VSX listing. The root `README.md` remains the repository landing page and is updated separately. |
-| D3 | Registries | Publish to both the VS Code Marketplace and Open VSX. The publishers must be independently retryable. If Open VSX is delayed, its docs and listing claims must wait until it is actually live. |
-| D4 | Release version | **Open.** Recommended: a coordinated patch release (`v1.8.1`) containing the server tag and rebuilt extension. A minor (`v1.9.0`) is acceptable if the launch is treated as a feature release. Do not republish the existing 1.8.0 artifact. |
+| D3 | Registries | Publish to both the VS Code Marketplace and Open VSX. The publishers are independent and independently retryable. If registry processing is delayed, the VSIX remains the documented fallback. |
+| D4 | Release version | **`v1.8.1`.** A coordinated patch release containing the server tag and rebuilt extension. The 1.8.0 artifact is not republished. |
 | D5 | Release order | Publish and verify the server release first, then the extension. Extension version `X.Y.Z` downloads server tag `vX.Y.Z`. |
 | D6 | Publication automation | Add Marketplace and Open VSX publishers to the tag-only release workflow, backed by repository secrets and a documented manual fallback. |
-| D7 | Icon and trademark | **Open.** Recommended: replace the official PICO-8 logo with original artwork for the listing/icon, or obtain documented permission from Lexaloffle. Do not publish the official logo while `editors/vscode/icons/README.md` says permission is unconfirmed. |
-| D8 | Publisher identity | Keep `asimmons91.pico-lsp` as the extension ID. Confirm that `asimmons91` is available and verified in both registries before writing listing links or badges. |
-| D9 | Support scope | Local desktop VS Code only. Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts remain unsupported and must be prominent in the listing. |
+| D7 | Icon and trademark | **Original artwork.** `editors/vscode/icons/pico-lsp.png` replaces the official PICO-8 logo for the listing and `.p8` file icon and is covered by the project's MIT license. The FAQ places a separate software product in the "write first" category, so the official logo is not published without written permission. |
+| D8 | Publisher identity | Keep `asimmons91.pico-lsp` as the extension ID. The `asimmons91` publisher must be claimed and verified in both registries before the first publish; this remains a release-checklist item. |
+| D9 | Support scope | Local desktop VS Code and Open VSX-compatible editors only. Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts remain unsupported and must be prominent in the listing. |
 | D10 | Verification environment | Build, lint, unit, integration, and packaging checks run in CI. Registry installation and desktop behavior are verified on the maintainer's machine with a real VS Code installation and recorded in the release checklist. |
 | D11 | No behavior changes | Do not change LSP responses, server defaults, extension feature behavior, settings, or the download/checksum contract. |
 | D12 | Version-pinned docs | Update the version pins in the root README and install docs as part of the release. Do not leave examples pointing at the previous tag. |
 | D13 | Listing disclosure | Include a short AI-assisted-development note and a link to the project README, matching the root README's existing disclosure. |
 | D14 | VSIX fallback | Keep the GitHub release VSIX and `.vsix.sha256` as the offline, pinned, and registry-lag fallback. |
+| D15 | Listing display name | **PICO-8 LSP.** The extension ID remains `asimmons91.pico-lsp`. |
 
-### Open decisions to confirm before implementation
+### Resolved decisions
 
-1. **Release tag:** `v1.8.1` (recommended) or `v1.9.0`.
-2. **Icon:** original artwork (recommended) or documented permission to use the
-   official PICO-8 logo.
-3. **Registry sequence:** publish both together, or publish Marketplace first
-   and keep Open VSX out of the docs until it is live.
-4. **Listing name:** `PICO-8` or a more descriptive name such as
-   `PICO-8 Language Support`.
+1. **Release tag:** `v1.8.1`.
+2. **Icon:** original artwork; no official Lexaloffle logo is published.
+3. **Registry sequence:** both registries, with independent publication jobs and
+   the VSIX fallback documented.
+4. **Listing name:** `PICO-8 LSP`.
 
-Record the resolved choices here and in `docs/ROADMAP.md` before the release PR.
+### Pending publication items
+
+- Claim and verify the `asimmons91` publisher in both registries.
+- Configure the `VSCE_PAT` and `OVSX_PAT` repository secrets.
+- Add a real screenshot or short recording from the manual verification to
+  `editors/vscode/images/` and the listing before publishing.
+- Publish `v1.8.1`, verify both listings, and record the manual VS Code
+  verification in `docs/release-checklist.md`.
 
 ## Scope
 
@@ -128,16 +135,18 @@ Record the resolved choices here and in `docs/ROADMAP.md` before the release PR.
 
 ## Work breakdown
 
-1. [ ] Resolve the open decisions: release tag, icon/trademark path, registry
+1. [x] Resolve the open decisions: release tag, icon/trademark path, registry
        sequence, and listing name.
-2. [ ] Rewrite `editors/vscode/README.md` and capture listing screenshots.
-3. [ ] Add listing metadata, icon, and screenshot assets; clean up
+2. [x] Rewrite `editors/vscode/README.md` as the product listing and commit an
+       illustrative banner. Real screenshots remain a publication item.
+3. [x] Add listing metadata, the original icon, and image assets; clean up
        `.vscodeignore`.
-4. [ ] Update root README, install, troubleshooting, and configuration links.
-5. [ ] Add registry publication and manual fallback to the release workflow.
-6. [ ] Update release checklist, changelogs, roadmap, backlog, and version pins.
-7. [ ] Build and verify the server and extension; inspect the VSIX contents.
-8. [ ] Publish the server release, then the extension to each registry.
+4. [x] Update root README, install, troubleshooting, and configuration links.
+5. [x] Add registry publication and manual fallback to the release workflow.
+6. [x] Update release checklist, changelogs, roadmap, backlog, and version pins.
+7. [x] Build and verify the server and extension; inspect the VSIX contents.
+8. [ ] Add real screenshots from the manual verification, then publish the server
+       release and the extension to each registry.
 9. [ ] Run the manual verification checklist on the VS Code machine and record
        the results.
 10. [ ] Verify both listings, update `AGENTS.md`, and mark M24 Done.
@@ -151,9 +160,11 @@ registries. Editing the root README does not update the listing.
 
 The listing must contain, in this order:
 
-1. A short value statement and a screenshot or recording near the top.
+1. A short value statement and an image near the top. The committed banner is
+   original illustrative artwork; a real screenshot or recording from the manual
+   verification must replace or accompany it before publication.
 2. **Install** with the Marketplace path first:
-   - Extensions view, search `PICO-8` or `asimmons91.pico-lsp`;
+   - Extensions view, search `PICO-8 LSP` or `asimmons91.pico-lsp`;
    - `code --install-extension asimmons91.pico-lsp`;
    - the Marketplace item link.
 3. **Open VSX** installation for VSCodium and compatible editors, including the
@@ -221,9 +232,9 @@ Keep the existing version-mismatch and copy-diagnostics sections.
 
 ### 4. Package metadata and VSIX contents
 
-`editors/vscode/package.json` must keep the existing publisher, name, version,
-repository, license, categories, keywords, activation events, and capabilities,
-and add or confirm:
+`editors/vscode/package.json` keeps the existing publisher, name, repository,
+license, categories, keywords, activation events, and capabilities, updates the
+version to `1.8.1`, and adds or confirms:
 
 - a top-level `icon` pointing at a 128×128 PNG that is legally usable;
 - `homepage` and `bugs` links;
@@ -238,94 +249,102 @@ checks must remain green.
 
 ### 5. Icon and trademark
 
-The current `editors/vscode/icons/README.md` says the official PICO-8 logo is a
-Lexaloffle trademark and that permission should be confirmed before publishing.
-Resolve this before any registry upload:
+**Resolved: original artwork.** `editors/vscode/icons/pico-lsp.png` is original
+pixel art (a generic cartridge with a rainbow label), covered by the project's
+MIT license, and does not reproduce the official PICO-8 logo or wordmark. It is
+used for both the listing icon and the `.p8` language icon. `icons/README.md`
+records the license and trademark position.
 
-- preferred: replace the listing icon and, if necessary, the language icon with
-  original artwork that does not reproduce the official logo;
-- alternative: record written permission to use the official logo;
-- update the icon README and listing disclaimer to match the decision.
-
-Do not claim the icon is MIT-licensed if it is not.
+The PICO-8 FAQ says separate software products must write to Lexaloffle before
+using the logo, and a non-affiliation disclaimer does not replace permission.
+The official logo is therefore not published unless written permission is
+obtained and recorded here.
 
 ### 6. Versioning and release order
 
 The extension version pins the server release: extension `X.Y.Z` downloads
 `https://github.com/asimmons91/pico-lsp/releases/download/vX.Y.Z/...`.
 
-Therefore:
+The release tag is resolved as `v1.8.1`. The manifest and version pins are
+already updated. The remaining order is:
 
-1. Choose the release tag and update the extension manifest.
-2. Publish the server release and verify archives and `checksums.txt`.
-3. Build and verify the VSIX.
-4. Publish the VSIX to the registries.
-5. Verify first-run download from the public release.
+1. Publish the server release and verify archives and `checksums.txt`.
+2. Build and verify the VSIX.
+3. Publish the same VSIX to both registries.
+4. Verify first-run download from the public release.
 
 Do not publish the extension before the matching server release exists. Do not
-rebuild and replace the already-published 1.8.0 GitHub asset; cut a new tag
-instead. Update the version pins in `README.md`, `docs/install.md`, the
-changelogs, and release notes.
+rebuild and replace the already-published 1.8.0 GitHub asset; cut the new
+`v1.8.1` tag instead. Update any remaining version pins in `README.md`,
+`docs/install.md`, the changelogs, and release notes.
 
 ### 7. Registry publication
 
-Add tag-only publication steps to `.github/workflows/release.yml` or a small
-script invoked by it. Proposed secret names:
+**Implemented** in `.github/workflows/release.yml` as two independent tag-only
+jobs after the server release job:
 
-- `VSCE_PAT` for the VS Code Marketplace;
-- `OVSX_PAT` for Open VSX.
+- `publish-marketplace` uses the `VSCE_PAT` secret.
+- `publish-openvsx` uses the `OVSX_PAT` secret.
 
-Requirements:
+Both jobs download the `vscode-vsix` CI artifact, validate the manifest version
+against the tag, verify the VSIX checksum, fail clearly when the token is
+missing, and publish that exact VSIX. They never run for pull requests or
+branches because the workflow only triggers on `v*` tags.
 
-- Publish the exact VSIX built and checked by CI.
-- Keep Marketplace and Open VSX as independent jobs so one can be retried
-  without republishing the other.
-- Do not publish from pull requests, branches, or lightweight local builds.
-- Fail the job clearly when a token, publisher, or version is wrong.
-- Document the manual fallback commands and token scopes in
-  `docs/release-checklist.md`.
+The manual fallback commands and token scopes are in
+[release-checklist.md](release-checklist.md#registry-automation). Both commands
+use `--skip-duplicate` so a retry can complete when the version was already
+published; always verify the published version afterwards.
+
+Requirements remain:
+
 - Verify the published version and listing after each registry processes the
   upload; Open VSX may lag.
-- Roll back by unpublishing or publishing a patch release. Never reuse a
-  version number.
-
-If only one registry is live, the README, install docs, and this milestone must
-say so explicitly.
+- Roll back by unpublishing where supported or publishing a patch release. Never
+  reuse a version number.
+- If only one registry is live, the README, install docs, and this milestone
+  must say so explicitly. Both registries are the target; the listing claims
+  must be adjusted if publication fails for one.
 
 ### 8. Documentation consistency
 
-Search the repository for all of these and resolve them:
+The repository has been updated for:
 
 - “Marketplace” / “Open VSX” followed by “follow-up”, “deferred”, or “not
-  available yet”;
+  available yet” in current install, troubleshooting, extension, and release
+  documents;
 - “GitHub-only” release wording;
 - “VSIX only” extension install wording;
 - internal milestone names such as “M15 extension” in user-facing copy;
 - stale version pins and old release links.
 
-Update the install-channel decision and release assumptions in
-`docs/ROADMAP.md` when the milestone is committed. Add a short “superseded by
-M24” note to the historical deferral statements in M6 and M15 rather than
-rewriting shipped milestone history.
+The install-channel decision and release assumptions in `docs/ROADMAP.md` record
+the committed milestone. M6 and M15 carry short “superseded by M24” notes rather
+than rewritten shipped history.
 
-`docs/configuration.md` should only change if a link or install statement needs
-it; the settings reference itself is already editor-agnostic.
+`docs/configuration.md` did not need an install-statement change; the settings
+reference remains editor-agnostic.
 
 ### 9. Changelogs and repository state
 
-- `CHANGELOG.md`: add the marketplace launch, listing cleanup, and release
-  automation to the next release section.
-- `editors/vscode/CHANGELOG.md`: add the extension release section that
-  Marketplace displays.
-- `docs/release-checklist.md`: make the registry steps and manual verification
-  part of the standard release.
-- `docs/ROADMAP.md`: mark M24 Done only after the release and verification.
-- `docs/post-v1-backlog.md`: keep the promoted link and remove the Marketplace
-  item from the deferred priority list.
-- `AGENTS.md`: update the current release, distribution path, and extension
-  status after publication.
+- `CHANGELOG.md`: the marketplace launch, listing cleanup, and release
+  automation are in the `1.8.1` section.
+- `editors/vscode/CHANGELOG.md`: the extension `1.8.1` section is present for
+  Marketplace display.
+- `docs/release-checklist.md`: registry steps and manual verification are part
+  of the standard release.
+- `docs/ROADMAP.md`: M24 stays **In progress** until the release and
+  verification complete; mark it Done only afterwards.
+- `docs/post-v1-backlog.md`: the promoted link is kept and Marketplace/Open VSX
+  is removed from the deferred priority list.
+- `AGENTS.md`: records the implementation and the pending publication. Update
+  the current release and extension status again after publication.
 
 ## Manual verification on the VS Code machine
+
+**Status:** not yet run. Registry publication and every desktop check below
+remain open; record results in
+[release-checklist.md](release-checklist.md#manual-vs-code-verification).
 
 Implementation changes are made in the repository, but registry and desktop
 checks must be performed on the maintainer's machine with a real VS Code
@@ -380,20 +399,22 @@ unverified platform as an open release item rather than implying it passed.
 
 ## Exit criteria
 
-- [ ] The release tag, icon/trademark path, and registry scope are resolved and
+- [x] The release tag, icon/trademark path, and registry scope are resolved and
       recorded in this spec and `docs/ROADMAP.md`.
-- [ ] `editors/vscode/README.md` is a complete Marketplace/Open VSX listing with
-      install paths, requirements, screenshots, privacy, support, limitations,
-      AI disclosure, and trademark notice.
-- [ ] Root README, install, troubleshooting, and release-checklist docs describe
+- [x] `editors/vscode/README.md` is a complete Marketplace/Open VSX listing with
+      install paths, requirements, privacy, support, limitations, AI disclosure,
+      and trademark notice. An illustrative banner is committed.
+- [ ] A real screenshot or recording from the manual verification is added to the
+      listing before publication.
+- [x] Root README, install, troubleshooting, and release-checklist docs describe
       Marketplace, Open VSX, VSIX, upgrade, uninstall, cache, and offline paths.
-- [ ] No current README, install, troubleshooting, extension listing, or release
+- [x] No current README, install, troubleshooting, extension listing, or release
       document describes Marketplace/Open VSX publishing as pending; historical
       milestone statements are marked superseded.
-- [ ] `package.json` listing metadata and icon are complete; the VSIX contains
+- [x] `package.json` listing metadata and icon are complete; the VSIX contains
       README, CHANGELOG, LICENSE, and icon but no source, tests, scripts, or
-      internal notes.
-- [ ] The icon/trademark question is resolved without publishing an unlicensed
+      internal notes. Verified locally with `vsce ls`.
+- [x] The icon/trademark question is resolved without publishing an unlicensed
       PICO-8 logo.
 - [ ] The chosen release tag is cut after the release PR merges, with the server
       release published and verified before the extension.
@@ -406,15 +427,15 @@ unverified platform as an open release item rather than implying it passed.
       platforms: clean install, upgrade, uninstall, first-run download, offline
       server, cart features, settings, glyph picker, status bar, diagnostics,
       and listing rendering.
-- [ ] Changelogs, roadmap, backlog, release notes, and `AGENTS.md` are updated.
-- [ ] No LSP, server, parser, analysis, formatter, or extension feature behavior
+- [x] Changelogs, roadmap, backlog, release notes, and `AGENTS.md` are updated.
+- [x] No LSP, server, parser, analysis, formatter, or extension feature behavior
       changed.
 
 ## Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| The official PICO-8 logo is a trademark and the repository already flags it as needing permission | Resolve before packaging; prefer original artwork and keep the trademark disclaimer. |
+| The official PICO-8 logo is a trademark and the FAQ requires permission for a separate software product | Resolved with original artwork; the official logo is not published and the trademark disclaimer remains. |
 | The extension downloads the server version matching its own version | Publish and verify the server release first; test first-run download from the public release. |
 | Republishing 1.8.0 breaks the GitHub asset/checksum contract | Cut a new tag and rebuild the extension; never silently replace the old asset. |
 | The listing README is packaged, so repository-only edits do not update Marketplace | Rewrite `editors/vscode/README.md` before building the VSIX and verify the rendered listing. |

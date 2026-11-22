@@ -159,22 +159,86 @@ removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
 
 ## VS Code extension
 
-The VS Code client downloads the server version matching its own version from
-the GitHub release and verifies SHA-256. If first-run download fails, check the
-proxy settings (`http.proxy` and `http.proxyStrictSSL`), configure
-`pico8.serverPath`, or use **PICO-8: Clear Downloaded Server Cache** before
-retrying. Use **PICO-8: Show Language Server Output** for download and process
-errors.
+The VS Code extension is published as `asimmons91.pico-lsp` to the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
+and [Open VSX](https://open-vsx.org/extension/asimmons91/pico-lsp). It downloads
+the server version matching its own version from the GitHub release and verifies
+SHA-256.
 
 The extension attaches to `.p8` files and to all `.lua` files in workspace
 folders that contain a `.p8` cart. Disable another Lua language server for those
 folders to avoid duplicate diagnostics. `.lua` files outside PICO-8 workspaces
 are intentionally not attached.
 
-The VS Code client supports local desktop windows only. Remote extension hosts,
-web extension hosts, and read-only `.p8.png` virtual documents are not supported
-in the current release. Marketplace and Open VSX publishing are follow-ups;
-install the VSIX from the GitHub release.
+### The extension is not listed, or the registry version is behind
+
+- Search the Extensions view for `PICO-8 LSP` or the exact ID
+  `asimmons91.pico-lsp`.
+- Registry processing can lag behind the GitHub release. Check the
+  [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
+  or [Open VSX listing](https://open-vsx.org/extension/asimmons91/pico-lsp) for
+  the published version.
+- When you need a version that is not listed yet, install the matching VSIX from
+  the [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after
+  verifying its `.vsix.sha256` checksum. The VSIX is the offline and registry-lag
+  fallback for both registries.
+- If only one registry lists the extension, only that registry's install path is
+  currently available; use the VSIX elsewhere and retry the registry later.
+
+### Registry-installed extension cannot download the server
+
+The extension needs the matching server release on GitHub, even when the
+extension itself came from a registry.
+
+- Confirm the GitHub release for the extension version exists and contains the
+  archive for your OS and architecture plus `checksums.txt`.
+- Open **PICO-8: Show Language Server Output** for the download error.
+- If the extension was published before its server release, wait for the server
+  release or install the previous extension version until the release is
+  available.
+- Verify the checksum failure message against the release's `checksums.txt`.
+  Delete the cache and retry only if the download was interrupted; never bypass
+  a repeated checksum mismatch.
+
+### Proxy and corporate registry restrictions
+
+- Configure VS Code's `http.proxy` and `http.proxyStrictSSL` settings for the
+  server download.
+- If your organization blocks GitHub releases or the Marketplace, install the
+  VSIX from an approved internal mirror, or install the server separately and
+  set `pico8.serverPath`.
+- Open VSX availability depends on your editor's registry configuration. A
+  VS Code installation does not automatically use Open VSX, and VSCodium does
+  not automatically use the VS Code Marketplace.
+
+### The extension updated but the cached server is old
+
+An update installs the new extension but does not delete older cached servers.
+The new extension normally downloads its matching server on the next start.
+
+1. Run **PICO-8: Restart Language Server**.
+2. If the wrong server still starts, run **PICO-8: Clear Downloaded Server
+   Cache**, then restart the server. The command removes the cached server for
+   the installed extension version.
+3. To remove every cached version, delete the extension's global storage
+   directory; [install.md](install.md#cache-location-and-cleanup) lists the
+   platform paths.
+4. To bypass the cache entirely, set `pico8.serverPath` to a known binary and
+   set `pico8.autoDownload` to `false`.
+
+### Extension installed but no features appear
+
+- Open a folder, not a single file, and confirm it contains a `.p8` cart.
+- Confirm the workspace is trusted. The extension disables itself in untrusted
+  workspaces.
+- Check the **PICO-8 Language Server** output channel for a startup error.
+- Run **PICO-8: Copy Server Diagnostics** and include the block in a bug report.
+- Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts are not
+  supported. Run the extension in a local desktop window.
+
+The extension does not support read-only `.p8.png` virtual documents. Decode a
+PNG cart with `pico-lsp decode --output cart.p8 cart.p8.png` and open the text
+cart instead.
 
 ### VS Code settings validation
 
