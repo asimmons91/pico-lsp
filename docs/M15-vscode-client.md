@@ -3,7 +3,7 @@
 **Status:** Done — shipped in v1.3.0. macOS/Windows manual VSIX installation and
 live first-run download verification remain follow-ups. The full server settings
 schema is implemented in M21; server-health reporting is specified by M22.
-Remote extension hosts are not planned. M24 (v1.8.1 is GitHub-only; registry
+Remote extension hosts are not planned. M24 (v1.8.1 shipped GitHub-only; registry
 launch follows in a later patch) supersedes the Marketplace/Open VSX deferral
 and carries the registry and manual verification work.
 
@@ -48,9 +48,9 @@ These decisions were confirmed before the spec was written:
   `^1.95.0` and integration tests run against that minimum version.
 
 > **Superseded by M24:** the Marketplace/Open VSX deferral in this decision is
-> addressed by the opt-in registry automation. v1.8.1 is a GitHub-only release;
-> the registry launch follows in a later patch. The GitHub release VSIX remains
-> the offline, pinned, and registry-lag fallback.
+> addressed by the opt-in registry automation. v1.8.1 shipped as a GitHub-only
+> release; the registry launch follows in a later patch. The GitHub release VSIX
+> remains the offline, pinned, and registry-lag fallback.
 
 ## Scope
 
@@ -488,8 +488,8 @@ Extend `.github/workflows/release.yml`:
   adds server version checks and copyable diagnostics.
 - [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md)
   implements Marketplace/Open VSX publication, public-documentation cleanup, and
-  manual VS Code verification. v1.8.1 is GitHub-only; the registry launch and
-  manual verification follow in a later patch.
+  manual VS Code verification. v1.8.1 shipped GitHub-only; the registry launch
+  and manual verification follow in a later patch.
 
 ## Risks and mitigations
 
