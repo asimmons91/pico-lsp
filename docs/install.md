@@ -13,7 +13,7 @@ Homebrew and Mason packaging are deferred to post-v1; see the
 | Server | VS Code extension download | Normal VS Code use; the extension fetches the matching release |
 | Extension | VS Code Marketplace | Local desktop VS Code |
 | Extension | Open VSX | VSCodium and other Open VSX-compatible editors |
-| Extension | GitHub release VSIX | Offline, pinned, or registry-lag installs |
+| Extension | GitHub release VSIX | Pinned or registry-lag installs; offline use requires a local server |
 
 The extension and server versions match. Extension `1.8.1` downloads
 `pico-lsp` v1.8.1.
@@ -30,11 +30,13 @@ Every release also publishes `checksums.txt` with SHA-256 hashes.
 
 ## VS Code
 
-The VS Code extension is published to the VS Code Marketplace and Open VSX. The
-GitHub release VSIX remains available for offline, pinned, or registry-lag use.
-The extension supports local desktop VS Code and Open VSX-compatible editors
-only; remote extension hosts, web extension hosts, and Codespaces are not
-supported.
+The v1.8.1 release publishes the VS Code extension to the VS Code Marketplace
+and Open VSX. The GitHub release VSIX remains available for pinned or
+registry-lag use; offline use also requires a local server binary and
+`pico8.serverPath`. The extension supports local desktop VS Code and Open
+VSX-compatible editors only; remote extension hosts, web extension hosts, and
+Codespaces are not supported. If a registry does not list the matching version
+yet, use the manual VSIX installation below.
 
 ### Marketplace
 

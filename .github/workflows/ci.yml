@@ -163,6 +163,7 @@ jobs:
             '^extension/scripts/' \
             '^extension/images/' \
             '^extension/icons/README.md$' \
+            '^extension/icons/pico8\.png$' \
             '^extension/.*\.map$'; do
             if unzip -Z1 "$archive" | grep -qE "$pattern"; then
               echo "VSIX contains excluded path matching $pattern" >&2

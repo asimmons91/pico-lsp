@@ -159,11 +159,13 @@ removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
 
 ## VS Code extension
 
-The VS Code extension is published as `asimmons91.pico-lsp` to the
+The v1.8.1 release publishes the VS Code extension as
+`asimmons91.pico-lsp` to the
 [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=asimmons91.pico-lsp)
 and [Open VSX](https://open-vsx.org/extension/asimmons91/pico-lsp). It downloads
 the server version matching its own version from the GitHub release and verifies
-SHA-256.
+SHA-256. If a registry does not list the matching version yet, install the VSIX
+from the GitHub release.
 
 The extension attaches to `.p8` files and to all `.lua` files in workspace
 folders that contain a `.p8` cart. Disable another Lua language server for those
@@ -180,8 +182,8 @@ are intentionally not attached.
   the published version.
 - When you need a version that is not listed yet, install the matching VSIX from
   the [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after
-  verifying its `.vsix.sha256` checksum. The VSIX is the offline and registry-lag
-  fallback for both registries.
+  verifying its `.vsix.sha256` checksum. The VSIX is the registry-lag fallback;
+  offline use also requires a local server binary and `pico8.serverPath`.
 - If only one registry lists the extension, only that registry's install path is
   currently available; use the VSIX elsewhere and retry the registry later.
 

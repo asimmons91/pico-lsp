@@ -30,7 +30,8 @@ feature changes are in scope.
 matching `pico-lsp` server, attaches to the cart, and provides diagnostics,
 completion, the cart-budget status bar, and the glyph picker without requiring
 Go or a manual server install. The same VSIX installs from Open VSX in a
-compatible editor, and from the GitHub release for offline or pinned use. An
+compatible editor, and from the GitHub release for pinned or registry-lag use;
+offline use also requires a local server binary and `pico8.serverPath`. An
 upgrade replaces the extension and downloads the matching server; the
 uninstall path removes the extension and explains how to clear the cached
 server.
@@ -52,7 +53,7 @@ server.
 | D11 | No behavior changes | Do not change LSP responses, server defaults, extension feature behavior, settings, or the download/checksum contract. |
 | D12 | Version-pinned docs | Update the version pins in the root README and install docs as part of the release. Do not leave examples pointing at the previous tag. |
 | D13 | Listing disclosure | Include a short AI-assisted-development note and a link to the project README, matching the root README's existing disclosure. |
-| D14 | VSIX fallback | Keep the GitHub release VSIX and `.vsix.sha256` as the offline, pinned, and registry-lag fallback. |
+| D14 | VSIX fallback | Keep the GitHub release VSIX and `.vsix.sha256` as the pinned and registry-lag fallback. Offline use also requires a local server binary and `pico8.serverPath`. |
 | D15 | Listing display name | **PICO-8 LSP.** The extension ID remains `asimmons91.pico-lsp`. |
 
 ### Resolved decisions
@@ -169,8 +170,9 @@ The listing must contain, in this order:
    - the Marketplace item link.
 3. **Open VSX** installation for VSCodium and compatible editors, including the
    Open VSX item link.
-4. **Manual VSIX** installation for offline, pinned, or registry-lag use, with
-   the GitHub release link and checksum verification.
+4. **Manual VSIX** installation for pinned or registry-lag use, with
+   the GitHub release link and checksum verification. Offline use also requires
+   a local server binary and `pico8.serverPath`.
 5. **Requirements**: VS Code `^1.95.0`, local desktop only, no Go required.
 6. **Quick start**: open a folder containing a `.p8` cart; the matching server
    downloads on first use.
@@ -199,8 +201,9 @@ Helix sections. It must distinguish:
 - **extension** channels: Marketplace, Open VSX, and the GitHub release VSIX.
 
 Include the exact extension ID and CLI install command. Keep the VSIX path for
-offline and pinned versions. Remove the sentence that says Marketplace and Open
-VSX publishing are follow-ups.
+pinned and registry-lag versions; offline use requires a local server and
+`pico8.serverPath`. Remove the sentence that says Marketplace and Open VSX
+publishing are follow-ups.
 
 `docs/install.md` must add a channel table and document:
 
@@ -226,7 +229,8 @@ and add:
 - extension updated but server cache still old;
 - how to restart, clear the server cache, or switch to `pico8.serverPath`;
 - remote, web, and container hosts remain unsupported;
-- VSIX fallback for registry outages or offline machines.
+- VSIX fallback for registry outages or pinned versions; offline machines also
+  need a local server and `pico8.serverPath`.
 
 Keep the existing version-mismatch and copy-diagnostics sections.
 
@@ -288,8 +292,10 @@ jobs after the server release job:
 
 Both jobs download the `vscode-vsix` CI artifact, validate the manifest version
 against the tag, verify the VSIX checksum, fail clearly when the token is
-missing, and publish that exact VSIX. They never run for pull requests or
-branches because the workflow only triggers on `v*` tags.
+missing, and publish that exact VSIX. The release job also re-runs the packaged
+file assertions before uploading the artifact, and retains it for 90 days. The
+jobs never run for pull requests or branches because the workflow only triggers
+on `v*` tags.
 
 The manual fallback commands and token scopes are in
 [release-checklist.md](release-checklist.md#registry-automation). Both commands

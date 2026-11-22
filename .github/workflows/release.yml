@@ -95,6 +95,36 @@ jobs:
           )
         working-directory: editors/vscode
 
+      - name: Verify VSIX contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          archive="pico-lsp-vscode-${version}.vsix"
+          for entry in \
+            extension/dist/extension.js \
+            extension/syntaxes/pico8.tmLanguage.json \
+            extension/language-configuration.json \
+            extension/readme.md \
+            extension/changelog.md \
+            extension/LICENSE.txt \
+            extension/icons/pico-lsp.png; do
+            unzip -Z1 "$archive" | grep -qx "$entry"
+          done
+          for pattern in \
+            '^extension/src/' \
+            '^extension/test/' \
+            '^extension/scripts/' \
+            '^extension/images/' \
+            '^extension/icons/README.md$' \
+            '^extension/icons/pico8\.png$' \
+            '^extension/.*\.map$'; do
+            if unzip -Z1 "$archive" | grep -qE "$pattern"; then
+              echo "VSIX contains excluded path matching $pattern" >&2
+              exit 1
+            fi
+          done
+
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v7
         with:
@@ -104,7 +134,7 @@ jobs:
             pico-lsp-vscode-*.vsix.sha256
           if-no-files-found: error
           overwrite: true
-          retention-days: 7
+          retention-days: 90
 
       - name: Validate version injection
         shell: bash

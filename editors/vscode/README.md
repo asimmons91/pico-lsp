@@ -9,6 +9,9 @@ budgets without installing Go or managing a server binary.
 
 ## Install
 
+Registry processing can lag after a release. If the matching version is not
+listed in a registry yet, use the manual VSIX installation below.
+
 ### VS Code Marketplace
 
 1. Open the Extensions view (`Ctrl+Shift+X` on Windows and Linux, `Cmd+Shift+X`
@@ -39,8 +42,9 @@ Open VSX listing:
 
 ### Manual VSIX installation
 
-Install the VSIX when you are offline, need to pin a specific version, or the
-registry version is behind GitHub.
+Install the VSIX when you need to pin a specific version or the registry
+version is behind GitHub. For offline use, also install a local `pico-lsp`
+binary and set `pico8.serverPath`; the VSIX does not bundle the server.
 
 1. Download `pico-lsp-vscode-<version>.vsix` and
    `pico-lsp-vscode-<version>.vsix.sha256` from the matching
