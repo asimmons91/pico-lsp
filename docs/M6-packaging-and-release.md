@@ -46,8 +46,8 @@ includes, completes the PICO-8 API, and reports type diagnostics.
 
 > **Superseded by later milestones:** the VS Code client shipped in M15, and M24
 > prepares VS Code Marketplace and Open VSX publishing for that extension.
-> v1.8.1 is GitHub-only; the registry launch follows in a later patch. Homebrew
-> and Mason remain deferred.
+> v1.8.1 shipped as a GitHub-only release; the registry launch follows in a later
+> patch. Homebrew and Mason remain deferred.
 
 ## Release versioning
 

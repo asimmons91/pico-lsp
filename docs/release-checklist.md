@@ -1,13 +1,24 @@
 # Release checklist
 
 This checklist covers the v1.x release process for GitHub server archives and the
-VS Code extension. Homebrew and Mason publishing are deferred to post-v1. This
-checklist prepares **v1.8.1 as a GitHub-only release**; the Marketplace/Open VSX
-launch follows in a later patch.
+VS Code extension. Homebrew and Mason publishing are deferred to post-v1.
+**v1.8.1 was released on 2026-11-22 as a GitHub-only release**; the
+Marketplace/Open VSX launch follows in a later patch.
+
+## v1.8.1 release record
+
+- Tag: `v1.8.1`
+- Commit: `a3bd9929f9bc80cacd7615c205b6a64d058b590d`
+- Release: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
+- Release workflow: https://github.com/asimmons91/pico-lsp/actions/runs/45039342788
+- Assets: Linux, macOS, and Windows archives for amd64 and arm64,
+  `checksums.txt`, `pico-lsp-vscode-1.8.1.vsix`, and its `.sha256`
+- Registry jobs: skipped because `PUBLISH_REGISTRIES` is unset
+- `go install ...@v1.8.1` verified: reports `v1.8.1`
 
 ## Pre-release
 
-- [ ] `main` is green on Linux, macOS, and Windows CI.
+- [x] `main` is green on Linux, macOS, and Windows CI.
 - [x] `go test -race ./...` passes locally or on Linux CI.
 - [x] `gofmt -l .` is empty.
 - [x] `go vet ./...` passes.
@@ -59,30 +70,30 @@ launch follows in a later patch.
 - [x] `vsce ls` shows no `src/`, `test/`, `scripts/`, source maps, `images/`,
       `icons/README.md`, or `icons/pico8.png`.
 - [x] CI and the release workflow run the same VSIX content assertions.
-- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [x] The VSIX and `.vsix.sha256` are attached to the GitHub release.
 
 ## Tag and publish v1.8.1 (GitHub-only)
 
-- [ ] Merge the release pull request into `main`.
-- [ ] Verify the merge commit is green in CI.
-- [ ] Confirm the `PUBLISH_REGISTRIES` repository variable is unset or not
+- [x] Merge the release pull request into `main`.
+- [x] Verify the merge commit is green in CI.
+- [x] Confirm the `PUBLISH_REGISTRIES` repository variable is unset or not
       `true`, so the registry jobs are skipped.
-- [ ] Create the annotated tag:
+- [x] Create the annotated tag:
 
   ```sh
   git tag -a v1.8.1 -m "pico-lsp v1.8.1"
   git push origin v1.8.1
   ```
 
-- [ ] Watch the `Release` workflow complete.
-- [ ] Confirm the GitHub release contains Linux, macOS, and Windows archives for
+- [x] Watch the `Release` workflow complete.
+- [x] Confirm the GitHub release contains Linux, macOS, and Windows archives for
       amd64 and arm64 plus `checksums.txt`.
-- [ ] Confirm the release contains `pico-lsp-vscode-1.8.1.vsix` and
+- [x] Confirm the release contains `pico-lsp-vscode-1.8.1.vsix` and
       `pico-lsp-vscode-1.8.1.vsix.sha256`.
-- [ ] Download and run `pico-lsp --version` from at least one release archive.
-- [ ] Verify the archive checksum and the VSIX checksum.
-- [ ] Confirm `publish-marketplace` and `publish-openvsx` are skipped.
-- [ ] Confirm the release notes describe v1.8.1 as GitHub-only and point to the
+- [x] Download and run `pico-lsp --version` from at least one release archive.
+- [x] Verify the archive checksum and the VSIX checksum.
+- [x] Confirm `publish-marketplace` and `publish-openvsx` are skipped.
+- [x] Confirm the release notes describe v1.8.1 as GitHub-only and point to the
       VSIX.
 - [ ] Install the release VSIX and run the manual verification below.
 
@@ -161,8 +172,8 @@ launch follows in a later patch.
 
 ## Post-release
 
-- [ ] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1`
-      builds for a developer.
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1`
+      builds for a developer and reports `v1.8.1`.
 - [ ] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, the registry launch, Zed,
       and API version selection as needed.

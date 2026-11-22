@@ -1,8 +1,9 @@
 # M24 — VS Code Marketplace Launch and Documentation Cleanup
 
-**Status:** In progress — `v1.8.1` is prepared as a GitHub-only release (server
-archives and VSIX). Registry publication and manual VS Code verification remain
-pending for a later patch.
+**Status:** In progress — `v1.8.1` was released on 2026-11-22 as a GitHub-only
+release (server archives and VSIX). Registry publication and manual VS Code
+verification remain pending for a later patch. Release:
+https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health)
 
@@ -79,7 +80,6 @@ registry patch is live.
 
 ### Pending publication items
 
-- Publish `v1.8.1` as a GitHub-only release with the server archives and VSIX.
 - After the GitHub-only release, claim and verify the `asimmons91` publisher in
   both registries.
 - Configure the `VSCE_PAT` and `OVSX_PAT` repository secrets and set
@@ -162,11 +162,12 @@ registry patch is live.
 5. [x] Add registry publication and manual fallback to the release workflow.
 6. [x] Update release checklist, changelogs, roadmap, backlog, and version pins.
 7. [x] Build and verify the server and extension; inspect the VSIX contents.
-8. [ ] Publish `v1.8.1` as a GitHub-only release. Add real screenshots and
-       publish the later registry patch after the publisher and tokens are ready.
+8. [x] Publish `v1.8.1` as a GitHub-only release.
 9. [ ] Run the manual verification checklist on the VS Code machine and record
        the results.
-10. [ ] Verify both listings, update `AGENTS.md`, and mark M24 Done.
+10. [ ] Prepare the later registry patch: add real screenshots, set the secrets
+       and `PUBLISH_REGISTRIES=true`, publish both registries, verify both
+       listings, update `AGENTS.md`, and mark M24 Done.
 
 ## Detailed requirements
 
@@ -452,7 +453,7 @@ unverified platform as an open release item rather than implying it passed.
       internal notes. Verified locally with `vsce ls`.
 - [x] The icon/trademark question is resolved without publishing an unlicensed
       PICO-8 logo.
-- [ ] The `v1.8.1` GitHub-only release is cut with server archives and the VSIX;
+- [x] The `v1.8.1` GitHub-only release is cut with server archives and the VSIX;
       the registry jobs are skipped because `PUBLISH_REGISTRIES` is unset.
 - [ ] The later registry patch is tagged after the release PR merges, with the
       server release published and verified before the extension.
