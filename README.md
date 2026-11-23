@@ -116,6 +116,11 @@ upgrade, uninstall, cache, and offline instructions.
 
 ## Neovim 0.11+
 
+> **Client migration:** The Neovim client is being extracted to
+> [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim). The setup below
+> remains valid while the plugin is validated; new client features and
+> milestone specs live in that repository.
+
 ```lua
 vim.filetype.add({ extension = { p8 = "pico8" } })
 

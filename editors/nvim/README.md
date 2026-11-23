@@ -1,5 +1,11 @@
 # Neovim 0.11+ setup
 
+> **Migration:** The client is being extracted to
+> [`asimmons91/pico8.nvim`](https://github.com/asimmons91/pico8.nvim). This
+> directory remains the historical copy while the plugin is validated. New
+> Neovim client work, docs, and milestone specs belong in the plugin
+> repository. M33 remains server-owned here.
+
 This directory contains:
 
 - the recommended `vim.lsp.config` setup for `.p8` carts;

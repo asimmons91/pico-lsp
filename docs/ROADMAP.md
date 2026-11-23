@@ -129,6 +129,12 @@ and reruns the [release checklist](release-checklist.md).
 M25–M34 are the proposed Neovim integration batch. The recommended
 implementation order is M25 → M34:
 
+> **Client migration:** The Neovim client, M25–M32/M34 specs, and the
+> editor-only Tree-sitter grammar are now maintained in
+> [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim). M33 remains
+> server-owned here. This repository retains the historical `editors/nvim` copy
+> until the plugin is validated.
+
 1. **M25–M26** establish the drop-in client config and harden the optional
    include helper.
 2. **M27–M31** make existing server features visible and ergonomic in Neovim:

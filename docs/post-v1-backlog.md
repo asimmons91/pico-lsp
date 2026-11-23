@@ -48,7 +48,9 @@ v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release; the
 registry launch follows in a later patch. M25–M34 are the proposed Neovim
 integration batch; they are dependency-ordered and none has started. The
-unpromoted items below are not part of these releases.
+Neovim client milestones and specs now live in
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim); M33 remains in this
+repository. The unpromoted items below are not part of these releases.
 
 ## Prioritization
 
