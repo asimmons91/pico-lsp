@@ -3,7 +3,8 @@
 **Status:** Proposed — not started.
 
 **Depends on:** M7 (formatter), M8 (`.p8.png` virtual documents), M11 (pull
-diagnostics), M14 (code actions)
+diagnostics), M14 (code actions), M25 (Neovim test job and config), M30
+(in-editor include navigation fallback)
 
 **Release target:** Proposed for the Neovim integration batch (v1.9.0);
 unscheduled.
@@ -26,17 +27,21 @@ All behavior is standard LSP and remains available to every client; no
 Neovim-specific server branch is added.
 
 **Demo:** In Neovim 0.11+, select a few lines in a cart and press `gq`; the
-server returns edits for those lines only. Put the cursor on an `#include`
-path and press `gx`; the included file opens. On a client that supports code-lens
-refresh, the budget lens updates after a cart edit without a manual refresh.
+server returns edits for those lines only. A range that would change the line
+count is refused; Neovim's `formatexpr` may ignore the error, so use a
+whole-document format command when that happens. In Neovim 0.12+, put the cursor
+on an `#include` path and press `gx`; the target is passed to `vim.ui.open` and
+the system opener. M30's `gf` remains the in-editor path. On a client that
+supports code-lens refresh, the budget lens updates after a cart edit without a
+manual refresh.
 
 ## Decisions proposed
 
 | ID | Decision | Choice |
 |---|---|---|
 | D1 | Range formatting scope | Format complete lines covered by the request. Return edits only for those lines. |
-| D2 | Line preservation | Format the full document for context, but return no edits and a clear error when the formatted document changes the line count. Line count changes make range mapping unsafe. |
-| D3 | Range boundaries | Expand a partial-line range to whole lines. Reject a range outside the document or an empty/invalid range with an error. |
+| D2 | Line preservation | Format the full document for context, but return a `RequestFailed` error when the formatted document changes the line count. Neovim's `formatexpr` may swallow that error; the server contract is still an error rather than a partial edit. |
+| D3 | Range boundaries | Expand a partial-line range to whole lines and clamp it to the document. An empty expanded range returns no edits. Reject only invalid params or a missing/unopened document. |
 | D4 | Syntax and includes | Reuse document-formatting safety: syntax errors, missing/unreadable includes, and `.p8.png` virtual documents are refused with the existing error style. |
 | D5 | Document links | Return links for resolved `#include` directives in the requested file. Skip missing, unreadable, and nested includes. Do not add a resolve provider. |
 | D6 | Link range | Use the directive's path token range, including quotes if that is the parser's existing span; the link target is the resolved file URI. |
@@ -106,7 +111,9 @@ Requirements:
   error.
 - Compare the original and formatted line counts. If they differ, return a
   `RequestFailed` error explaining that range formatting would change the line
-  count and that the user should format the whole document.
+  count and that the user should format the whole document. Do not return a
+  partial edit. Neovim's `formatexpr` may not display the server error; the
+  response must still be correct for clients that do.
 - Expand the requested LSP range to complete lines:
   - start line = requested start line;
   - end line = requested end line, inclusive when the end character is greater
@@ -130,7 +137,9 @@ Neovim behavior to verify:
 - Neovim sets `formatexpr` when the server advertises range formatting.
 - `gq` on selected lines sends `textDocument/rangeFormatting`.
 - `gq` on a single line formats only that line.
-- A line-count-changing document causes a visible error, not a partial edit.
+- A line-count-changing document returns a `RequestFailed` response and no
+  partial edit. Neovim may silently do nothing; document the whole-document
+  workaround.
 
 ### 2. Document links
 
@@ -159,9 +168,11 @@ Requirements:
 - Bound the result to a reasonable number of directives; carts are small, but
   avoid unbounded allocation from malformed input.
 
-Neovim 0.12 maps `gx` to document links when available. Verify that `gx` on an
-include path opens the target. In older Neovim versions, M30's `gf` remains the
-supported path.
+Neovim 0.12 maps `gx` to document links when available. The default handler
+passes the target to `vim.ui.open`, which uses the system opener rather than
+opening a Neovim buffer; M30's `gf` remains the in-editor path. Verify `gx` by
+stubbing `vim.ui.open` or by asserting the `textDocument/documentLink` result.
+Neovim 0.11 has no document-link support in `gx`.
 
 ### 3. Code-lens refresh
 
@@ -186,8 +197,9 @@ supported path.
 - Document in `editors/nvim/README.md`:
   - `gq` works when the server advertises range formatting and Neovim sets
     `formatexpr`;
-  - `gx` on an include path opens the linked file on Neovim 0.12+;
-  - `gf` remains the fallback and is M30.
+  - `gx` on an include path uses Neovim 0.12's document-link handling and
+    `vim.ui.open` (system opener); it does not open an editor buffer;
+  - `gf` remains the in-editor fallback and is M30.
 - Update the root README feature list only if it claims formatting or include
   navigation.
 - Note the line-count restriction for range formatting so users know when to
@@ -223,20 +235,24 @@ supported path.
   - range formatting a single line works;
   - a partial-line range expands to whole lines;
   - an empty range returns no edits;
-  - a document whose formatted line count differs returns the documented error;
+  - a document whose formatted line count differs returns the documented error
+    and no edits;
   - syntax errors and missing includes are refused;
   - `.p8.png` virtual documents are refused;
   - document links for resolved includes have the expected range and target;
   - missing/unreadable/nested includes produce no link;
   - links are filtered to the requested file;
+  - a Neovim 0.12 `gx` smoke check stubs `vim.ui.open` and asserts the expected
+    target, or the more portable check asserts the `documentLink` response
+    directly;
   - code-lens refresh is requested only when the client advertises support;
   - refresh is throttled and does not run after shutdown.
 - Golden tests for link ranges in quoted, unquoted, and tab-suffixed includes.
 - Existing formatter, navigation, and diagnostic tests remain green.
 - `go test ./...`, `go test -race ./...`, `go vet ./...`, `gofmt -l .`,
   `golangci-lint run ./...`, and `govulncheck ./...` remain green.
-- Add a headless Neovim smoke check for `gq` and `gx` in the Neovim CI job when
-  the capabilities are present.
+- Add a headless Neovim smoke check for `gq` (0.11+) and, on 0.12+ only, `gx`
+  with a stubbed `vim.ui.open`, in the Neovim CI job from M25.
 
 ## Exit criteria
 
@@ -244,7 +260,8 @@ supported path.
 - [ ] `gq` formats the selected lines and refuses unsafe line-count changes.
 - [ ] The server advertises and implements document links for resolved
       `#include` directives.
-- [ ] `gx` opens an include path in Neovim 0.12+.
+- [ ] A Neovim 0.12 `gx` smoke check verifies the document link through a
+      stubbed `vim.ui.open`; 0.11 uses M30's `gf`.
 - [ ] Code-lens refresh is sent only to capable clients and is throttled.
 - [ ] Existing formatting, navigation, and diagnostics behavior is unchanged.
 - [ ] API and Neovim docs describe the new capabilities.

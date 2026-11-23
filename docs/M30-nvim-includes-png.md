@@ -24,17 +24,19 @@ never leave a partly initialized virtual buffer.
 
 **Demo:** Open `testdata/smoke.p8`, place the cursor on
 `#include "lib.lua"`, and press `gf`. The included file opens. Repeat with
-`#include  lib.lua:2` and confirm the `:2` selector is ignored for file opening
-while the correct file is opened. Run `nvim testdata/p8png/smoke.p8.png` with the
-helper enabled; a read-only `pico8-cart:` buffer opens and attaches the client.
-`:Pico8OpenPng` offers file completion.
+`#include "other.p8:2"` and confirm the `:2` selector is recognized only for a
+cart include and ignored for file opening. `#include "lib.lua:2"` is a literal
+`.lua:2` path and is not treated as a tab selector, matching the server. Run
+`nvim testdata/p8png/smoke.p8.png` with the helper enabled; a read-only
+`pico8-cart:` buffer opens and attaches the client. `:Pico8OpenPng` offers file
+completion.
 
 ## Decisions proposed
 
 | ID | Decision | Choice |
 |---|---|---|
 | D1 | Include options | Set `include` and `includeexpr` buffer-locally in `ftplugin/pico8.vim`. Do not require the helper. |
-| D2 | Path parsing | Reuse the helper's include-target parsing rules: optional quotes, leading whitespace after `#include`, forward-slash normalization, and a trailing `:<hex digit>` tab selector. |
+| D2 | Path parsing | Reuse the helper's include-target parsing rules: optional quotes, leading whitespace after `#include`, forward-slash normalization, and a trailing `:<hex digit>` tab selector only for `.p8`/`.p8.png` includes, matching the server. |
 | D3 | Relative paths | Resolve relative paths against the cart's directory, not Neovim's current working directory. Absolute paths stay absolute. |
 | D4 | Missing targets | Return the resolved path and let Neovim report `E484`/not-found normally. Do not create files. |
 | D5 | `gf` scope | Navigation applies to `.p8` buffers. Included `.lua` files do not gain `gf` include handling. |
@@ -104,8 +106,9 @@ The resolver must handle:
 #include "lib.lua"
 #include 'lib.lua'
 #include   lib.lua
-#include "lib/player.lua:2"
-#include lib/player.lua:a
+#include "other.p8:2"
+#include other.p8:a
+#include "lib.lua:2"   -- literal filename, not a tab selector
 ```
 
 Rules:
@@ -113,7 +116,9 @@ Rules:
 - Strip one pair of matching single or double quotes.
 - Trim leading and trailing whitespace.
 - Convert backslashes to forward slashes.
-- Strip a trailing `:<hex digit>` tab selector before resolving the file path.
+- Strip a trailing `:<hex digit>` tab selector only when the remaining path
+  ends in `.p8` or `.p8.png`. This matches the server's
+  `splitIncludeTarget`; a `.lua:2` path stays literal.
 - Resolve relative paths against the cart's directory.
 - Keep absolute paths absolute.
 - Return a normalized path that Neovim can use with `:find`/`:edit`.
@@ -214,7 +219,10 @@ When `require("pico_lsp").setup()` enables the helper:
 - Headless tests assert:
   - `gf` opens quoted, unquoted, whitespace-padded, nested, and absolute
     include targets;
-  - a `:tab` suffix opens the file and strips the suffix;
+  - `gf` resolves a relative include against the cart even when Neovim's
+    working directory is a sibling or repository root;
+  - a `:tab` suffix on a `.p8` include opens the file and strips the suffix;
+  - a `.lua:2` path is treated as a literal filename, not a tab selector;
   - a missing target reports an error and creates no file;
   - the include options are restored when the filetype changes;
   - `nvim cart.p8.png` auto-opens a read-only `pico8-cart:` buffer with an

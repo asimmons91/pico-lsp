@@ -35,8 +35,8 @@ server settings.
 | D2 | Wiring point | Add an `on_attach` function to `editors/nvim/lsp/pico_lsp.lua` that delegates to a helper module. This covers both the optional helper and base config users. |
 | D3 | Scope | Enable per buffer, not globally. Do not change other filetypes or other LSP clients. |
 | D4 | Setup options | Add `codelens` and `inlay_hints` booleans to `require("pico_lsp").setup`, defaulting to `true`. |
-| D5 | Neovim API floor | Use `vim.lsp.codelens.enable` and `vim.lsp.inlay_hint.enable` from Neovim 0.11. Wrap calls in `pcall` so a stripped or patched build cannot break attachment. |
-| D6 | Code-lens refresh | Enable the lens on attach. On Neovim versions without automatic code-lens refresh, refresh on `BufWritePost` for the cart. Do not run a refresh on every keystroke. |
+| D5 | Neovim API floor | Use a compatibility helper: Neovim 0.12+ has `vim.lsp.codelens.enable`/`is_enabled`; Neovim 0.11 has `vim.lsp.codelens.refresh` and its legacy display path. Inlay hints expose `enable`/`is_enabled` on both. Wrap calls in `pcall` so a stripped or patched build cannot break attachment. |
+| D6 | Code-lens refresh | Enable or refresh the lens on attach. On Neovim 0.12+ the client refreshes automatically after changes; on 0.11 refresh on `BufWritePost`. Do not run a refresh on every keystroke. |
 | D7 | Inlay toggle | Add `:Pico8ToggleInlayHints` to toggle the client display for the current buffer. It does not rewrite server configuration; it warns when `pico8.inlayHints` is false. |
 | D8 | Server changes | None. The server already advertises both capabilities and honors its settings. |
 | D9 | Non-helper users | Users who replace the shipped config's `on_attach` are responsible for enabling the features; document the one-line calls. |
@@ -83,8 +83,10 @@ server settings.
 
 On `LspAttach` for a `pico_lsp` client:
 
-- Call `vim.lsp.codelens.enable(true, { bufnr = bufnr })` when
-  `M.opts.codelens ~= false`.
+- When `M.opts.codelens ~= false`, call a compatibility helper that:
+  - uses `vim.lsp.codelens.enable(true, { bufnr = bufnr })` on Neovim 0.12+;
+  - otherwise uses `vim.lsp.codelens.refresh({ bufnr = bufnr })` on Neovim
+    0.11, whose legacy code-lens engine displays the returned lenses.
 - Call `vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })` when
   `M.opts.inlay_hints ~= false`.
 - Do not check the server's current settings before enabling. The server
@@ -93,6 +95,8 @@ On `LspAttach` for a `pico_lsp` client:
 - Wrap each call in `pcall` and log a debug message if the API is unavailable.
 - Do not call either function for buffers whose filetype is not `pico8`.
 - Do not enable semantic tokens or completion from this hook.
+- Do not assume `vim.lsp.codelens.is_enabled` exists on 0.11; capability
+  reporting and tests must use the same version-aware helper.
 
 ### 2. Setup options
 
@@ -117,8 +121,9 @@ require("pico_lsp").setup({
 ### 3. Code-lens refresh
 
 - Neovim 0.12 refreshes code lenses automatically after document changes.
-- On versions that do not, add a buffer-local `BufWritePost` autocmd for carts
-  that calls `vim.lsp.codelens.refresh({ bufnr = bufnr })` inside `pcall`.
+- Neovim 0.11 has no `enable` state; call `vim.lsp.codelens.refresh({ bufnr =
+  bufnr })` on attach and add a buffer-local `BufWritePost` autocmd for carts
+  that refreshes again.
 - Do not call refresh while the client is not attached.
 - Do not refresh on every `TextChanged` event; the budget lens is allowed to be
   one save behind on older clients.
@@ -146,7 +151,11 @@ require("pico_lsp").setup({
   turn them off, and how to enable them manually for a custom config:
 
   ```lua
+  -- Neovim 0.12+
   vim.lsp.codelens.enable(true, { bufnr = bufnr })
+  -- Neovim 0.11
+  vim.lsp.codelens.refresh({ bufnr = bufnr })
+
   vim.lsp.inlay_hint.enable(true, { bufnr = bufnr })
   ```
 
@@ -160,18 +169,25 @@ require("pico_lsp").setup({
 ### 6. Tests
 
 - Headless Neovim tests assert:
-  - `vim.lsp.codelens.is_enabled({ bufnr = bufnr })` is true after attach;
-  - `vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr })` is true after attach;
+  - on Neovim 0.12+, `vim.lsp.codelens.is_enabled({ bufnr = bufnr })` is true
+    after attach;
+  - on Neovim 0.11, the budget lens is available through
+    `vim.lsp.codelens.get(bufnr)` after the attach refresh, because 0.11 has no
+    `is_enabled`;
+  - `vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr })` is true after attach on
+    both versions;
   - direct `textDocument/codeLens` returns the budget lens;
   - direct `textDocument/inlayHint` returns a hint when
     `pico8.inlayHints = true` and an empty result when false;
-  - `setup({ codelens = false })` leaves code lens disabled;
+  - `setup({ codelens = false })` suppresses the lens request/display on both
+    versions (0.12 reports disabled; 0.11 has no request and no cached lens);
   - `setup({ inlay_hints = false })` leaves inlay hints disabled;
   - toggling inlay hints flips the per-buffer state;
   - a non-PICO-8 buffer is unaffected.
 - Add a test for a config that does not call `require("pico_lsp").setup` but
   uses the shipped `lsp/pico_lsp.lua`; the default enablement must still apply.
-- Keep tests compatible with Neovim 0.11 and 0.12.
+- Keep tests compatible with Neovim 0.11 and 0.12. Use a version check rather
+  than calling a 0.12-only function unconditionally.
 
 ## Interfaces and state
 
@@ -183,8 +199,8 @@ require("pico_lsp").setup({
 
 ## Error handling
 
-- A failed `vim.lsp.codelens.enable` or `vim.lsp.inlay_hint.enable` must not
-  prevent the client from attaching.
+- A failed `vim.lsp.codelens.enable`, `vim.lsp.codelens.refresh`, or
+  `vim.lsp.inlay_hint.enable` must not prevent the client from attaching.
 - A missing `pico_lsp` client produces a clear notification for the toggle
   command and does nothing for autocmds.
 - A server that returns no lens or hints is a valid state, not an error.

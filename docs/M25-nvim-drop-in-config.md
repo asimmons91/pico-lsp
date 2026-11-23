@@ -36,12 +36,12 @@ and open `cart.p8`. The server attaches with the cart's directory as
 | D2 | Activation | Do not auto-enable the client. Users call `vim.lsp.enable("pico_lsp")`, matching normal Neovim LSP configuration. |
 | D3 | Root strategy | For `.p8` buffers, use the cart's directory as `root_dir`. Do not default to `.git`. This is the **recommended** choice and remains the main decision to confirm. |
 | D4 | Settings | Do not duplicate server defaults in the shipped config. An empty or absent `settings` table lets `internal/config` remain authoritative; documentation shows how to override individual fields. |
-| D5 | Command discovery | Resolve the executable from `vim.g.pico_lsp_cmd`, then `vim.env.PICO_LSP_BIN`, then `{ "pico-lsp" }`. Local builds and headless tests can point at an absolute binary. |
+| D5 | Command discovery | Resolve the executable from `vim.g.pico_lsp_cmd`, then `vim.env.PICO_LSP_BIN`, then `{ "pico-lsp" }`. Normalize string values to a one-element list because Neovim's LSP `cmd` must be a list or function. Local builds and headless tests can point at an absolute binary. |
 | D6 | Filetypes | The base config handles `pico8` only. Cart-owned `.lua` files remain the optional helper's job. |
 | D7 | Helper integration | The helper reads the merged `vim.lsp.config["pico_lsp"]` value and stops carrying its own copy of `apiVersion`, `typeChecking`, and `inlayHints`. |
 | D8 | Keymaps | No default keymaps beyond Neovim's own LSP defaults. |
 | D9 | Editor floor | Neovim 0.11+ remains the supported floor. Use `vim.lsp.config`/`vim.lsp.enable`; no `nvim-lspconfig` dependency. |
-| D10 | Release | M25 is the foundation for M26–M32 and should land first. It can ship independently in a patch. |
+| D10 | Release | M25 is the foundation for M26–M32 and supplies the config/test job used by M33–M34. It should land first and can ship independently in a patch. |
 
 ### Open decision
 
@@ -96,8 +96,12 @@ The spec assumes the cart directory is the default and that users can override
 
 ```lua
 local function command()
-  if vim.g.pico_lsp_cmd then
-    return vim.g.pico_lsp_cmd
+  local configured = vim.g.pico_lsp_cmd
+  if type(configured) == "string" and configured ~= "" then
+    return { configured }
+  end
+  if type(configured) == "table" and #configured > 0 then
+    return configured
   end
   if vim.env.PICO_LSP_BIN and vim.env.PICO_LSP_BIN ~= "" then
     return { vim.env.PICO_LSP_BIN }
@@ -124,9 +128,9 @@ Requirements:
   autocmds, or start clients as a side effect.
 - `root_dir` must call `on_dir` at most once and must not call it for unnamed
   buffers.
-- The returned `cmd` may be a string or a list. Accept table values from
-  `vim.g.pico_lsp_cmd` unchanged; document that a string must be executable on
-  `PATH`.
+- The resolved `cmd` must always be a non-empty list of strings or a function.
+  Neovim's LSP client rejects a bare string, so normalize `vim.g.pico_lsp_cmd`
+  strings to `{ value }`. Empty values fall through to the environment/default.
 - Do not include server settings that merely repeat `internal/config` defaults.
 - Do not include `on_attach`; M27 adds the helper's client-capability wiring.
 - Add a short comment explaining that users can override the config with
@@ -135,13 +139,14 @@ Requirements:
 ### 2. Root behavior
 
 - A named `.p8` buffer uses the normalized directory containing the cart.
+- Unnamed buffers and `pico8-cart:` virtual buffers are not auto-activated by
+  the base config. Return without calling `on_dir`; do not fabricate a root.
+  The helper starts `.p8.png` virtual documents explicitly with the source
+  directory.
+- Do not call `on_dir(nil)` merely to force a rootless client; Neovim would
+  start a second client for a virtual buffer that the helper already owns.
 - The helper continues to use the owning cart's directory as the root for
   cart-owned `.lua` buffers.
-- A `.p8.png` virtual buffer or a buffer created by `:Pico8OpenPng` is started
-  with an explicit `root_dir` by the helper. The base config must not override
-  it.
-- A rootless client is allowed for unnamed or special buffers; it must still
-  attach and analyze the open document.
 - Multiple carts in one directory share one client. Carts in different
   directories may start separate clients.
 - Do not walk upward to find a `.p8` file for a `.lua` buffer. That would make
@@ -180,6 +185,8 @@ Requirements:
 - Add a headless test that starts Neovim with `--clean -u NONE`, appends
   `editors/nvim` to `runtimepath`, and asserts:
   - `vim.lsp.config["pico_lsp"]` exists and has the expected fields;
+  - `vim.g.pico_lsp_cmd` as a string resolves to a one-element `cmd` list, and
+    an empty string falls through to the default;
   - a cart in a temporary non-git directory attaches;
   - `client.root_dir` is the cart directory;
   - two carts in sibling directories use separate roots;

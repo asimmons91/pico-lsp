@@ -36,7 +36,7 @@ next step.
 | D3 | Binary check | Resolve the configured `cmd` and report `vim.fn.executable`/`filereadable` plus the resolved path. Do not download anything. |
 | D4 | Version check | Run `<cmd> --version` with a 2-second timeout and show the parsed server version. If a client is running, also show `client.server_info.version` and warn on a mismatch. |
 | D5 | Client report | For each `pico_lsp` client, show root, attached buffer count, settings source/type, and workspace folders. Redact nothing beyond source text, which is never included. |
-| D6 | Capability report | For the current `pico8` buffer, report code-lens and inlay-hint enablement and warn when the server setting asks for a feature the client has disabled. |
+| D6 | Capability report | For the current `pico8` buffer, report code-lens and inlay-hint enablement. Use `is_enabled` only where the Neovim version provides it; on 0.11 report the legacy refresh-based code-lens path instead. Warn when the server setting asks for a feature the client has disabled. |
 | D7 | Include report | For helper-managed `.lua` buffers, report the owning cart and whether the client is attached. Warn when `lua_ls` and `pico_lsp` are both attached. |
 | D8 | Helper report | Report whether `require("pico_lsp").setup` ran, whether it is disabled, and which optional commands exist. Missing commands are a warning only when the helper is expected. |
 | D9 | Tree-sitter report | Advisory only: report whether the `pico8` parser loads and point to M34's installer. Do not install it. |
@@ -99,11 +99,14 @@ section headings and key phrases.
 - Report `vim.lsp.config["pico_lsp"]` presence.
   - If absent, warn that the shipped `editors/nvim/lsp/pico_lsp.lua` is not on
     `runtimepath` and show the runtime-path line.
-- Report the resolved `cmd` table/string and its source:
-  `vim.g.pico_lsp_cmd`, `PICO_LSP_BIN`, or the default.
+- Report the resolved `cmd` value and its source: `vim.g.pico_lsp_cmd`,
+  `PICO_LSP_BIN`, or the default.
 - Validate the command shape:
-  - a non-empty table with a string executable or a non-empty string;
-  - warn on an empty command or non-string entries.
+  - a non-empty list of non-empty strings, or a function;
+  - warn on a bare string because Neovim's LSP client rejects it even though
+    the shipped M25 config normalizes strings;
+  - warn on an empty command or non-string list entries;
+  - report a function as user-provided without executing it.
 - Do not evaluate or spawn the command in this section beyond the binary check.
 
 ### 3. Server binary and version
@@ -145,10 +148,14 @@ For the current `pico8` buffer with an attached client:
   pulled by the server.
 - Report:
   - `pico8.inlayHints` value and `vim.lsp.inlay_hint.is_enabled({ bufnr })`;
-  - `pico8.limits.codeLens` value and
-    `vim.lsp.codelens.is_enabled({ bufnr })`.
-- If the server setting is true and the client feature is disabled, warn with
-  the relevant `require("pico_lsp").setup` option or manual enable call.
+  - `pico8.limits.codeLens` value and code-lens state:
+    - Neovim 0.12+: `vim.lsp.codelens.is_enabled({ bufnr })`;
+    - Neovim 0.11: the legacy refresh-based engine has no per-buffer enable
+      state; report whether `vim.lsp.codelens.get(bufnr)` has cached lenses and
+      do not claim a client-side toggle exists.
+- If the server setting is true and a feature with a client-side toggle is
+  disabled, warn with the relevant `require("pico_lsp").setup` option or manual
+  enable call. On 0.11, do not warn about code lens for a missing toggle.
 - If the server setting is false, report that the feature is intentionally off.
 - Report `pico8.typeChecking` and `pico8.diagnostics.mode` when present, and
   warn on values outside `off/basic/strict` or `auto/push/pull`.
@@ -233,8 +240,13 @@ For the current `pico8` buffer with an attached client:
   - run with the helper disabled and assert no missing-command warnings;
   - run with `pico8.inlayHints = true` and client hints disabled and assert a
     warning;
+  - on 0.12+, run with the server code lens enabled and the client codelens
+    disabled and assert a warning; on 0.11 assert no false toggle warning;
   - run with `lua_ls` mocked as attached to a managed include and assert the
-    conflict warning, without starting a real `lua_ls`.
+    conflict warning, without starting a real `lua_ls`;
+  - run with no helper and no client, then assert the client list, buffers, and
+    `stdpath("data")` tree are unchanged after health (the read-only
+    guarantee).
 - Keep the tests independent of server version strings; match `pico-lsp` and
   `development build` labels.
 - Run on Neovim 0.11 and 0.12 in CI.

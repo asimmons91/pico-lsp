@@ -34,7 +34,7 @@ the helper never attaches the first cart's client to the second cart's include.
 | D1 | Include source | When a `.p8` buffer is loaded, parse its lines instead of re-reading the file. Fall back to disk only when no loaded buffer exists. |
 | D2 | Cache key | Cache each cart's parsed include set by buffer `changedtick` when loaded, otherwise by path plus mtime and size. Invalidate on save and on debounced cart edits. |
 | D3 | Client reuse | Reuse an existing `pico_lsp` client only when its normalized root matches the target cart directory. Otherwise start a client for that root. |
-| D4 | Ownership | Store helper-managed attachments in a buffer map containing the client ID, root, and owning cart. Never detach a client the helper did not start for that buffer. |
+| D4 | Ownership | Store helper-managed attachments in a buffer map containing the client ID, root, and owning cart. Explicitly attaching an existing client creates a managed record. Never detach a client that is not recorded as managed for that buffer. |
 | D5 | Revalidation | On cart save and debounced cart edits, recompute ownership for loaded managed `.lua` buffers. Detach when the owning cart disappears or changes root, then attach the new owner if one exists. |
 | D6 | Rescan triggers | `BufWritePost` for carts, debounced `TextChanged`/`TextChangedI` for loaded carts, `BufEnter`/`FileType` for Lua buffers, and an explicit `:Pico8Refresh`. |
 | D7 | Debounce | Coalesce cart-edit rescans for 250–500 ms. A rescan must not run synchronously on every keystroke. |
@@ -88,7 +88,9 @@ the helper never attaches the first cart's client to the second cart's include.
 - Preserve the existing directive parser behavior:
   - leading whitespace before `#include`;
   - single or double quotes around the path;
-  - optional `:<hex digit>` tab selector;
+  - optional `:<hex digit>` tab selector only for `.p8` and `.p8.png` include
+    paths, matching the server's `splitIncludeTarget`; a `.lua` path keeps the
+    suffix as a literal filename;
   - forward-slash normalization;
   - case-insensitive path comparison on Windows and macOS.
 - A missing or unreadable cart falls back to the previous behavior without
@@ -212,10 +214,14 @@ the helper never attaches the first cart's client to the second cart's include.
   - opens two carts with the same include basename in sibling directories and
     asserts each buffer uses the matching root;
   - removes an include and asserts the managed client detaches;
+  - starts a `pico_lsp` client directly on an included `.lua` buffer, removes
+    the include, and asserts the user-started client remains attached;
   - enters and leaves the same `.lua` buffer repeatedly and asserts one client
     per root;
   - calls `:Pico8Refresh` and asserts no duplicate clients;
-  - verifies an unrelated `.lua` file still does not attach.
+  - verifies an unrelated `.lua` file still does not attach;
+  - verifies a `.lua:2` include path is treated literally, matching the
+    server, and does not attach a `lib.lua` buffer.
 - Tests must wait on conditions with a bounded `vim.wait`, not fixed sleeps.
 - Run the suite on Neovim 0.11 and 0.12 in CI.
 - The test must clean up temporary directories and stop clients before exiting.

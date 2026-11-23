@@ -63,7 +63,16 @@ ahead of that batch.
 | P3 | Zed extension | Modern editor support | Medium |
 | P4 | API version selection | Support future PICO-8 API versions | Medium |
 
-## 1. Homebrew and Mason packaging
+## 1. Neovim integration batch (M25–M34)
+
+Implement the dependency-ordered batch described in
+[ROADMAP.md](ROADMAP.md): client setup and helper hardening first, then code
+lens/inlay hints, statusline and tabs, include-buffer settings, include
+navigation and PNG opening, glyph input, health checks, standard LSP hooks, and
+the Tree-sitter installer. This is the current editor-focused priority; the
+packaging items below are not scheduled ahead of it.
+
+## 2. Homebrew and Mason packaging
 
 Complete the two install channels deferred from M6.
 
@@ -77,7 +86,7 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 2. Zed extension
+## 3. Zed extension
 
 Provide PICO-8 support in Zed.
 
@@ -89,7 +98,7 @@ Requirements:
 - Binary architecture detection and clear installation errors.
 - Document manual binary configuration.
 
-## 3. API version selection
+## 4. API version selection
 
 Support additional PICO-8 API versions.
 

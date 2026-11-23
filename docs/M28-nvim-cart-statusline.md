@@ -37,7 +37,7 @@ uses a cached value and does not block the statusline.
 | D1 | Module | Put cache and commands in `editors/nvim/lua/pico_lsp/cart.lua` and re-export the public functions from `require("pico_lsp")`. |
 | D2 | Never block rendering | Statusline functions return cached data only. They never call `request_sync` or wait for the server. |
 | D3 | Refresh transport | Use asynchronous `client:request` for `pico8/cartInfo`. Ignore responses that no longer match the current refresh generation. |
-| D4 | Cache key | Cache by cart root URI after the first response and map each buffer to its owner root. Include buffers and PNG virtual buffers therefore share one entry. |
+| D4 | Cache key | Cache by the response's `rootUri`: the owning cart for includes, and the `pico8-cart:` virtual URI for a virtual-buffer request. Map each buffer to that key. Source-PNG and virtual requests are separate keys; do not assume they share an entry. |
 | D5 | Refresh triggers | `LspAttach`, `BufWritePost` for carts and includes, `InsertLeave`, and a debounced `TextChanged` on attached buffers. A manual refresh is available. |
 | D6 | Debounce | Coalesce edit-triggered refreshes for 400–600 ms. Do not request on every keystroke. |
 | D7 | Default text | `tokens/tokenLimit tok · chars/charLimit ch · compressed/compressedLimit zip`, omitting the compressed segment when `compressedStatus` is `unavailable`. |
@@ -120,14 +120,18 @@ function M.refresh_cart_info(bufnr) end
   buffer's owner root.
 - For an included `.lua` buffer, the response's `rootUri` is the owning cart;
   use that for the cache key.
-- For a `.p8.png` virtual buffer, the response's `rootUri` is the source PNG;
-  use that for the cache key.
+- For a `.p8.png` virtual buffer, the response's `rootUri` is the
+  `pico8-cart:` virtual URI because the snapshot is loaded under that virtual
+  root. Use the virtual URI as the cache key. A direct request for the source
+  PNG URI is a different key and is not required by the Neovim statusline.
 - Before a response arrives, `cart_info` may return `nil`. Do not substitute
   placeholder zeros.
 - Increment a generation counter per root for each request. Ignore a response
   whose generation is stale.
 - On `BufWritePost` for a `.p8` or `.lua` buffer attached to `pico_lsp`,
   refresh the owner root.
+- After the helper's `Pico8ReloadPng` path refreshes a virtual document,
+  refresh its cached cart info when the cart module is loaded.
 - On `InsertLeave`, refresh the current attached buffer.
 - On `TextChanged`, debounce a refresh for the current attached buffer.
 - Do not refresh when the client is not attached or the buffer is not
@@ -175,8 +179,8 @@ Rules:
 - Fetch or use cached cart info, then call `vim.ui.select` with tab labels such
   as `0: main (lines 4-120)`.
 - Tab `index`, `name`, `startLine`, and `endLine` come from `pico8/cartInfo`.
-  `startLine` and `endLine` are zero-based LSP lines; convert to a 1-based
-  Neovim cursor line and clamp to the buffer line count.
+  The server reports cart lines zero-based; convert to a 1-based Neovim cursor
+  line and clamp to the buffer line count.
 - Place the cursor on the selected tab's start line. Do not modify the buffer.
 - On a root cart, operate on the current buffer.
 - On an included `.lua` buffer, notify that tabs belong to the owning cart and
@@ -215,10 +219,14 @@ Rules:
   - `cart_status` returns the expected token/character/compressed segments;
   - the compressed segment is omitted for a standalone `.lua` cart;
   - an included `.lua` buffer resolves to the owning cart's info;
-  - a `.p8.png` virtual buffer resolves to the source PNG's info;
+  - a `.p8.png` virtual buffer resolves using the virtual `rootUri` returned by
+    the server, not a fabricated source-PNG key;
   - editing a cart or include changes the cached values after the debounce;
   - `:Pico8CartInfo` notifies with a summary;
   - `:Pico8Tabs` uses `vim.ui.select` and jumps to the chosen tab;
+  - a failed refresh after a successful fetch keeps the previous cached value;
+  - rapid saves/edits leave at most one in-flight request per root and discard
+    stale generations;
   - `cart_status` returns `nil` before the first response and never blocks.
 - Use a stubbed `vim.ui.select` to choose a tab deterministically.
 - Keep the test independent of real cart token counts where possible; assert

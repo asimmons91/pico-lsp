@@ -93,7 +93,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M30 | Neovim Include Navigation and PNG Opening | `gf` for includes and direct `.p8.png` decoding | M6, M8, M25, M26 | Proposed |
 | M31 | Neovim Glyph Input Polish | Cached glyph catalog, byte insertion, and filtered picker | M16, M26 | Proposed |
 | M32 | Neovim Health Check | `:checkhealth pico_lsp` with actionable setup diagnostics | M25–M31 | Proposed |
-| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14 | Proposed |
+| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14, M25, M30 | Proposed |
 | M34 | Neovim Tree-sitter Installer and Distribution | Build and install the committed parser and queries from Neovim | M6, M12, M25 | Proposed |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
