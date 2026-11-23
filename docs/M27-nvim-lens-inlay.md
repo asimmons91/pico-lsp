@@ -183,6 +183,8 @@ require("pico_lsp").setup({
     versions (0.12 reports disabled; 0.11 has no request and no cached lens);
   - `setup({ inlay_hints = false })` leaves inlay hints disabled;
   - toggling inlay hints flips the per-buffer state;
+  - with `pico8.inlayHints = false`, `:Pico8ToggleInlayHints` warns through a
+    stubbed `vim.notify` and does not change server settings;
   - a non-PICO-8 buffer is unaffected.
 - Add a test for a config that does not call `require("pico_lsp").setup` but
   uses the shipped `lsp/pico_lsp.lua`; the default enablement must still apply.

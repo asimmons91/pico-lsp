@@ -141,10 +141,10 @@ Requirements:
 - A named `.p8` buffer uses the normalized directory containing the cart.
 - Unnamed buffers and `pico8-cart:` virtual buffers are not auto-activated by
   the base config. Return without calling `on_dir`; do not fabricate a root.
-  The helper starts `.p8.png` virtual documents explicitly with the source
-  directory.
-- Do not call `on_dir(nil)` merely to force a rootless client; Neovim would
-  start a second client for a virtual buffer that the helper already owns.
+  Neovim skips activation when the callback is not called. The helper starts
+  `.p8.png` virtual documents explicitly with the source directory.
+- Do not call `on_dir(nil)` as a fallback for skipped buffers. The shipped
+  config has no rootless activation path for unnamed or virtual buffers.
 - The helper continues to use the owning cart's directory as the root for
   cart-owned `.lua` buffers.
 - Multiple carts in one directory share one client. Carts in different
@@ -212,8 +212,9 @@ Requirements:
   used.
 - A failed `vim.lsp.start` must not leave duplicate clients or partial helper
   state.
-- An empty `root_dir` is valid; do not invent a root from the current working
-  directory.
+- A skipped buffer has no `root_dir`; do not fall back to the current working
+  directory or invent a root. A user override may provide its own root for a
+  special buffer, but the shipped config does not.
 - A user override must replace, not merge with, the shipped `root_dir`.
 
 ## Testing and CI

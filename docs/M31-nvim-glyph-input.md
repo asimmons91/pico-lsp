@@ -181,6 +181,9 @@ Requirements:
   string-only entries correctly; alternatively use the cached full catalog and
   rely on `pico8.insertGlyph` to reject invalid context. Prefer the existing
   position request so the picker does not offer invalid entries.
+- Do not overwrite the full `entries`/`by_byte` cache with a position-filtered
+  picker result. Keep the filtered list local to the picker, or merge only
+  entries that are valid for the current context.
 - Selection calls the same insert path as an exact name.
 - Cancellation is a no-op.
 
@@ -206,6 +209,8 @@ Requirements:
   - exact name insertion works;
   - a search term opens a filtered picker (stub `vim.ui.select` and assert the
     item list);
+  - a position-filtered picker request does not clobber the full catalog used
+    by Shift mappings;
   - command completion returns cached names without a request;
   - missing-client and failed-request fallbacks return literal letters and warn
     once;

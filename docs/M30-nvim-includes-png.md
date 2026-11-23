@@ -227,6 +227,9 @@ When `require("pico_lsp").setup()` enables the helper:
   - the include options are restored when the filetype changes;
   - `nvim cart.p8.png` auto-opens a read-only `pico8-cart:` buffer with an
     attached client;
+  - an invalid `.p8.png` and a client-start failure produce an error, no
+    `pico8-cart:` virtual buffer, no binary line content, and no
+    `M.png_buffers` entry;
   - the original PNG buffer is removed after success;
   - auto-open does not run when `disable = true`;
   - `:Pico8OpenPng` completion includes files;

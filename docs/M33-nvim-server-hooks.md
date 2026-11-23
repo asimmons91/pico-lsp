@@ -41,7 +41,7 @@ manual refresh.
 |---|---|---|
 | D1 | Range formatting scope | Format complete lines covered by the request. Return edits only for those lines. |
 | D2 | Line preservation | Format the full document for context, but return a `RequestFailed` error when the formatted document changes the line count. Neovim's `formatexpr` may swallow that error; the server contract is still an error rather than a partial edit. |
-| D3 | Range boundaries | Expand a partial-line range to whole lines and clamp it to the document. An empty expanded range returns no edits. Reject only invalid params or a missing/unopened document. |
+| D3 | Range boundaries | Expand a partial-line range to whole lines and clamp it to the document. An empty expanded range returns no edits. Invalid params and missing/unopened documents are errors; the refusals in D4 remain separate errors. |
 | D4 | Syntax and includes | Reuse document-formatting safety: syntax errors, missing/unreadable includes, and `.p8.png` virtual documents are refused with the existing error style. |
 | D5 | Document links | Return links for resolved `#include` directives in the requested file. Skip missing, unreadable, and nested includes. Do not add a resolve provider. |
 | D6 | Link range | Use the directive's path token range, including quotes if that is the parser's existing span; the link target is the resolved file URI. |
@@ -99,7 +99,9 @@ func (s *Server) RangeFormatting(
 
 Requirements:
 
-- Validate params and the document URI the same way as `Formatting`.
+- Reject nil params, an empty document URI, and unknown/unopened documents
+  with `InvalidParams` or the existing navigation error. Do not copy document
+  formatting's `nil, nil` success path for these cases.
 - Refuse virtual `.p8.png` documents and `.p8.png` source URIs with the same
   messages as document formatting.
 - Refuse a cart with missing or unreadable includes.
@@ -218,8 +220,8 @@ Neovim 0.11 has no document-link support in `gx`.
 ## Error handling
 
 - Invalid params: return `InvalidParams` consistently with existing handlers.
-- Unknown/unopened document: return the existing navigation or request error,
-  not an empty success that hides a client bug.
+- Unknown/unopened document: return `InvalidParams` or `RequestFailed` as
+  appropriate, not an empty success that hides a client bug.
 - Syntax errors: return `RequestFailed` with the existing wording.
 - Missing includes: refuse cart formatting as today.
 - Line-count-changing range: return `RequestFailed` with a message that names
@@ -237,6 +239,8 @@ Neovim 0.11 has no document-link support in `gx`.
   - an empty range returns no edits;
   - a document whose formatted line count differs returns the documented error
     and no edits;
+  - nil params, an empty URI, and an unknown/unopened document return errors,
+    not empty success;
   - syntax errors and missing includes are refused;
   - `.p8.png` virtual documents are refused;
   - document links for resolved includes have the expected range and target;
@@ -253,11 +257,14 @@ Neovim 0.11 has no document-link support in `gx`.
   `golangci-lint run ./...`, and `govulncheck ./...` remain green.
 - Add a headless Neovim smoke check for `gq` (0.11+) and, on 0.12+ only, `gx`
   with a stubbed `vim.ui.open`, in the Neovim CI job from M25.
+- The `gq` smoke check includes a line-count-changing fixture and asserts the
+  buffer is unchanged after the refusal; it must not apply a partial edit.
 
 ## Exit criteria
 
 - [ ] The server advertises and implements range formatting.
-- [ ] `gq` formats the selected lines and refuses unsafe line-count changes.
+- [ ] `gq` formats the selected lines and refuses unsafe line-count changes
+      without applying a partial edit.
 - [ ] The server advertises and implements document links for resolved
       `#include` directives.
 - [ ] A Neovim 0.12 `gx` smoke check verifies the document link through a

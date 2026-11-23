@@ -33,8 +33,8 @@ next step.
 |---|---|---|
 | D1 | Module | Add `editors/nvim/lua/pico_lsp/health.lua`; Neovim's `:checkhealth pico_lsp` loads it automatically. |
 | D2 | Read-only | Health checks must not start clients, send configuration, install parsers, or modify buffers/settings. |
-| D3 | Binary check | Resolve the configured `cmd` and report `vim.fn.executable`/`filereadable` plus the resolved path. Do not download anything. |
-| D4 | Version check | Run `<cmd> --version` with a 2-second timeout and show the parsed server version. If a client is running, also show `client.server_info.version` and warn on a mismatch. |
+| D3 | Binary check | Resolve a list/string `cmd` and report `vim.fn.executable`/`filereadable` plus the resolved path. For a function `cmd`, report it as user-supplied and skip executable resolution. Do not download anything. |
+| D4 | Version check | For a list/string `cmd`, run `<cmd> --version` with a 2-second timeout and show the parsed server version. For a function `cmd`, skip the probe and use a running client's `server_info.version` when available. If a client is running, also show `client.server_info.version` and warn on a mismatch. |
 | D5 | Client report | For each `pico_lsp` client, show root, attached buffer count, settings source/type, and workspace folders. Redact nothing beyond source text, which is never included. |
 | D6 | Capability report | For the current `pico8` buffer, report code-lens and inlay-hint enablement. Use `is_enabled` only where the Neovim version provides it; on 0.11 report the legacy refresh-based code-lens path instead. Warn when the server setting asks for a feature the client has disabled. |
 | D7 | Include report | For helper-managed `.lua` buffers, report the owning cart and whether the client is attached. Warn when `lua_ls` and `pico_lsp` are both attached. |
@@ -111,8 +111,11 @@ section headings and key phrases.
 
 ### 3. Server binary and version
 
-- Resolve the executable with `vim.fn.exepath` for PATH names or
-  `vim.fs.normalize` for absolute paths.
+- If `cmd` is a function, report `user-supplied function` for the binary and
+  skip path resolution and `--version`. Do not execute the function. If a
+  client is running, report its `server_info.version`.
+- For a list/string `cmd`, resolve the executable with `vim.fn.exepath` for PATH
+  names or `vim.fs.normalize` for absolute paths.
 - If missing, report an error with build/install commands from
   `docs/install.md`.
 - Run `vim.system({ executable, "--version" }, { timeout = 2000 }):wait()`.
@@ -226,6 +229,8 @@ For the current `pico8` buffer with an attached client:
 - Missing `vim.health` API: exit quietly; the target Neovim versions provide it.
 - Missing client, settings, or command: report and continue.
 - `vim.system` unavailable or fails: report an info/warn with the raw error.
+- A function-valued `cmd` is not spawned; health never invokes a user command
+  function for probing.
 - A malformed `cmd` must not throw when health formats it.
 - A buffer that disappears during iteration is skipped.
 - Health must not hang on a wedged server; use bounded timeouts only for the
@@ -237,6 +242,8 @@ For the current `pico8` buffer with an attached client:
   - run `:checkhealth pico_lsp` with the helper enabled and a cart attached;
   - capture the health buffer and assert the section headings and key OK lines;
   - run with a missing binary and assert an error and install guidance;
+  - run with a function-valued `cmd` and assert health reports it as
+    user-supplied without spawning it or emitting a missing-binary error;
   - run with the helper disabled and assert no missing-command warnings;
   - run with `pico8.inlayHints = true` and client hints disabled and assert a
     warning;
