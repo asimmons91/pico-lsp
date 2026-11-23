@@ -30,24 +30,51 @@ verification follow in a later patch.
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
 - [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress (v1.8.1 GitHub-only; registry launch later)
+- [M25 — Neovim Drop-in Configuration and Cart-Aware Roots](M25-nvim-drop-in-config.md) — proposed
+- [M26 — Neovim Helper Correctness and Performance](M26-nvim-helper-correctness.md) — proposed
+- [M27 — Neovim Code Lens and Inlay Hint Enablement](M27-nvim-lens-inlay.md) — proposed
+- [M28 — Neovim Cart Budget Statusline and Tab Picker](M28-nvim-cart-statusline.md) — proposed
+- [M29 — PICO-8 Buffer Settings for Cart-Owned Lua Files](M29-nvim-include-buffers.md) — proposed
+- [M30 — Neovim Include Navigation and PNG Opening](M30-nvim-includes-png.md) — proposed
+- [M31 — Neovim Glyph Input Polish](M31-nvim-glyph-input.md) — proposed
+- [M32 — Neovim Health Check](M32-nvim-health.md) — proposed
+- [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — proposed
+- [M34 — Neovim Tree-sitter Installer and Distribution](M34-nvim-treesitter-install.md) — proposed
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
 later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release; the
-registry launch follows in a later patch. The unpromoted items below are not part
-of these releases.
+registry launch follows in a later patch. M25–M34 are the proposed Neovim
+integration batch; they are dependency-ordered and none has started. The
+Neovim client milestones and specs now live in
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim); M33 remains in this
+repository. The unpromoted items below are not part of these releases.
 
 ## Prioritization
 
+The proposed Neovim integration batch (M25–M34) is the current editor-focused
+priority. The packaging items below remain available but are not scheduled
+ahead of that batch.
+
 | Priority | Item | Value | Risk |
 |---|---|---|---|
-| P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
-| P2 | Zed extension | Modern editor support | Medium |
-| P3 | API version selection | Support future PICO-8 API versions | Medium |
+| P1 | Neovim integration batch (M25–M34) | Makes existing server features discoverable and ergonomic in the primary editor | Low–medium |
+| P2 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
+| P3 | Zed extension | Modern editor support | Medium |
+| P4 | API version selection | Support future PICO-8 API versions | Medium |
 
-## 1. Homebrew and Mason packaging
+## 1. Neovim integration batch (M25–M34)
+
+Implement the dependency-ordered batch described in
+[ROADMAP.md](ROADMAP.md): client setup and helper hardening first, then code
+lens/inlay hints, statusline and tabs, include-buffer settings, include
+navigation and PNG opening, glyph input, health checks, standard LSP hooks, and
+the Tree-sitter installer. This is the current editor-focused priority; the
+packaging items below are not scheduled ahead of it.
+
+## 2. Homebrew and Mason packaging
 
 Complete the two install channels deferred from M6.
 
@@ -61,7 +88,7 @@ Requirements:
 - Keep the release workflow able to skip these publishers if credentials or
   registry access are unavailable.
 
-## 2. Zed extension
+## 3. Zed extension
 
 Provide PICO-8 support in Zed.
 
@@ -73,7 +100,7 @@ Requirements:
 - Binary architecture detection and clear installation errors.
 - Document manual binary configuration.
 
-## 3. API version selection
+## 4. API version selection
 
 Support additional PICO-8 API versions.
 
