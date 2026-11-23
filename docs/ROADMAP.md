@@ -2,9 +2,10 @@
 
 **Status:** v1.8.1 released as a GitHub-only release with the server archives and
 VSIX. M24 remains in progress: the Marketplace/Open VSX launch and manual VS Code
-verification are deferred to a later patch.
+verification are deferred to a later patch. M25–M34 are proposed Neovim
+integration milestones; no work has started.
 
-**Last updated:** 2026-11-22
+**Last updated:** 2026-11-23
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -84,6 +85,16 @@ These decisions were made before milestone specs were written. Changing one requ
 | M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
 | M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
 | M24 | VS Code Marketplace Launch and Documentation Cleanup | Marketplace/Open VSX listings, documentation cleanup, release automation, and manual VS Code verification | M15, M21, M22 | In progress (v1.8.1 released GitHub-only; registry launch later) |
+| M25 | Neovim Drop-in Configuration and Cart-Aware Roots | Runtime-path config, cart-directory workspaces, and one-command client setup | M6 | Proposed |
+| M26 | Neovim Helper Correctness and Performance | Buffer-aware includes, root-matched clients, managed detach, and CI | M6, M25 | Proposed |
+| M27 | Neovim Code Lens and Inlay Hint Enablement | Budget lens and type hints visible in stock Neovim | M25, M26 | Proposed |
+| M28 | Neovim Cart Budget Statusline and Tab Picker | Cached cart info for statuslines, `:Pico8CartInfo`, and `:Pico8Tabs` | M25, M26, M27 | Proposed |
+| M29 | PICO-8 Buffer Settings for Cart-Owned Lua Files | Include comment settings, buffer variables, and `:Pico8OpenCart` | M26 | Proposed |
+| M30 | Neovim Include Navigation and PNG Opening | `gf` for includes and direct `.p8.png` decoding | M6, M8, M25, M26 | Proposed |
+| M31 | Neovim Glyph Input Polish | Cached glyph catalog, byte insertion, and filtered picker | M16, M26 | Proposed |
+| M32 | Neovim Health Check | `:checkhealth pico_lsp` with actionable setup diagnostics | M25–M31 | Proposed |
+| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14 | Proposed |
+| M34 | Neovim Tree-sitter Installer and Distribution | Build and install the committed parser and queries from Neovim | M6, M12, M25 | Proposed |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -115,6 +126,24 @@ publication to both registries and the manual VS Code verification are planned
 for a later patch; that patch sets `PUBLISH_REGISTRIES=true`, adds the secrets,
 and reruns the [release checklist](release-checklist.md).
 
+M25–M34 are the proposed Neovim integration batch. The recommended
+implementation order is M25 → M34:
+
+1. **M25–M26** establish the drop-in client config and harden the optional
+   include helper.
+2. **M27–M31** make existing server features visible and ergonomic in Neovim:
+   the budget lens and type hints, cached budget status, include-buffer
+   settings, `gf`/PNG opening, and glyph input.
+3. **M32** adds `:checkhealth pico_lsp` after the client surface exists.
+4. **M33** adds standard LSP hooks that Neovim consumes directly: range
+   formatting for `gq`, document links for `gx`, and code-lens refresh.
+5. **M34** removes the manual Tree-sitter compile step.
+
+M25–M32 and M34 are client, documentation, and test changes. M33 is the only
+milestone in the batch that adds server capabilities, and it does so through
+standard LSP rather than Neovim-specific behavior. None of these milestones is
+started; their scopes and decisions are proposals until promoted and scheduled.
+
 Each milestone has a detailed spec:
 
 - [M0 — Foundation & Walking Skeleton](M0-foundation.md)
@@ -141,6 +170,16 @@ Each milestone has a detailed spec:
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
 - [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress (v1.8.1 released GitHub-only; registry launch later)
+- [M25 — Neovim Drop-in Configuration and Cart-Aware Roots](M25-nvim-drop-in-config.md) — proposed
+- [M26 — Neovim Helper Correctness and Performance](M26-nvim-helper-correctness.md) — proposed
+- [M27 — Neovim Code Lens and Inlay Hint Enablement](M27-nvim-lens-inlay.md) — proposed
+- [M28 — Neovim Cart Budget Statusline and Tab Picker](M28-nvim-cart-statusline.md) — proposed
+- [M29 — PICO-8 Buffer Settings for Cart-Owned Lua Files](M29-nvim-include-buffers.md) — proposed
+- [M30 — Neovim Include Navigation and PNG Opening](M30-nvim-includes-png.md) — proposed
+- [M31 — Neovim Glyph Input Polish](M31-nvim-glyph-input.md) — proposed
+- [M32 — Neovim Health Check](M32-nvim-health.md) — proposed
+- [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — proposed
+- [M34 — Neovim Tree-sitter Installer and Distribution](M34-nvim-treesitter-install.md) — proposed
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
