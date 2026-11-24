@@ -9,7 +9,7 @@ LSP client, but only the listed paths are supported.
 | Editor | Tested version | Status | Install path |
 |---|---|---|---|
 | VS Code | 1.95+ engine; desktop checks pending | Supported, local desktop only | GitHub release VSIX |
-| Neovim | 0.12.5 headless tests; 0.11+ supported | Supported | `pico8.nvim` or manual `vim.lsp.config` |
+| Neovim | 0.12.5 headless tests; 0.11+ supported | Supported | `pico8.nvim` (repository install) or manual `vim.lsp.config` |
 | Helix | 25.07 (last recorded; re-verify on current stable) | Supported | `editors/helix/languages.toml` |
 | Open VSX-compatible editors | Current stable | Best-effort via VSIX; not separately tested | GitHub release VSIX |
 | Zed | — | Post-v1 backlog | — |
