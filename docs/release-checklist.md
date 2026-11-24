@@ -219,15 +219,16 @@ Record one row per tested platform in the table below.
 |---|---|---|---|---|---|---|---|
 | Not run | | | | | | Pending | |
 
-- [ ] **VSIX install:** install `pico-lsp-vscode-1.8.1.vsix` from the GitHub
-      release; the checksum matches and the extension activates on a `.p8`.
+- [ ] **VSIX install:** install `pico-lsp-vscode-<version>.vsix` from the
+      matching GitHub release; the checksum matches and the extension activates
+      on a `.p8`.
 - [ ] **First-run download:** with a clean cache, opening a `.p8` downloads,
       verifies, and starts the matching server.
 - [ ] **Offline/custom server:** `pico8.serverPath` with downloads disabled makes
       no network request and all features work.
-- [ ] **Cart features:** `testdata/smoke.p8` shows diagnostics, completion,
-      hover, symbols, folding, navigation, rename, semantic tokens, formatting,
-      inlay hints, code lens, and code actions.
+- [ ] **Cart features:** `examples/hello.p8` and `testdata/smoke.p8` show
+      diagnostics, completion, hover, symbols, folding, navigation, rename,
+      semantic tokens, formatting, inlay hints, code lens, and code actions.
 - [ ] **Glyph picker:** **PICO-8: Insert P8SCII Glyph**, typing `p8_left`, and
       completion in code and strings work.
 - [ ] **Status bar:** token, character, and compressed budgets update while
@@ -243,10 +244,14 @@ Record one row per tested platform in the table below.
       VSIX updates the extension and downloads the matching server.
 - [ ] **Uninstall:** uninstalling and clearing the documented cache path removes
       the extension and cached server as documented.
+- [ ] **Product page:** the installed extension's details page renders the
+      README, screenshot, links, license, and changelog correctly.
 - [ ] **VSIX contents:** `vsce ls` and a package inspection show no source,
       tests, scripts, images, or internal notes.
-- [ ] **Remote/web limitation:** the listing and docs clearly state that remote,
-      web, and container hosts are unsupported.
+- [ ] **Screenshot:** a real screenshot or recording from this run is added to
+      `editors/vscode/images/`, the root README, and the VS Code product page.
+- [ ] **Remote/web limitation:** the product page and docs clearly state that
+      remote, web, and container hosts are unsupported.
 
 The Marketplace clean-install, Open VSX install, and registry listing-render
 checks are part of the parked registry publication item, not M24.

@@ -247,8 +247,9 @@ Rules:
 
 ## VS Code client follow-ups
 
-M21, M22, and M24 are separate, additive client milestones. They do not change
-the LSP wire contract, server defaults, or the editor-agnostic server contract.
+M21 and M22 are separate, additive client milestones. M24 is the end-user
+documentation and onboarding milestone. None changes the LSP wire contract,
+server defaults, or the editor-agnostic server contract.
 
 - **M21 — Settings schema:** the server's existing `pico8.*` settings are
   discoverable and validated in the VS Code Settings UI, with drift tests

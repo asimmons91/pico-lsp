@@ -8,7 +8,8 @@ https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health),
 M33 (standard Neovim hooks). The Neovim client release depends on
-[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim) M32–M34.
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim) M32–M34. A manual tag is
+acceptable for M24; `pico8.nvim` M35 adds release automation.
 
 **Release target:** the next patch after the documentation, demo assets, and
 VSIX verification are ready. The version is chosen at release time; a docs-only
@@ -70,7 +71,7 @@ formatting. The root README shows the same install snippet.
 | D14 | VSIX is primary | The GitHub release VSIX and `.vsix.sha256` are the primary and pinned install path. Offline use also requires a local server binary and `pico8.serverPath`. |
 | D15 | Display name | Keep **PICO-8 LSP** as the extension display name. |
 | D16 | Documentation set | M24 owns the quickstart, demo cart, PICO-8 workflow, type guide, CLI reference, migration guide, editor matrix, support files, and repository metadata. |
-| D17 | Neovim client | Tag `pico8.nvim` and link the tagged install path from the root README. The plugin work stays in that repository; M24 owns the cross-repo install documentation. |
+| D17 | Neovim client | Tag `pico8.nvim` (manually if M35 release automation is not ready) and link the tagged install path from the root README. The plugin work stays in that repository; M24 owns the cross-repo install documentation. |
 | D18 | Registry backlog | Record the publisher verification, PATs, `PUBLISH_REGISTRIES=true`, publication, and listing verification in the post-v1 backlog; M24 supplies the screenshots. |
 
 ### Resolved decisions
@@ -297,8 +298,8 @@ reference. Do not change server behavior.
 |---|---|---|---|
 | VS Code | 1.95+ | Supported, local desktop only | GitHub release VSIX |
 | Neovim | 0.11+ (0.12 for `gx`) | Supported | Tagged `pico8.nvim` or manual `vim.lsp.config` |
-| Helix | Stable at release time | Supported | `editors/helix/languages.toml` |
-| Open VSX-compatible editors | Current stable | Supported via VSIX, untested as a matrix entry | VSIX |
+| Helix | Stable at release time (record exact version) | Supported | `editors/helix/languages.toml` |
+| Open VSX-compatible editors | Current stable | Best-effort via VSIX; not separately tested | VSIX |
 | Zed | — | Post-v1 backlog | — |
 
 The table must record what was actually tested. Do not claim a Helix version
