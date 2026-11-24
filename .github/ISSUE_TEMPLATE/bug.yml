@@ -1,0 +1,87 @@
+name: Bug report
+description: Report a server, editor, or documentation problem
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Remove private cart source from logs before
+        posting. Security issues belong in the private advisory process, not
+        this form.
+  - type: input
+    id: version
+    attributes:
+      label: pico-lsp version
+      description: Output of `pico-lsp --version`.
+      placeholder: v1.8.1
+    validations:
+      required: true
+  - type: dropdown
+    id: editor
+    attributes:
+      label: Editor
+      options:
+        - VS Code
+        - Neovim
+        - Helix
+        - Other LSP client
+    validations:
+      required: true
+  - type: input
+    id: editor-version
+    attributes:
+      label: Editor version
+      placeholder: VS Code 1.95.0 / Neovim 0.12.5 / Helix 25.07
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: Linux amd64, macOS arm64, Windows amd64
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include a minimal `.p8` cart or `.lua` include when possible.
+      placeholder: |
+        1. Open this cart...
+        2. Put the cursor...
+        3. See...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: |
+        In VS Code, paste the **PICO-8: Copy Server Diagnostics** block. For
+        other editors, include relevant `--log-file` lines. Remove private
+        source. Do not paste a whole cart unless it is minimal.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: I removed private source from logs and diagnostics.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

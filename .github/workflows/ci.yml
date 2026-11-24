@@ -58,6 +58,9 @@ jobs:
       - name: Test
         run: go test -count=1 ./...
 
+      - name: Check documentation links
+        run: go test -count=1 ./internal/docscheck
+
       - name: Race test
         if: runner.os == 'Linux'
         run: go test -count=1 -race ./...

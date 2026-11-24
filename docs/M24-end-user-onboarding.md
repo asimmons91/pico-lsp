@@ -3,7 +3,9 @@
 **Status:** In progress — `v1.8.1` was released on 2026-11-22 as a GitHub-only
 release (server archives and VSIX). M24 was reworked around end-user
 documentation and onboarding after registry publication stalled on publisher
-account setup. The manual VS Code verification has not been run. Release:
+account setup. The documentation, support files, demo cart, and link check are
+implemented. The real screenshot, manual VS Code verification, tagged
+`pico8.nvim` release, and docs/onboarding patch remain open. Release:
 https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health),
@@ -168,7 +170,8 @@ The release workflow already contains independent, tag-only
     verification.
 14. `.github/ISSUE_TEMPLATE/bug.yml`, `.github/ISSUE_TEMPLATE/config.yml`,
     `SECURITY.md`, and `CONTRIBUTING.md`.
-15. `.github/workflows/ci.yml` — documentation link check.
+15. `internal/docscheck/linkcheck_test.go` and `.github/workflows/ci.yml` —
+    local Markdown link check.
 16. `docs/release-checklist.md` — M24 checklist, VSIX-only manual verification,
     and the parked registry section.
 17. `docs/ROADMAP.md`, `docs/post-v1-backlog.md`, and `AGENTS.md` — status,
@@ -178,34 +181,35 @@ The release workflow already contains independent, tag-only
 
 ## Work breakdown
 
-1. [ ] Reconcile public wording: GitHub VSIX is the current VS Code channel;
+1. [x] Reconcile public wording: GitHub VSIX is the current VS Code channel;
    registry publication is parked, not "coming in a later patch."
-2. [ ] Write `docs/getting-started.md` and add `examples/hello.p8`; link both
-   from the root README and the VS Code product page.
-3. [ ] Write `docs/pico8-workflow.md`, including the default carts locations,
+2. [x] Write `docs/getting-started.md` and add `examples/hello.p8`; link both
+   from the root README.
+3. [x] Write `docs/pico8-workflow.md`, including the default carts locations,
    external editing, `load`/reload, save conflicts, includes, and read-only PNG
    carts.
-4. [ ] Write `docs/types.md` with runnable annotation examples and the
+4. [x] Write `docs/types.md` with runnable annotation examples and the
    `off`/`basic`/`strict` behavior.
-5. [ ] Write `docs/cli.md`; ensure `pico-lsp --help` points at `decode` or the
-   reference explains the subcommand clearly.
-6. [ ] Write `docs/migrating.md` for `pico8-ls` users and LuaLS coexistence.
-7. [ ] Write `docs/editors.md` with the tested matrix and a concrete Helix
+5. [x] Write `docs/cli.md`; the reference explains the `decode` subcommand and
+   the top-level help limitation.
+6. [x] Write `docs/migrating.md` for `pico8-ls` users and LuaLS coexistence.
+7. [x] Write `docs/editors.md` with the tested matrix and a concrete Helix
    settings example; link it from the root README.
-8. [ ] Add the issue template, `SECURITY.md`, and `CONTRIBUTING.md`; add a root
+8. [x] Add the issue template, `SECURITY.md`, and `CONTRIBUTING.md`; add a root
    README support/privacy section, a CHANGELOG link, and CI/release badges.
-9. [ ] Set the GitHub description, topics, homepage, and social preview.
+9. [x] Set the GitHub description, topics, and homepage. A social preview still
+   needs a manual upload in the repository settings.
 10. [ ] Capture a real screenshot or recording and add it to the root README and
     `editors/vscode/README.md`.
 11. [ ] Run the VSIX-only manual verification on a real VS Code installation and
     record it in `docs/release-checklist.md`.
-12. [ ] Tag `pico8.nvim` and replace the root README's manual-only Neovim setup
-    with the tagged plugin install, keeping the raw `vim.lsp.config` fallback.
-13. [ ] Add the documentation link check to CI and fix broken links.
+12. [ ] Tag `pico8.nvim` and replace the root README's unpinned plugin install
+    with the tagged install, keeping the raw `vim.lsp.config` fallback.
+13. [x] Add the documentation link check to CI and fix broken links.
 14. [ ] Cut the documentation/onboarding patch if the VSIX product page or
     extension metadata changes; otherwise ship the docs without a tag and record
     why in the release checklist.
-15. [ ] Update the roadmap, backlog, changelogs, and `AGENTS.md`.
+15. [x] Update the roadmap, backlog, changelogs, and `AGENTS.md`.
 
 ## Detailed requirements
 
@@ -379,9 +383,10 @@ published; install the GitHub release VSIX" in:
 Historical release records and changelog entries may keep the v1.8.1 GitHub-only
 wording; do not rewrite shipped history.
 
-Add a documentation link check to `ci.yml`. It must validate relative links in
-`README.md`, `docs/`, and `editors/`, and fail on broken local links. External
-link failures may warn rather than fail if the check is flaky.
+Add a documentation link check test under `internal/docscheck` and run it in
+CI. It must validate relative links and anchors in `README.md`, `docs/`, and
+`editors/`, and fail on broken local links. External link failures may warn
+rather than fail if the check is flaky.
 
 ## Manual verification on the VS Code machine
 
@@ -421,6 +426,7 @@ platform as open rather than implying it passed.
   remain green.
 - `goreleaser check` and a snapshot build remain green.
 - `vsce ls` confirms the packaged file set.
+- `examples/hello.p8` parses in the `pkg/cart` tests.
 - The documentation link check passes.
 - The release workflow validates that the extension version matches the tag
   before publishing.
@@ -430,22 +436,23 @@ platform as open rather than implying it passed.
 
 ## Exit criteria
 
-- [ ] M24 is retitled and scoped as end-user documentation and onboarding;
+- [x] M24 is retitled and scoped as end-user documentation and onboarding;
       registry publication is recorded in the post-v1 backlog and is not an
       M24, roadmap, or release-checklist gate.
-- [ ] `docs/getting-started.md`, `examples/hello.p8`, and the root README
+- [x] `docs/getting-started.md`, `examples/hello.p8`, and the root README
       quickstart link exist.
-- [ ] `docs/pico8-workflow.md` covers carts on disk, external editing, reload,
+- [x] `docs/pico8-workflow.md` covers carts on disk, external editing, reload,
       save conflicts, includes, and read-only PNG carts.
-- [ ] `docs/types.md` covers the supported LuaCATS features with valid examples.
-- [ ] `docs/cli.md` documents every flag and `decode`; `pico-lsp --help`
-      mentions `decode` or the limitation is explicit.
-- [ ] `docs/migrating.md` covers `pico8-ls` and LuaLS coexistence.
-- [ ] `docs/editors.md` has a tested version matrix and a concrete Helix
+- [x] `docs/types.md` covers the supported LuaCATS features with valid examples.
+- [x] `docs/cli.md` documents every flag and `decode`; the top-level help
+      limitation is explicit.
+- [x] `docs/migrating.md` covers `pico8-ls` and LuaLS coexistence.
+- [x] `docs/editors.md` has a tested version matrix and a concrete Helix
       settings example.
-- [ ] `.github/ISSUE_TEMPLATE/`, `SECURITY.md`, `CONTRIBUTING.md`, and the root
+- [x] `.github/ISSUE_TEMPLATE/`, `SECURITY.md`, `CONTRIBUTING.md`, and the root
       README support/privacy section exist.
-- [ ] GitHub description, topics, homepage, and social preview are set.
+- [x] GitHub description, topics, and homepage are set.
+- [ ] A social preview is uploaded in the repository settings.
 - [ ] A real screenshot or recording from the manual verification is in the
       root README and `editors/vscode/README.md`.
 - [ ] The VSIX-only manual verification is recorded for the available platforms:
@@ -453,13 +460,14 @@ platform as open rather than implying it passed.
       picker, status bar, diagnostics, upgrade, and uninstall.
 - [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
       install path.
-- [ ] Public docs no longer promise a Marketplace or Open VSX launch; they state
+- [x] Public docs no longer promise a Marketplace or Open VSX launch; they state
       that the GitHub VSIX is the current channel.
-- [ ] The documentation link check is in CI and passes.
-- [ ] Changelogs, roadmap, backlog, and `AGENTS.md` are updated.
-- [ ] No LSP, server, parser, analysis, formatter, or extension feature behavior
+- [ ] The documentation link check passes in CI. The test is implemented and
+      passes locally; the branch CI run is the remaining confirmation.
+- [x] Changelogs, roadmap, backlog, and `AGENTS.md` are updated.
+- [x] No LSP, server, parser, analysis, formatter, or extension feature behavior
       changed.
-- [ ] Registry publication remains parked in the backlog with the publisher,
+- [x] Registry publication remains parked in the backlog with the publisher,
       token, publication, and listing-verification steps intact.
 
 ## Risks and mitigations

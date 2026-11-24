@@ -2,7 +2,8 @@
 
 `pico-lsp` release binaries are static and require no Go toolchain or runtime.
 Homebrew and Mason packaging are deferred to post-v1; see the
-[roadmap](ROADMAP.md).
+[roadmap](ROADMAP.md). For a first install, the
+[getting-started guide](getting-started.md) is the shorter path.
 
 ## Install channels
 
