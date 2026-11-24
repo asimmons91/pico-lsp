@@ -68,6 +68,15 @@ contributions are not reported because compression is global.
 If no cart can be found, the request fails with JSON-RPC error code `-32001`
 and message `cart-not-found`.
 
+### Neovim consumer
+
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim) caches this response
+and exposes `require("pico_lsp").cart_status()`, `cart_info()`, and
+`refresh_cart_info()`, plus `:Pico8CartInfo` and `:Pico8Tabs`. The statusline
+functions read the cache only and never block on a request. See the
+[pico8.nvim statusline documentation](https://github.com/asimmons91/pico8.nvim#cart-budget-statusline)
+for the lualine and plain statusline recipes.
+
 ## `pico8/decodeCart`
 
 Decodes a read-only `.p8.png` cart for an editor helper. The request accepts the
