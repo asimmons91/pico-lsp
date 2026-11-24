@@ -45,9 +45,11 @@ includes, completes the PICO-8 API, and reports type diagnostics.
 - A hosted package registry or Docker image.
 
 > **Superseded by later milestones:** the VS Code client shipped in M15, and M24
-> prepares VS Code Marketplace and Open VSX publishing for that extension.
-> v1.8.1 shipped as a GitHub-only release; the registry launch follows in a later
-> patch. Homebrew and Mason remain deferred.
+> now owns end-user documentation, onboarding, demo assets, and GitHub-VSIX
+> verification. v1.8.1 shipped as a GitHub-only release. Marketplace and Open
+> VSX publication is parked in the
+> [post-v1 backlog](post-v1-backlog.md), not a later M24 patch. Homebrew and
+> Mason remain deferred.
 
 ## Release versioning
 
@@ -223,6 +225,11 @@ Create/maintain:
 - `LICENSE`:
   - MIT.
 - `CHANGELOG.md`.
+
+> **Extended by M24:** the install quickstart, PICO-8 editing workflow, CLI
+> reference, migration guide, editor compatibility matrix, support files, and
+> VSIX-only verification are completed in
+> [M24](M24-end-user-onboarding.md).
 
 ## CI
 

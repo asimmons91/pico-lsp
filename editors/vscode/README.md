@@ -9,7 +9,7 @@ budgets without installing Go or managing a server binary.
 
 ## Install
 
-v1.8.1 is a GitHub-release-only release. Install the VSIX:
+The extension is distributed as a GitHub release VSIX. Install it:
 
 1. Download `pico-lsp-vscode-1.8.1.vsix` and
    `pico-lsp-vscode-1.8.1.vsix.sha256` from the matching
@@ -23,10 +23,10 @@ v1.8.1 is a GitHub-release-only release. Install the VSIX:
 3. In VS Code, open the Extensions view, select **...**, and choose
    **Install from VSIX...**.
 
-Marketplace and Open VSX listing is planned for a later patch. When those
-listings are live, search for `PICO-8 LSP` or `asimmons91.pico-lsp` in the
-Extensions view and select **Install**. The VSIX remains available for pinned,
-registry-lag, and offline use.
+The extension is not currently listed in the VS Code Marketplace or Open VSX.
+The VSIX remains available for pinned, registry-lag, and offline use. Registry
+publication is parked in the
+[post-v1 backlog](https://github.com/asimmons91/pico-lsp/blob/main/docs/post-v1-backlog.md).
 
 Offline use also requires a local `pico-lsp` binary and `pico8.serverPath`; the
 VSIX does not bundle the server. See the
@@ -84,7 +84,8 @@ The extension version and server version are identical by default. Extension
 - Cart code is never executed. The server only parses and analyzes source.
 - The only network request made by the extension is the checksummed download of
   the matching `pico-lsp` release from this project's GitHub releases. VS Code
-  itself may check the Marketplace or Open VSX for extension updates.
+  itself may check its configured extension source for updates; this extension
+  is not currently listed in either registry.
 - Untrusted workspaces are disabled. The extension does not start a server or
   download a binary there.
 - Logs may contain source excerpts only when LSP trace logging is explicitly
@@ -166,9 +167,9 @@ If a download fails behind a proxy, configure VS Code's `http.proxy` and
 - `.p8.png` virtual documents are not supported in this extension. Decode a PNG
   cart with `pico-lsp decode --output cart.p8 cart.p8.png` and open the text
   cart.
-- Marketplace and Open VSX listings are planned for a later patch. v1.8.1 is a
-  GitHub-release-only VSIX; use the matching VSIX when you need a specific
-  version immediately.
+- The extension is distributed as a GitHub release VSIX. Marketplace and Open
+  VSX publication is not currently available; registry work is parked in the
+  post-v1 backlog. Use the matching VSIX when you need a specific version.
 - Offline use requires `pico8.serverPath` (and usually
   `pico8.autoDownload: false`).
 - The extension downloads the server version that matches its own version. It
