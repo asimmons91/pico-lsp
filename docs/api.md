@@ -279,6 +279,31 @@ Clicking it runs `pico8.showCartInfo`. The lens appends `(warning)` at or above
 without a compressed budget show `compressed n/a`. Disable the lens with
 `pico8.limits.codeLens: false`.
 
+## Standard LSP capabilities
+
+In addition to document formatting, pico-lsp advertises these standard
+capabilities for editors that consume them:
+
+- `textDocument/rangeFormatting` formats complete lines covered by the request.
+  The whole document is formatted for context, but edits are returned only for
+  the selected lines. If formatting would change the line count, the request
+  fails with `RequestFailed` and no partial edit; format the whole document
+  instead. Neovim sets `formatexpr` automatically and maps `gq` to this
+  request.
+- `textDocument/documentLink` returns a link for every resolved `#include`
+  directive in the requested file. The link range covers the include target
+  (including quotes), the target is the resolved file URI without a tab
+  fragment, and the tooltip names the selected tab. Missing, unreadable, and
+  nested includes are skipped. Neovim 0.12 uses this from `gx` and passes the
+  target to `vim.ui.open`; `gf` remains the in-editor navigation path.
+- `workspace/codeLens/refresh` is sent to clients that advertise
+  `workspace.codeLens.refreshSupport` after a cart analysis changes its budget
+  lens. Refreshes are throttled per cart and are not sent while
+  `pico8.limits.codeLens` is false or while the server is shutting down.
+
+`.p8.png` virtual documents remain read-only: range formatting is refused and
+document links are empty.
+
 ## Go public packages
 
 Go programs can import stable public facades without importing `internal/`

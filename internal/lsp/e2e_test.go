@@ -30,16 +30,20 @@ type testClient struct {
 	progress      chan *protocol.ProgressParams
 	applied       chan *protocol.ApplyWorkspaceEditParams
 	applyResult   *protocol.ApplyWorkspaceEditResult
+
+	codeLensRefresh     chan struct{}
+	codeLensRefreshHits atomic.Int64
 }
 
 func newTestClient() *testClient {
 	return &testClient{
-		configCalls:   make(chan *protocol.ConfigurationParams, 4),
-		diagnostics:   make(chan *protocol.PublishDiagnosticsParams, 8),
-		messages:      make(chan *protocol.ShowMessageParams, 8),
-		registrations: make(chan *protocol.RegistrationParams, 4),
-		progress:      make(chan *protocol.ProgressParams, 8),
-		applied:       make(chan *protocol.ApplyWorkspaceEditParams, 4),
+		configCalls:     make(chan *protocol.ConfigurationParams, 4),
+		diagnostics:     make(chan *protocol.PublishDiagnosticsParams, 8),
+		messages:        make(chan *protocol.ShowMessageParams, 8),
+		registrations:   make(chan *protocol.RegistrationParams, 4),
+		progress:        make(chan *protocol.ProgressParams, 8),
+		applied:         make(chan *protocol.ApplyWorkspaceEditParams, 4),
+		codeLensRefresh: make(chan struct{}, 8),
 	}
 }
 
@@ -74,6 +78,15 @@ func (c *testClient) ApplyEdit(ctx context.Context, params *protocol.ApplyWorksp
 		return c.applyResult, nil
 	}
 	return &protocol.ApplyWorkspaceEditResult{Applied: true}, nil
+}
+
+func (c *testClient) CodeLensRefresh(ctx context.Context) error {
+	c.codeLensRefreshHits.Add(1)
+	select {
+	case c.codeLensRefresh <- struct{}{}:
+	default:
+	}
+	return nil
 }
 
 type harness struct {

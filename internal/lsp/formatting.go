@@ -43,24 +43,7 @@ func (s *Server) Formatting(ctx context.Context, params *protocol.DocumentFormat
 		}
 	}
 
-	settings := s.cfg.Settings()
-	opts := format.DefaultOptions()
-	opts.MaxBlankLines = settings.Format.MaxBlankLines
-	if params.Options.TabSize > 0 {
-		opts.TabSize = int(params.Options.TabSize)
-	}
-	if params.Options.TabSize > 0 || params.Options.InsertSpaces {
-		opts.InsertSpaces = params.Options.InsertSpaces
-	}
-	if params.Options.TrimTrailingWhitespace != nil {
-		opts.TrimTrailingWhitespace = *params.Options.TrimTrailingWhitespace
-	}
-	if params.Options.InsertFinalNewline != nil {
-		opts.InsertFinalNewline = *params.Options.InsertFinalNewline
-	}
-	if params.Options.TrimFinalNewlines != nil {
-		opts.TrimFinalNewlines = *params.Options.TrimFinalNewlines
-	}
+	opts := s.formattingOptions(params.Options)
 
 	formatted, err := format.Document(nav.file.Text, opts, strings.HasSuffix(lower, ".p8"))
 	if errors.Is(err, format.ErrSyntax) {
@@ -77,4 +60,26 @@ func (s *Server) Formatting(ctx context.Context, params *protocol.DocumentFormat
 		Range:   nav.file.Index.Range(0, len(nav.file.Text)),
 		NewText: formatted,
 	}}, nil
+}
+
+func (s *Server) formattingOptions(options protocol.FormattingOptions) format.Options {
+	settings := s.cfg.Settings()
+	opts := format.DefaultOptions()
+	opts.MaxBlankLines = settings.Format.MaxBlankLines
+	if options.TabSize > 0 {
+		opts.TabSize = int(options.TabSize)
+	}
+	if options.TabSize > 0 || options.InsertSpaces {
+		opts.InsertSpaces = options.InsertSpaces
+	}
+	if options.TrimTrailingWhitespace != nil {
+		opts.TrimTrailingWhitespace = *options.TrimTrailingWhitespace
+	}
+	if options.InsertFinalNewline != nil {
+		opts.InsertFinalNewline = *options.InsertFinalNewline
+	}
+	if options.TrimFinalNewlines != nil {
+		opts.TrimFinalNewlines = *options.TrimFinalNewlines
+	}
+	return opts
 }

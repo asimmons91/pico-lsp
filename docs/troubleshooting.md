@@ -142,6 +142,19 @@ refuses documents with syntax errors, missing/unreadable includes, and
 read-only `.p8.png` carts. The formatter preserves PICO-8 shorthand and all
 non-code cart sections; it does not wrap long lines or reorder statements.
 
+`textDocument/rangeFormatting` formats complete lines covered by the request.
+It also refuses a document when the formatted line count would change, because
+the server cannot return a safe partial edit. Format the whole document in that
+case. An included `.lua` file can still be range-formatted when a sibling
+include in its cart is missing.
+
+`textDocument/documentLink` returns links only for resolved `#include`
+directives in the requested file. Missing, unreadable, and nested includes are
+skipped. Clients without document-link support, including Neovim 0.11, keep
+using the editor's include navigation (M30's `gf` in the Neovim client).
+Capable clients receive a throttled `workspace/codeLens/refresh` after a cart
+analysis that changes the budget lens.
+
 Code actions cover generated type annotations, diagnostic suppression, and
 creating missing `.lua` includes. A “Create missing include file” action is only
 offered for `.lua` paths inside the workspace boundary.

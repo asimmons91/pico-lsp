@@ -217,6 +217,52 @@ func TestLoadIncludesAndSourceMap(t *testing.T) {
 	if include.DirectiveSpan.FileID != 0 || !strings.Contains(text[include.DirectiveSpan.Start:include.DirectiveSpan.End], "#include") {
 		t.Fatalf("directive span = %+v", include.DirectiveSpan)
 	}
+	if got := text[include.PathSpan.Start:include.PathSpan.End]; got != `"lib/a.lua"` {
+		t.Fatalf("path span = %q, want quoted target", got)
+	}
+}
+
+func TestIncludeDirectiveRange(t *testing.T) {
+	cases := []struct {
+		line string
+		path string
+		span string
+	}{
+		{line: `#include "lib/a.lua"`, path: "lib/a.lua", span: `"lib/a.lua"`},
+		{line: `  #include   'lib/a.lua'  `, path: "lib/a.lua", span: `'lib/a.lua'`},
+		{line: `#include lib/a.lua`, path: "lib/a.lua", span: "lib/a.lua"},
+		{line: `#include "other.p8:2"`, path: "other.p8:2", span: `"other.p8:2"`},
+		{line: `#include`, path: "", span: ""},
+	}
+	for _, tc := range cases {
+		path, start, end, ok := includeDirectiveRange(tc.line)
+		if !ok {
+			t.Fatalf("%q was not recognized", tc.line)
+		}
+		if path != tc.path || tc.line[start:end] != tc.span {
+			t.Fatalf("%q = path %q span %q, want %q/%q", tc.line, path, tc.line[start:end], tc.path, tc.span)
+		}
+	}
+}
+
+func TestIncludePathSpans(t *testing.T) {
+	root := uri.File("/tmp/p8/cart.p8")
+	inc := uri.File("/tmp/p8/lib/a.lua")
+	p := newMapProvider()
+	p.files[inc] = "#include \"nested.lua\"\n"
+	text := "pico-8 cartridge // pico-8.com\nversion 42\n__lua__\n#include 'lib/a.lua'\n"
+	snap := loadText(t, p, root, text)
+	if len(snap.Cart.Includes) != 2 {
+		t.Fatalf("includes = %+v", snap.Cart.Includes)
+	}
+	rootInclude := snap.Cart.Includes[0]
+	if got := text[rootInclude.PathSpan.Start:rootInclude.PathSpan.End]; got != "'lib/a.lua'" {
+		t.Fatalf("root path span = %q", got)
+	}
+	nested := snap.Cart.Includes[1]
+	if got := p.files[inc][nested.PathSpan.Start:nested.PathSpan.End]; got != `"nested.lua"` {
+		t.Fatalf("nested path span = %q", got)
+	}
 }
 
 func TestIncludeMissing(t *testing.T) {

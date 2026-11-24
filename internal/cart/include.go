@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"go.lsp.dev/uri"
@@ -116,22 +117,40 @@ func longBracketLevel(text string, pos int) (int, bool) {
 }
 
 func includeDirective(content string) (string, bool) {
+	path, _, _, ok := includeDirectiveRange(content)
+	return path, ok
+}
+
+// includeDirectiveRange parses one #include line and returns the path token.
+// start and end are byte offsets in content covering the target, including
+// quotes when present. The path itself has surrounding whitespace and matching
+// quotes removed.
+func includeDirectiveRange(content string) (path string, start, end int, ok bool) {
 	trimmed := strings.TrimLeft(content, " \t")
 	const directive = "#include"
 	if !strings.HasPrefix(trimmed, directive) {
-		return "", false
+		return "", 0, 0, false
 	}
 	rest := trimmed[len(directive):]
 	if rest != "" && rest[0] != ' ' && rest[0] != '\t' {
-		return "", false
+		return "", 0, 0, false
 	}
-	path := strings.TrimSpace(rest)
+	base := len(content) - len(trimmed) + len(directive)
+	target := strings.TrimSpace(rest)
+	if target == "" {
+		start = base + len(rest)
+		return "", start, start, true
+	}
+	leading := len(rest) - len(strings.TrimLeftFunc(rest, unicode.IsSpace))
+	start = base + leading
+	end = start + len(target)
+	path = target
 	if len(path) >= 2 {
 		if (path[0] == '"' && path[len(path)-1] == '"') || (path[0] == '\'' && path[len(path)-1] == '\'') {
 			path = path[1 : len(path)-1]
 		}
 	}
-	return path, true
+	return path, start, end, true
 }
 
 // splitIncludeTarget separates a PICO-8 tab suffix (a single hex digit) from
@@ -259,11 +278,12 @@ func (f *flattener) appendLines(text string, lines []lineRef, fileID source.File
 		}
 		content := lineContent(text, line)
 		span := source.Span{FileID: fileID, Start: line.start, End: contentEnd(text, line)}
-		if path, ok := includeDirective(content); ok && f.state.outside() {
+		if path, pathStart, pathEnd, ok := includeDirectiveRange(content); ok && f.state.outside() {
 			if f.includeCountLimit(span) {
 				return
 			}
-			if f.processRootInclude(path, line) {
+			pathSpan := source.Span{FileID: fileID, Start: line.start + pathStart, End: line.start + pathEnd}
+			if f.processRootInclude(path, pathSpan, line) {
 				// The directive's line terminator remains after the replacement.
 				f.needSeparator = true
 			}
@@ -287,10 +307,11 @@ func (f *flattener) appendIncluded(text string, lines []lineRef, fileID source.F
 		}
 		content := lineContent(text, line)
 		span := source.Span{FileID: fileID, Start: line.start, End: contentEnd(text, line)}
-		if path, ok := includeDirective(content); ok && f.state.outside() {
+		if path, pathStart, pathEnd, ok := includeDirectiveRange(content); ok && f.state.outside() {
 			if f.includeCountLimit(span) {
 				return
 			}
+			pathSpan := source.Span{FileID: fileID, Start: line.start + pathStart, End: line.start + pathEnd}
 			name, tab := splitIncludeTarget(path)
 			resolved, err := resolveInclude(dir, name)
 			if err != nil {
@@ -306,6 +327,7 @@ func (f *flattener) appendIncluded(text string, lines []lineRef, fileID source.F
 				ResolvedURI:   resolved,
 				Tab:           tab,
 				DirectiveSpan: span,
+				PathSpan:      pathSpan,
 				Nested:        true,
 			})
 			f.diags = append(f.diags, Diagnostic{
@@ -330,7 +352,7 @@ func (f *flattener) appendIncluded(text string, lines []lineRef, fileID source.F
 	}
 }
 
-func (f *flattener) processRootInclude(path string, directive lineRef) bool {
+func (f *flattener) processRootInclude(path string, pathSpan source.Span, directive lineRef) bool {
 	span := source.Span{FileID: 0, Start: directive.start, End: directive.end}
 	// The directive line's end includes a newline; point at the content.
 	if span.End > span.Start {
@@ -341,10 +363,10 @@ func (f *flattener) processRootInclude(path string, directive lineRef) bool {
 			span.End--
 		}
 	}
-	return f.loadRootInclude(path, span, f.rootDir)
+	return f.loadRootInclude(path, span, pathSpan, f.rootDir)
 }
 
-func (f *flattener) loadRootInclude(path string, span source.Span, dir string) bool {
+func (f *flattener) loadRootInclude(path string, span, pathSpan source.Span, dir string) bool {
 	name, tab := splitIncludeTarget(path)
 	resolved, err := resolveInclude(dir, name)
 	if err != nil {
@@ -354,11 +376,11 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 			Span:     span,
 			Severity: SeverityError,
 		})
-		f.includes = append(f.includes, Include{Path: path, Tab: tab, DirectiveSpan: span, Unreadable: true})
+		f.includes = append(f.includes, Include{Path: path, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 		return false
 	}
 	if IsP8PNG(resolved) {
-		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, Unreadable: true})
+		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 		f.diags = append(f.diags, Diagnostic{
 			Code:     CodeIncludeUnreadable,
 			Message:  fmt.Sprintf("PICO-8 PNG includes are not supported yet: %s", path),
@@ -370,7 +392,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 
 	max := f.loader.maxSize()
 	if size, ok := f.loader.sizeOf(resolved); ok && size > int64(max) {
-		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, Unreadable: true})
+		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 		f.diags = append(f.diags, Diagnostic{
 			Code:     CodeIncludeUnreadable,
 			Message:  fmt.Sprintf("included file is too large: %s (%d bytes)", path, size),
@@ -382,7 +404,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 
 	data, readErr := f.loader.readFile(resolved, max)
 	if readErr != nil {
-		record := Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span}
+		record := Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan}
 		if errors.Is(readErr, os.ErrNotExist) {
 			record.Missing = true
 			f.diags = append(f.diags, Diagnostic{
@@ -405,7 +427,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 	}
 
 	if len(data) > max {
-		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, Unreadable: true})
+		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 		f.diags = append(f.diags, Diagnostic{
 			Code:     CodeIncludeUnreadable,
 			Message:  fmt.Sprintf("included file is too large: %s (%d bytes)", path, len(data)),
@@ -415,7 +437,7 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 		return false
 	}
 	if !utf8.Valid(data) || bytes.IndexByte(data, 0) >= 0 {
-		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, Unreadable: true})
+		f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 		f.diags = append(f.diags, Diagnostic{
 			Code:     CodeIncludeUnreadable,
 			Message:  fmt.Sprintf("included file is binary or not UTF-8: %s", path),
@@ -432,12 +454,13 @@ func (f *flattener) loadRootInclude(path string, span source.Span, dir string) b
 		ResolvedURI:   resolved,
 		Tab:           tab,
 		DirectiveSpan: span,
+		PathSpan:      pathSpan,
 	}
 	if strings.HasSuffix(strings.ToLower(resolved.Path()), ".p8") {
 		sections, code, _ := parseSections(text)
 		selected, trimFinal, ok := selectCartCode(text, sections, code, tab)
 		if !ok {
-			f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, Unreadable: true})
+			f.includes = append(f.includes, Include{Path: path, ResolvedURI: resolved, Tab: tab, DirectiveSpan: span, PathSpan: pathSpan, Unreadable: true})
 			f.diags = append(f.diags, Diagnostic{
 				Code:     CodeIncludeUnreadable,
 				Message:  fmt.Sprintf("tab %d not found in included cart %s", tab, path),

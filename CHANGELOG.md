@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- M33 standard LSP hooks: `textDocument/rangeFormatting` with safe complete-line
+  edits and a line-count refusal, `textDocument/documentLink` for resolved
+  `#include` targets with precise path ranges, and throttled
+  `workspace/codeLens/refresh` requests for clients that advertise refresh
+  support. The cart model now records an include `PathSpan` for links.
+
 ## [1.8.1] - 2026-11-22
 
 ### Added

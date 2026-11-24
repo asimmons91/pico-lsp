@@ -103,12 +103,18 @@ type Server struct {
 	diagnosticPull     bool
 	diagnosticRelated  bool
 	applyEdit          bool
+	codeLensRefresh    bool
 	warnedPullFallback bool
 
 	workspaceMu      sync.Mutex
 	workspaceFolders []uri.URI
 
 	watchedFilesDynamic bool
+
+	refreshMu            sync.Mutex
+	refreshTimers        map[uri.URI]*time.Timer
+	refreshStopped       bool
+	codeLensRefreshDelay time.Duration
 
 	cancelMu sync.Mutex
 	cancels  map[jsonrpc2.ID]context.CancelFunc
@@ -130,12 +136,14 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 	}
 
 	s := &Server{
-		log:      log,
-		cfg:      cfg,
-		encoding: protocol.PositionEncodingKindUTF16,
-		trace:    protocol.TraceValueOff,
-		exitDone: make(chan struct{}),
-		cancels:  make(map[jsonrpc2.ID]context.CancelFunc),
+		log:                  log,
+		cfg:                  cfg,
+		encoding:             protocol.PositionEncodingKindUTF16,
+		trace:                protocol.TraceValueOff,
+		exitDone:             make(chan struct{}),
+		cancels:              make(map[jsonrpc2.ID]context.CancelFunc),
+		refreshTimers:        make(map[uri.URI]*time.Timer),
+		codeLensRefreshDelay: 250 * time.Millisecond,
 	}
 	s.docs = NewDocumentStore(s.encoding, log)
 	s.png = newPNGCache()
@@ -157,6 +165,7 @@ func New(log *slog.Logger, cfg *config.Manager) *Server {
 	}
 
 	s.carts = NewCartManager(s.docs, s.diags, func() config.Settings { return s.cfg.Settings() }, s.WorkspaceFolders, builtins, log)
+	s.carts.SetAnalyzeHook(s.noteCartAnalyzed)
 	return s
 }
 
@@ -461,6 +470,7 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 	if params.Capabilities.Workspace != nil && params.Capabilities.Workspace.ApplyEdit != nil {
 		s.applyEdit = *params.Capabilities.Workspace.ApplyEdit
 	}
+	s.codeLensRefresh = supportsCodeLensRefresh(params)
 	if params.Trace != "" {
 		s.trace = params.Trace
 	}
@@ -496,21 +506,23 @@ func (s *Server) Initialize(ctx context.Context, params *protocol.InitializePara
 			TriggerCharacters: []string{".", ":", "@", "#"},
 			ResolveProvider:   boolPtr(true),
 		},
-		HoverProvider:              protocol.Boolean(true),
-		SignatureHelpProvider:      &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
-		DocumentFormattingProvider: protocol.Boolean(true),
-		CodeActionProvider:         protocol.Boolean(true),
-		CodeLensProvider:           &protocol.CodeLensOptions{},
-		ExecuteCommandProvider:     protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo, CommandRemoveUnused, CommandInsertGlyph}},
-		DefinitionProvider:         protocol.Boolean(true),
-		ReferencesProvider:         protocol.Boolean(true),
-		DocumentHighlightProvider:  protocol.Boolean(true),
-		DocumentSymbolProvider:     protocol.Boolean(true),
-		FoldingRangeProvider:       protocol.Boolean(true),
-		WorkspaceSymbolProvider:    protocol.Boolean(true),
-		RenameProvider:             &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
-		SemanticTokensProvider:     semanticTokensOptions(),
-		InlayHintProvider:          protocol.Boolean(true),
+		HoverProvider:                   protocol.Boolean(true),
+		SignatureHelpProvider:           &protocol.SignatureHelpOptions{TriggerCharacters: []string{"(", ","}, RetriggerCharacters: []string{","}},
+		DocumentFormattingProvider:      protocol.Boolean(true),
+		DocumentRangeFormattingProvider: protocol.Boolean(true),
+		DocumentLinkProvider:            &protocol.DocumentLinkOptions{},
+		CodeActionProvider:              protocol.Boolean(true),
+		CodeLensProvider:                &protocol.CodeLensOptions{},
+		ExecuteCommandProvider:          protocol.ExecuteCommandOptions{Commands: []string{CommandShowCartInfo, CommandRemoveUnused, CommandInsertGlyph}},
+		DefinitionProvider:              protocol.Boolean(true),
+		ReferencesProvider:              protocol.Boolean(true),
+		DocumentHighlightProvider:       protocol.Boolean(true),
+		DocumentSymbolProvider:          protocol.Boolean(true),
+		FoldingRangeProvider:            protocol.Boolean(true),
+		WorkspaceSymbolProvider:         protocol.Boolean(true),
+		RenameProvider:                  &protocol.RenameOptions{PrepareProvider: boolPtr(true)},
+		SemanticTokensProvider:          semanticTokensOptions(),
+		InlayHintProvider:               protocol.Boolean(true),
 		Workspace: &protocol.WorkspaceOptions{
 			WorkspaceFolders: &protocol.WorkspaceFoldersServerCapabilities{
 				Supported:           boolPtr(true),
@@ -604,6 +616,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 	s.mu.Unlock()
 
+	s.stopCodeLensRefresh()
 	s.log.Info("shutdown requested")
 	return nil
 }
@@ -622,6 +635,7 @@ func (s *Server) Exit(ctx context.Context) error {
 	s.mu.Unlock()
 
 	s.exitOnce.Do(func() { close(s.exitDone) })
+	s.stopCodeLensRefresh()
 
 	s.log.Info("exit notification received", "code", code)
 	return nil
@@ -722,6 +736,14 @@ func chooseEncoding(params *protocol.InitializeParams) protocol.PositionEncoding
 		}
 	}
 	return protocol.PositionEncodingKindUTF16
+}
+
+func supportsCodeLensRefresh(params *protocol.InitializeParams) bool {
+	return params != nil &&
+		params.Capabilities.Workspace != nil &&
+		params.Capabilities.Workspace.CodeLens != nil &&
+		params.Capabilities.Workspace.CodeLens.RefreshSupport != nil &&
+		*params.Capabilities.Workspace.CodeLens.RefreshSupport
 }
 
 func supportsConfiguration(params *protocol.InitializeParams) bool {
