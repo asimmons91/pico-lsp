@@ -29,7 +29,9 @@ type CartManager struct {
 	settings         func() config.Settings
 	workspaceFolders func() []uri.URI
 
-	mu        sync.Mutex
+	mu          sync.Mutex
+	analyzeHook func(uri.URI)
+
 	analyzeMu sync.Mutex
 	loader    *cart.Loader
 	resolver  *cart.Resolver
@@ -69,6 +71,23 @@ func NewCartManager(docs *DocumentStore, diags *Diagnostics, settings func() con
 	m.loader = cart.NewLoader(m.provider(), protocol.PositionEncodingKindUTF16, log)
 	m.resolver = cart.NewResolver(m.loader)
 	return m
+}
+
+// SetAnalyzeHook installs a callback invoked after a successful cart analysis.
+// The callback must not block; code-lens refresh scheduling is asynchronous.
+func (m *CartManager) SetAnalyzeHook(hook func(uri.URI)) {
+	m.mu.Lock()
+	m.analyzeHook = hook
+	m.mu.Unlock()
+}
+
+func (m *CartManager) notifyAnalyzed(root uri.URI) {
+	m.mu.Lock()
+	hook := m.analyzeHook
+	m.mu.Unlock()
+	if hook != nil {
+		hook(root)
+	}
 }
 
 func (m *CartManager) SetEncoding(encoding protocol.PositionEncodingKind) {
@@ -307,6 +326,7 @@ func (m *CartManager) analyzeLocked(ctx context.Context, u uri.URI, invalidate b
 	m.mu.Unlock()
 
 	m.publish(ctx, snap, entry.semantics, previous)
+	m.notifyAnalyzed(root)
 	return root
 }
 

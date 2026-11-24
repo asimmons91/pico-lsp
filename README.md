@@ -41,6 +41,9 @@ bugs with a minimal reproduction so they can be verified and fixed.
   flow-aware type inference with `off`, `basic`, and `strict` checking.
 - AST-guided `textDocument/formatting` that preserves shorthand, comments,
   annotations, includes, and non-code cart sections.
+- `textDocument/rangeFormatting` for `gq` and other line-range formatting, plus
+  `textDocument/documentLink` for resolved `#include` targets and throttled
+  `workspace/codeLens/refresh` support for the cart budget lens.
 - An editor-oriented tree-sitter grammar for `.p8` carts, with committed ABI 14
   parser sources, highlight/indent/text-object queries, and Neovim/Helix setup
   docs. It is highlighting-only and never used by analysis.
@@ -142,9 +145,16 @@ runtime path and enable the helper plugin:
 require("pico_lsp").setup()
 ```
 
-Full setup, keymaps, the `pico8/cartInfo` statusline recipe, the optional Vim
-syntax file, and PICO-8 comment settings are in
-[editors/nvim/README.md](editors/nvim/README.md).
+The canonical client lives in
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim). Full setup, keymaps,
+the `pico8/cartInfo` statusline recipe, the optional Vim syntax file, and
+PICO-8 comment settings are in its README.
+
+Neovim 0.11+ consumes the standard hooks directly: `gq` formats the selected
+lines through `textDocument/rangeFormatting`, and Neovim 0.12 maps `gx` to
+`textDocument/documentLink` and opens the target with `vim.ui.open`. Range
+formatting refuses a line-count-changing edit; format the whole document in that
+case. `gf` remains the in-editor include navigation path.
 
 ## Helix
 

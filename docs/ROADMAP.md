@@ -2,9 +2,10 @@
 
 **Status:** v1.8.1 released as a GitHub-only release with the server archives and
 VSIX. M24 remains in progress: the Marketplace/Open VSX launch and manual VS Code
-verification are deferred to a later patch.
+verification are deferred to a later patch. M33 (standard LSP hooks for the
+Neovim client) is complete.
 
-**Last updated:** 2026-11-22
+**Last updated:** 2026-11-24
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -84,6 +85,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
 | M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
 | M24 | VS Code Marketplace Launch and Documentation Cleanup | Marketplace/Open VSX listings, documentation cleanup, release automation, and manual VS Code verification | M15, M21, M22 | In progress (v1.8.1 released GitHub-only; registry launch later) |
+| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14, pico8.nvim M25/M30 | Done |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -115,6 +117,12 @@ publication to both registries and the manual VS Code verification are planned
 for a later patch; that patch sets `PUBLISH_REGISTRIES=true`, adds the secrets,
 and reruns the [release checklist](release-checklist.md).
 
+M33 is complete. The server advertises range formatting and document links and
+sends throttled `workspace/codeLens/refresh` requests to capable clients. The
+Neovim-facing client specs and tests live in
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim); M33 is the standard-LSP
+server dependency they consume. See [M33](M33-nvim-server-hooks.md).
+
 Each milestone has a detailed spec:
 
 - [M0 — Foundation & Walking Skeleton](M0-foundation.md)
@@ -141,6 +149,10 @@ Each milestone has a detailed spec:
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
 - [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress (v1.8.1 released GitHub-only; registry launch later)
+- [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — done
+
+The Neovim client milestone specs (M25–M32 and M34) live in
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim/tree/main/docs/milestones).
 
 Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 

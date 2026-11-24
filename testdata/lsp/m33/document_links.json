@@ -1,0 +1,72 @@
+[
+  {
+    "range": {
+      "start": {
+        "line": 3,
+        "character": 9
+      },
+      "end": {
+        "line": 3,
+        "character": 25
+      }
+    },
+    "tooltip": "Open lib/player.lua",
+    "target": "lib/player.lua"
+  },
+  {
+    "range": {
+      "start": {
+        "line": 4,
+        "character": 9
+      },
+      "end": {
+        "line": 4,
+        "character": 24
+      }
+    },
+    "tooltip": "Open lib/other.lua",
+    "target": "lib/other.lua"
+  },
+  {
+    "range": {
+      "start": {
+        "line": 5,
+        "character": 11
+      },
+      "end": {
+        "line": 5,
+        "character": 23
+      }
+    },
+    "tooltip": "Open unquoted.lua",
+    "target": "unquoted.lua"
+  },
+  {
+    "range": {
+      "start": {
+        "line": 6,
+        "character": 9
+      },
+      "end": {
+        "line": 6,
+        "character": 20
+      }
+    },
+    "tooltip": "Open tabs.p8 (tab 2)",
+    "target": "tabs.p8"
+  },
+  {
+    "range": {
+      "start": {
+        "line": 8,
+        "character": 9
+      },
+      "end": {
+        "line": 8,
+        "character": 21
+      }
+    },
+    "tooltip": "Open nested.lua",
+    "target": "nested.lua"
+  }
+]

@@ -73,6 +73,7 @@ type Include struct {
 	ResolvedURI   uri.URI
 	Tab           int // selected zero-based .p8 tab, or -1 for all tabs/non-.p8
 	DirectiveSpan source.Span
+	PathSpan      source.Span
 	FileSpan      source.Span
 	Missing       bool
 	Nested        bool

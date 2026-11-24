@@ -265,6 +265,14 @@ The cart root also gets a budget code lens. Run it to show the
 `pico8.showCartInfo` summary. The lens marks compressed budgets with
 `(warning)` from 90% of the limit and `(over limit)` above it.
 
+The server advertises standard range formatting and document links. Neovim sets
+`formatexpr` when a client supports range formatting, so `gq` formats the
+selected lines. A range that would change the line count is refused; format the
+whole document instead. Neovim 0.12 maps `gx` to document links and opens the
+resolved include with `vim.ui.open` (the system opener); `gf` remains the
+in-editor path. The canonical client is
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim).
+
 ## Smoke test
 
 1. Open the test cart:
