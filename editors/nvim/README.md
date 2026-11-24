@@ -1,8 +1,14 @@
 # Neovim 0.11+ setup
 
-This directory contains:
+The maintained Neovim client is
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim). Use its plugin for
+automatic filetype setup, cart-owned `.lua` attachment, the cart budget
+statusline, the glyph picker, PNG carts, and `:checkhealth pico_lsp`.
 
-- the recommended `vim.lsp.config` setup for `.p8` carts;
+This directory remains the reference for the base `vim.lsp.config` setup and the
+compatibility helper. It contains:
+
+- the minimal `vim.lsp.config` setup for `.p8` carts;
 - an optional helper for attaching `pico-lsp` to cart-owned `.lua` buffers;
 - `ftdetect`, `syntax`, and `ftplugin` files for PICO-8 carts;
 - a headless smoke test for the helper.

@@ -1,5 +1,8 @@
 # pico-lsp
 
+[![CI](https://github.com/asimmons91/pico-lsp/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/asimmons91/pico-lsp/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/asimmons91/pico-lsp)](https://github.com/asimmons91/pico-lsp/releases)
+
 `pico-lsp` is a fast, editor-agnostic language server for PICO-8 carts. It
 understands the PICO-8 dialect, `.p8` tabs, non-recursive `#include` files, the
 PICO-8 0.2.7 API, and LuaCATS type annotations.
@@ -7,6 +10,9 @@ PICO-8 0.2.7 API, and LuaCATS type annotations.
 It is a static Go binary with no runtime dependencies. It is not a generic Lua
 language server: PICO-8 semantics win, including shorthand syntax, token and
 character budgets, and the absence of the Lua standard library.
+
+New here? Start with the [getting-started guide](docs/getting-started.md) or open
+the [demo cart](examples/hello.p8).
 
 ## AI-assisted development
 
@@ -119,6 +125,27 @@ upgrade, uninstall, cache, and offline instructions.
 
 ## Neovim 0.11+
 
+Install a `pico-lsp` release binary, then use the canonical
+[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim) client:
+
+```lua
+return {
+  {
+    "asimmons91/pico8.nvim",
+    main = "pico_lsp",
+    lazy = false,
+    opts = {},
+  },
+}
+```
+
+`lazy = false` makes the plugin's `ftdetect`, `ftplugin`, and `syntax` files
+available before the first `.p8` buffer opens. The plugin adds cart-owned `.lua`
+attachment, the `pico8/cartInfo` statusline helpers, the P8SCII glyph picker,
+PNG cart opening, `gq` range formatting, and `:checkhealth pico_lsp`.
+
+If you prefer not to use a plugin, the minimal `vim.lsp.config` setup is:
+
 ```lua
 vim.filetype.add({ extension = { p8 = "pico8" } })
 
@@ -138,17 +165,9 @@ vim.lsp.config("pico_lsp", {
 vim.lsp.enable("pico_lsp")
 ```
 
-To attach cart-owned `.lua` buffers automatically, add `editors/nvim` to your
-runtime path and enable the helper plugin:
-
-```lua
-require("pico_lsp").setup()
-```
-
-The canonical client lives in
-[`pico8.nvim`](https://github.com/asimmons91/pico8.nvim). Full setup, keymaps,
-the `pico8/cartInfo` statusline recipe, the optional Vim syntax file, and
-PICO-8 comment settings are in its README.
+The repository's [`editors/nvim`](editors/nvim/README.md) helper remains for
+compatibility with existing runtimepath setups; `pico8.nvim` is the maintained
+client. Full setup, keymaps, and statusline recipes are in the plugin README.
 
 Neovim 0.11+ consumes the standard hooks directly: `gq` formats the selected
 lines through `textDocument/rangeFormatting`, and Neovim 0.12 maps `gx` to
@@ -206,6 +225,21 @@ matching `workspace/executeCommand` command used by the code lens.
 `pico8/glyphs` and `pico8.insertGlyph` power the P8SCII glyph picker. All are
 documented in [docs/api.md](docs/api.md).
 
+## Documentation
+
+- [Getting started](docs/getting-started.md): install and try the demo cart.
+- [PICO-8 workflow](docs/pico8-workflow.md): edit carts outside PICO-8, reload,
+  includes, and PNG limits.
+- [Types](docs/types.md): LuaCATS annotations and checking modes.
+- [CLI](docs/cli.md): flags, logging, and `.p8.png` decoding.
+- [Editors](docs/editors.md): tested versions and per-editor differences.
+- [Migrating](docs/migrating.md): move from `pico8-ls` and coexist with LuaLS.
+- [Configuration](docs/configuration.md): every `pico8.*` setting.
+- [Diagnostics](docs/diagnostics.md): codes, severities, and suppression.
+- [API](docs/api.md): custom requests, commands, and public Go packages.
+- [Troubleshooting](docs/troubleshooting.md): attach, feature, and log problems.
+- [Changelog](CHANGELOG.md) and [release checklist](docs/release-checklist.md).
+
 ## Known limitations
 
 - `.p8.png` carts are supported read-only. Edit and save an exported text `.p8`
@@ -220,6 +254,23 @@ documented in [docs/api.md](docs/api.md).
 - macOS and Windows binaries are unsigned. See
   [docs/troubleshooting.md](docs/troubleshooting.md) for Gatekeeper and
   SmartScreen notes.
+
+## Support and privacy
+
+- Start with [Getting started](docs/getting-started.md) and
+  [Troubleshooting](docs/troubleshooting.md).
+- Report bugs with the
+  [bug report form](https://github.com/asimmons91/pico-lsp/issues/new?template=bug.yml)
+  and include a minimal cart.
+- Report vulnerabilities privately through [SECURITY.md](SECURITY.md), not the
+  public issue tracker.
+- Contribution guidance is in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+`pico-lsp` has no telemetry, analytics, or crash reporting. Cart code is parsed
+and analyzed, never executed. The VS Code extension's only network request is the
+checksummed download of the matching server from this project's GitHub releases.
+Logs may contain source excerpts only when trace logging is explicitly enabled;
+review a log before sharing it.
 
 ## Development
 

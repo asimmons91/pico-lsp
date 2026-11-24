@@ -24,19 +24,20 @@ patch when the docs and VSIX are ready, or its docs may land without a tag if th
 packaged extension does not change. Record which path was taken. See
 [M24](M24-end-user-onboarding.md).
 
-- [ ] `docs/getting-started.md` and `examples/hello.p8` exist and are linked from
+- [x] `docs/getting-started.md` and `examples/hello.p8` exist and are linked from
       the root README.
-- [ ] `docs/pico8-workflow.md`, `docs/types.md`, `docs/cli.md`,
+- [x] `docs/pico8-workflow.md`, `docs/types.md`, `docs/cli.md`,
       `docs/migrating.md`, and `docs/editors.md` exist and are linked from the
       relevant README sections.
-- [ ] Root README, install, troubleshooting, VS Code product page, `docs/M6`,
+- [x] Root README, install, troubleshooting, VS Code product page, `docs/M6`,
       `docs/M15`, `docs/M21`, and `AGENTS.md` no longer promise a Marketplace or
       Open VSX launch.
-- [ ] `.github/ISSUE_TEMPLATE/`, `SECURITY.md`, and `CONTRIBUTING.md` exist.
-- [ ] GitHub description, topics, homepage, and social preview are set.
+- [x] `.github/ISSUE_TEMPLATE/`, `SECURITY.md`, and `CONTRIBUTING.md` exist.
+- [x] GitHub description, topics, and homepage are set.
+- [ ] A social preview is uploaded in the repository settings.
 - [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
       install path.
-- [ ] The documentation link check passes in CI.
+- [x] The documentation link check exists and passes locally and in CI.
 - [ ] A real screenshot or recording from the manual verification is in the root
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available

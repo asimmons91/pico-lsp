@@ -1,11 +1,11 @@
 # PICO-8 Language Server — Roadmap
 
 **Status:** v1.8.1 released as a GitHub-only release with the server archives and
-VSIX. M24 is in progress as the end-user documentation and onboarding milestone;
-its VS Code work uses the GitHub release VSIX, and manual VS Code verification is
-still open. Marketplace/Open VSX publication is parked in the post-v1 backlog
-pending publisher account setup. M33 (standard LSP hooks for the Neovim client)
-is complete.
+VSIX. M24 is in progress: the documentation, support files, demo cart, and link
+check are implemented. The real screenshot, manual VS Code verification, tagged
+`pico8.nvim` client, and docs/onboarding patch remain open. Marketplace/Open VSX
+publication is parked in the post-v1 backlog pending publisher account setup.
+M33 (standard LSP hooks for the Neovim client) is complete.
 
 **Last updated:** 2026-11-24
 **Module:** `github.com/asimmons91/pico-lsp`  
@@ -87,7 +87,7 @@ These decisions were made before milestone specs were written. Changing one requ
 | M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0) |
 | M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
 | M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
-| M24 | End-User Documentation and Onboarding | Quickstart, PICO-8 workflow, type/CLI/migration/editor guides, support files, demo assets, and VSIX verification | M15, M21, M22, M33; pico8.nvim M32–M34 | In progress (v1.8.1 GitHub-only; registry publication parked) |
+| M24 | End-User Documentation and Onboarding | Quickstart, PICO-8 workflow, type/CLI/migration/editor guides, support files, demo assets, and VSIX verification | M15, M21, M22, M33; pico8.nvim M32–M34 | In progress (docs implemented; screenshot, verification, client tag, and patch open; registry publication parked) |
 | M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14, pico8.nvim M25/M30 | Done |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
@@ -114,14 +114,14 @@ deferred.
 
 M24 is in progress and has been reworked around end-user documentation and
 onboarding. **v1.8.1** was released on 2026-11-22 as a GitHub-only release
-containing the server archives and VSIX. The product-page copy, documentation,
-original artwork, and opt-in registry automation are implemented, but registry
-publication is parked in the [post-v1 backlog](post-v1-backlog.md) because the
-`asimmons91` publisher and `VSCE_PAT`/`OVSX_PAT` secrets are not configured. M24
-now covers the quickstart, PICO-8 workflow, type/CLI/migration/editor guides,
-support files, real demo assets, the tagged `pico8.nvim` install path, and the
-VSIX-only manual verification. The docs/onboarding patch is cut when those are
-ready; its version is chosen at release time. See
+containing the server archives and VSIX. The quickstart, demo cart, PICO-8
+workflow, type/CLI/migration/editor guides, support files, repository metadata,
+and documentation link check are implemented. The original artwork and opt-in
+registry automation remain, but registry publication is parked in the
+[post-v1 backlog](post-v1-backlog.md) because the `asimmons91` publisher and
+`VSCE_PAT`/`OVSX_PAT` secrets are not configured. Remaining M24 work is a real
+screenshot, the VSIX-only manual verification, a tagged `pico8.nvim` client, and
+the docs/onboarding patch; the version is chosen at release time. See
 [M24](M24-end-user-onboarding.md).
 
 M33 is complete. The server advertises range formatting and document links and
@@ -155,7 +155,7 @@ Each milestone has a detailed spec:
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (v1.8.1 GitHub-only; registry publication parked)
+- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (docs implemented; screenshot, verification, client tag, and patch open; registry publication parked)
 - [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — done
 
 The Neovim client milestone specs (M25–M32 and M34) live in
@@ -165,6 +165,12 @@ Uncommitted post-v1 ideas live in the [post-v1 backlog](post-v1-backlog.md).
 
 API and configuration references:
 
+- [Getting started](getting-started.md)
+- [PICO-8 workflow](pico8-workflow.md)
+- [Types](types.md)
+- [CLI](cli.md)
+- [Editors](editors.md)
+- [Migrating](migrating.md)
 - [API](api.md)
 - [Configuration](configuration.md)
 - [Diagnostics](diagnostics.md)

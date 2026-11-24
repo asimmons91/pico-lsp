@@ -30,7 +30,7 @@ backlog item rather than a current milestone deliverable.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — shipped in v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (v1.8.1 GitHub-only; registry publication parked below)
+- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (docs and support files implemented; screenshot, VS Code verification, `pico8.nvim` tag, and patch release open; registry publication parked below)
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.

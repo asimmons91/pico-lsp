@@ -1,9 +1,10 @@
 # Helix setup
 
 Helix attaches `pico-lsp` to `.p8` carts through its language-server
-configuration. The server supports the full v1 feature set: diagnostics,
-symbols, completion, hover, signature help, semantic tokens, inlay hints,
-code actions, and the cart budget code lens.
+configuration. The server supports diagnostics, symbols, completion, hover,
+signature help, semantic tokens, inlay hints, and code actions. The cart budget
+is available through the `pico8/cartInfo` request; Helix has no built-in status
+UI for it.
 
 ## Install
 
@@ -53,12 +54,18 @@ watches workspace files; use a temporary directory.
 
 ## Configuration
 
-Server settings use the `pico8` section. Helix does not pull
-`workspace/configuration` in every version, so pass settings in the server
-definition or via the language configuration supported by your Helix release.
-The server also accepts initialization options when the client sends them.
+Server settings use the `pico8` section. Helix passes `config` on the language
+server as initialization options, which the server accepts as
+`initializationOptions.pico8`:
 
-See [../../docs/configuration.md](../../docs/configuration.md) for every setting.
+```toml
+[language-server.pico-lsp]
+command = "pico-lsp"
+config = { pico8 = { typeChecking = "basic", inlayHints = false } }
+```
+
+See [../../docs/configuration.md](../../docs/configuration.md) for every setting
+and [../../docs/editors.md](../../docs/editors.md) for the tested matrix.
 
 ## Smoke test
 

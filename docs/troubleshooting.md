@@ -312,6 +312,7 @@ Gatekeeper or SmartScreen warnings. Instructions are in
 
 ## Reporting a bug
 
+Use the [bug report form](https://github.com/asimmons91/pico-lsp/issues/new?template=bug.yml).
 Include:
 
 - `pico-lsp --version`;
@@ -322,4 +323,7 @@ Include:
 - the relevant log lines from `--log-file`;
 - whether the issue occurs with the default configuration.
 
-The server has no telemetry and does not collect data automatically.
+Do not report security issues in the public tracker; use
+[SECURITY.md](../SECURITY.md). The server has no telemetry and does not collect
+data automatically. See [CONTRIBUTING.md](../CONTRIBUTING.md) for development
+setup and pull requests.

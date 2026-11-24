@@ -57,6 +57,11 @@ for platform-specific checksum commands and offline setup.
 The extension version and server version are identical by default. Extension
 `1.8.1`, for example, downloads `pico-lsp` v1.8.1.
 
+New to `pico-lsp`? See the
+[getting-started guide](https://github.com/asimmons91/pico-lsp/blob/main/docs/getting-started.md)
+and open the
+[demo cart](https://github.com/asimmons91/pico-lsp/blob/main/examples/hello.p8).
+
 ## Features
 
 - PICO-8-aware diagnostics for syntax, includes, undefined globals, types, and

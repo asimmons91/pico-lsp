@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
+- End-user onboarding docs: a quickstart with a demo cart, the PICO-8 editing
+  workflow, a LuaCATS/type guide, CLI reference, editor matrix, migration and
+  LuaLS coexistence guide, issue templates, security and contribution policies,
+  and a Markdown link check in CI.
 - M33 standard LSP hooks: `textDocument/rangeFormatting` with safe complete-line
   edits and a line-count refusal, `textDocument/documentLink` for resolved
   `#include` targets with precise path ranges, and throttled

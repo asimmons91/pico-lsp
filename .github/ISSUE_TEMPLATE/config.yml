@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation and quickstart
+    url: https://github.com/asimmons91/pico-lsp#readme
+    about: Install, configure, and try the demo cart.
+  - name: Troubleshooting
+    url: https://github.com/asimmons91/pico-lsp/blob/main/docs/troubleshooting.md
+    about: The server does not attach, features are missing, or logs.
+  - name: Security policy
+    url: https://github.com/asimmons91/pico-lsp/blob/main/SECURITY.md
+    about: Report a vulnerability privately.

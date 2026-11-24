@@ -4,7 +4,8 @@ pico-lsp reads configuration from the `pico8` section using
 `workspace/configuration` when the client supports pulls, falling back to
 `initializationOptions.pico8` and `workspace/didChangeConfiguration`.
 
-For installation and editor setup, see [install.md](install.md),
+For installation and editor setup, see [getting-started.md](getting-started.md),
+[editors.md](editors.md), [install.md](install.md),
 [../editors/nvim/README.md](../editors/nvim/README.md), and
 [../editors/helix/README.md](../editors/helix/README.md).
 
