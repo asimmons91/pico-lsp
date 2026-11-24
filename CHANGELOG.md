@@ -14,6 +14,13 @@ All notable changes to this project are documented here. The format follows
   `workspace/codeLens/refresh` requests for clients that advertise refresh
   support. The cart model now records an include `PathSpan` for links.
 
+### Changed
+
+- Reworked M24 into an end-user documentation and onboarding milestone.
+  Marketplace and Open VSX publication is parked in the post-v1 backlog pending
+  publisher account setup; the GitHub release VSIX remains the supported VS Code
+  channel.
+
 ## [1.8.1] - 2026-11-22
 
 ### Added

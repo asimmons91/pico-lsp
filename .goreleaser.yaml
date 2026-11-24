@@ -100,5 +100,6 @@ release:
     deferred to post-v1.
 
     VS Code users can install **PICO-8 LSP** (`asimmons91.pico-lsp`) by
-    downloading `pico-lsp-vscode-<version>.vsix` from this release. Marketplace
-    and Open VSX listing is planned for a later patch.
+    downloading `pico-lsp-vscode-<version>.vsix` from this release. The VSIX is
+    the supported VS Code channel; Marketplace and Open VSX publication is not
+    currently available.

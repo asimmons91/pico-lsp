@@ -187,8 +187,9 @@ jobs:
   publish-marketplace:
     name: publish marketplace
     needs: release
-    # Registry publishing is opt-in. Set the repository variable
-    # PUBLISH_REGISTRIES to true after the publisher and tokens are ready.
+    # Registry publishing is opt-in and currently parked in the post-v1
+    # backlog. Set PUBLISH_REGISTRIES=true only after the publisher and tokens
+    # are ready and the listing checks are scheduled.
     if: startsWith(github.ref, 'refs/tags/v') && vars.PUBLISH_REGISTRIES == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -237,8 +238,9 @@ jobs:
   publish-openvsx:
     name: publish open vsx
     needs: release
-    # Registry publishing is opt-in. Set the repository variable
-    # PUBLISH_REGISTRIES to true after the publisher and tokens are ready.
+    # Registry publishing is opt-in and currently parked in the post-v1
+    # backlog. Set PUBLISH_REGISTRIES=true only after the publisher and tokens
+    # are ready and the listing checks are scheduled.
     if: startsWith(github.ref, 'refs/tags/v') && vars.PUBLISH_REGISTRIES == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15

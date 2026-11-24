@@ -2,8 +2,9 @@
 
 This checklist covers the v1.x release process for GitHub server archives and the
 VS Code extension. Homebrew and Mason publishing are deferred to post-v1.
-**v1.8.1 was released on 2026-11-22 as a GitHub-only release**; the
-Marketplace/Open VSX launch follows in a later patch.
+**v1.8.1 was released on 2026-11-22 as a GitHub-only release.** Marketplace and
+Open VSX publication is parked in the [post-v1 backlog](post-v1-backlog.md); it
+is not a release gate for M24.
 
 ## v1.8.1 release record
 
@@ -15,6 +16,33 @@ Marketplace/Open VSX launch follows in a later patch.
   `checksums.txt`, `pico-lsp-vscode-1.8.1.vsix`, and its `.sha256`
 - Registry jobs: skipped because `PUBLISH_REGISTRIES` is unset
 - `go install ...@v1.8.1` verified: reports `v1.8.1`
+
+## M24 docs/onboarding release
+
+M24 is the end-user documentation and onboarding milestone. It may ship as a
+patch when the docs and VSIX are ready, or its docs may land without a tag if the
+packaged extension does not change. Record which path was taken. See
+[M24](M24-end-user-onboarding.md).
+
+- [ ] `docs/getting-started.md` and `examples/hello.p8` exist and are linked from
+      the root README.
+- [ ] `docs/pico8-workflow.md`, `docs/types.md`, `docs/cli.md`,
+      `docs/migrating.md`, and `docs/editors.md` exist and are linked from the
+      relevant README sections.
+- [ ] Root README, install, troubleshooting, VS Code product page, `docs/M6`,
+      `docs/M15`, `docs/M21`, and `AGENTS.md` no longer promise a Marketplace or
+      Open VSX launch.
+- [ ] `.github/ISSUE_TEMPLATE/`, `SECURITY.md`, and `CONTRIBUTING.md` exist.
+- [ ] GitHub description, topics, homepage, and social preview are set.
+- [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
+      install path.
+- [ ] The documentation link check passes in CI.
+- [ ] A real screenshot or recording from the manual verification is in the root
+      README and `editors/vscode/README.md`.
+- [ ] The manual VS Code verification below is recorded for the available
+      platforms, or unverified checks are recorded as open.
+- [ ] If the VSIX changes, the version bump, changelogs, tag, and assets match;
+      otherwise record why no tag was cut.
 
 ## Pre-release
 
@@ -97,28 +125,31 @@ Marketplace/Open VSX launch follows in a later patch.
       VSIX.
 - [ ] Install the release VSIX and run the manual verification below.
 
-## Later registry patch
+## Parked registry publication
+
+Not part of M24. Do these steps only after the publisher accounts and tokens are
+available; keep the GitHub VSIX as the supported channel until both listings are
+live. Record the launch in the backlog, not as an M24 exit criterion.
 
 - [ ] Claim and verify the `asimmons91` publisher in both the VS Code Marketplace
       and Open VSX.
 - [ ] Add the `VSCE_PAT` and `OVSX_PAT` repository secrets.
-- [ ] Add a real screenshot or recording from the manual verification to
-      `editors/vscode/images/` and the listing.
-- [ ] Restore the Marketplace-first install order in `editors/vscode/README.md`.
+- [ ] Restore the registry-first install order in `editors/vscode/README.md` only
+      after both listings are live.
 - [ ] Set `PUBLISH_REGISTRIES=true`.
-- [ ] Tag the later patch after the release PR merges; extension `X.Y.Z` must
+- [ ] Tag the registry patch after the release PR merges; extension `X.Y.Z` must
       download server tag `vX.Y.Z`.
 - [ ] Confirm `publish-marketplace` and `publish-openvsx` succeed.
 - [ ] Verify both listings show the correct version, README, images, icon,
       license, changelog, repository links, categories, and keywords.
 - [ ] Install from both registries and record the results.
-- [ ] Update the roadmap, M24 status, and `AGENTS.md`; mark M24 Done.
+- [ ] Update the backlog item and `AGENTS.md`.
 
 ## Registry automation
 
 - Registry publishing is gated by the `PUBLISH_REGISTRIES` repository variable.
   When it is unset or not `true`, both publish jobs are skipped. This is the
-  v1.8.1 GitHub-only path.
+  current GitHub-only path.
 - `VSCE_PAT` and `OVSX_PAT` are repository secrets. Do not commit or print them.
 - `VSCE_PAT` is an Azure DevOps personal access token with the Marketplace
   **Manage** scope and access to the `asimmons91` publisher.
@@ -175,8 +206,8 @@ Marketplace/Open VSX launch follows in a later patch.
 - [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1`
       builds for a developer and reports `v1.8.1`.
 - [ ] Update any documentation that needs the released version.
-- [ ] Open post-v1 tracking issues for Homebrew, Mason, the registry launch, Zed,
-      and API version selection as needed.
+- [ ] Open post-v1 tracking issues for Homebrew, Mason, the parked registry
+      launch, Zed, and API version selection as needed.
 
 ## Manual VS Code verification
 
@@ -218,7 +249,7 @@ Record one row per tested platform in the table below.
       web, and container hosts are unsupported.
 
 The Marketplace clean-install, Open VSX install, and registry listing-render
-checks are part of the later registry patch.
+checks are part of the parked registry publication item, not M24.
 
 Record any unverified platform or check as open rather than implying it passed.
 

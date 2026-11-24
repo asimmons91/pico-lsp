@@ -172,57 +172,52 @@ removal. Disable all M14 actions with `pico8.refactors.enabled: false`; see
 
 ## VS Code extension
 
-v1.8.1 is a GitHub-release-only release. Install
-`pico-lsp-vscode-1.8.1.vsix` from the
+The extension is distributed as a GitHub release VSIX. Install
+`pico-lsp-vscode-<version>.vsix` from the
 [GitHub release](https://github.com/asimmons91/pico-lsp/releases) after verifying
-its `.vsix.sha256` checksum. Marketplace and Open VSX listing is planned for a
-later patch; the registry troubleshooting below applies once those listings are
-live. The extension downloads the server version matching its own version from
-the GitHub release and verifies SHA-256. Offline use also requires a local server
-binary and `pico8.serverPath`.
+its `.vsix.sha256` checksum. Marketplace and Open VSX publication is not
+currently available; the registry work is parked in the
+[post-v1 backlog](post-v1-backlog.md). The extension downloads the server version
+matching its own version from the GitHub release and verifies SHA-256. Offline use
+also requires a local server binary and `pico8.serverPath`.
 
 The extension attaches to `.p8` files and to all `.lua` files in workspace
 folders that contain a `.p8` cart. Disable another Lua language server for those
 folders to avoid duplicate diagnostics. `.lua` files outside PICO-8 workspaces
 are intentionally not attached.
 
-### The registry listing is not live, or the registry version is behind
+### The extension is not in a registry
 
-- For v1.8.1, install the VSIX from the GitHub release. The Marketplace and Open
-  VSX listings are planned for a later patch.
-- Once the listings are live, search the Extensions view for `PICO-8 LSP` or the
-  exact ID `asimmons91.pico-lsp`.
-- Registry processing can lag behind the GitHub release. When you need a version
-  that is not listed yet, install the matching VSIX from the GitHub release after
-  verifying its `.vsix.sha256` checksum.
-- If only one registry lists the extension, only that registry's install path is
-  currently available; use the VSIX elsewhere and retry the registry later.
+- Install the VSIX from the GitHub release; there is no Marketplace or Open VSX
+  listing to search for today.
+- Use the VSIX that matches your editor version and verify its `.vsix.sha256`
+  checksum.
+- If you need a specific version, install the matching VSIX from the GitHub
+  release instead of waiting for a registry update.
+- Do not configure your editor to expect a registry listing until the backlog
+  item is completed and the listings are verified.
 
-### Registry-installed extension cannot download the server
+### VSIX-installed extension cannot download the server
 
-The extension needs the matching server release on GitHub, even when the
-extension itself came from a registry.
+The extension needs the matching server release on GitHub.
 
 - Confirm the GitHub release for the extension version exists and contains the
   archive for your OS and architecture plus `checksums.txt`.
 - Open **PICO-8: Show Language Server Output** for the download error.
-- If the extension was published before its server release, wait for the server
-  release or install the previous extension version until the release is
-  available.
+- If the extension was installed before its server release exists, install the
+  previous extension version until the matching server release is available.
 - Verify the checksum failure message against the release's `checksums.txt`.
   Delete the cache and retry only if the download was interrupted; never bypass
   a repeated checksum mismatch.
 
-### Proxy and corporate registry restrictions
+### Proxy and network restrictions
 
 - Configure VS Code's `http.proxy` and `http.proxyStrictSSL` settings for the
   server download.
-- If your organization blocks GitHub releases or the Marketplace, install the
-  VSIX from an approved internal mirror, or install the server separately and
-  set `pico8.serverPath`.
-- Open VSX availability depends on your editor's registry configuration. A
-  VS Code installation does not automatically use Open VSX, and VSCodium does
-  not automatically use the VS Code Marketplace.
+- If your organization blocks GitHub releases, install the VSIX from an approved
+  internal mirror, or install the server separately and set `pico8.serverPath`.
+- Registry availability depends on your editor and network; the current support
+  path is the GitHub release VSIX, not a registry.
 
 ### The extension updated but the cached server is old
 

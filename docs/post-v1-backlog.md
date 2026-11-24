@@ -10,8 +10,9 @@ move into their own milestone specs.
 ## Promoted post-v1 work
 
 The following backlog items have been promoted and split into milestone specs.
-v1.8.1 shipped as a GitHub-only release; registry publication and manual
-verification follow in a later patch.
+v1.8.1 shipped as a GitHub-only release. M24 was reworked around end-user
+documentation and onboarding; Marketplace/Open VSX publication is a blocked
+backlog item rather than a current milestone deliverable.
 
 - [M7 — AST-Aware Formatter](M7-formatter.md)
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
@@ -29,23 +30,49 @@ verification follow in a later patch.
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md) — shipped in v1.8.0
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md) — shipped in v1.8.0
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — VS Code Marketplace Launch and Documentation Cleanup](M24-vscode-marketplace.md) — in progress (v1.8.1 GitHub-only; registry launch later)
+- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (v1.8.1 GitHub-only; registry publication parked below)
 
 M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
-later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release; the
-registry launch follows in a later patch. The unpromoted items below are not part
-of these releases.
+later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release. M24 now
+covers end-user documentation and onboarding; registry publication is blocked
+below. The unpromoted items below are not part of these releases.
 
 ## Prioritization
 
 | Priority | Item | Value | Risk |
 |---|---|---|---|
+| Blocked | VS Code Marketplace and Open VSX publication | Makes the VS Code extension discoverable and auto-updatable | Blocked on publisher account and token setup |
 | P1 | Homebrew and Mason packaging | Completes the v1 install story deferred from M6 | Low–medium |
 | P2 | Zed extension | Modern editor support | Medium |
 | P3 | API version selection | Support future PICO-8 API versions | Medium |
+
+## Blocked: VS Code Marketplace and Open VSX publication
+
+The extension is currently distributed as a GitHub release VSIX. Registry
+publication is implemented in the release workflow but deliberately skipped
+because the `asimmons91` publisher and `VSCE_PAT`/`OVSX_PAT` secrets are not
+ready. Do not claim either registry is live, and do not make M24 or a release
+depend on it.
+
+When the accounts are available:
+
+- Claim and verify the `asimmons91` publisher in both registries.
+- Add the `VSCE_PAT` and `OVSX_PAT` repository secrets.
+- Add the real screenshot or recording captured by M24 to the listing.
+- Set `PUBLISH_REGISTRIES=true` and publish the same verified VSIX that passed
+  the release checks.
+- Verify both listings render the README, screenshot, icon, license, changelog,
+  repository links, categories, and keywords.
+- Restore registry-first install wording only after both listings are live.
+- Keep the GitHub VSIX as the pinned and registry-lag fallback.
+
+The independent `publish-marketplace` and `publish-openvsx` jobs and their
+manual fallback stay in the repository. See the parked section in
+[M24](M24-end-user-onboarding.md#parked-registry-publication) and the
+[registry automation](release-checklist.md#registry-automation) notes.
 
 ## 1. Homebrew and Mason packaging
 
@@ -87,7 +114,7 @@ Requirements:
 
 ## Cross-cutting requirements
 
-- No regressions in existing v1 through v1.8.0 behavior or performance
+- No regressions in existing v1 through v1.8.1 behavior or performance
   budgets.
 - Every feature is additive or explicitly opt-in.
 - Update the roadmap, README, configuration docs, diagnostic reference, and
@@ -100,6 +127,7 @@ Requirements:
 
 | Risk | Mitigation |
 |---|---|
+| Publisher accounts or registry credentials unavailable | Keep the GitHub VSIX primary; park registry publication in this backlog and do not promise a launch date. |
 | Packaging credentials or registry lag | Ship GitHub binaries first; make publishers independently retryable. |
 | Client/packaging drift | Shared release assets, thin clients, platform smoke tests. |
 | API-version stub drift | Versioned stub fixtures and explicit fallback diagnostics. |

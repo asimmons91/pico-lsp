@@ -57,7 +57,7 @@ bugs with a minimal reproduction so they can be verified and fixed.
 - A VS Code extension with a contributed `pico8` language, TextMate
   highlighting, managed checksummed server downloads, `.p8`/Lua attachment, and
   cart-budget status bar, shipped as a GitHub release VSIX. Marketplace and Open
-  VSX listing is planned for a later patch.
+  VSX publication is not currently available; the VSIX is the supported channel.
 - Conservative refactors: extract to local function, safe global-to-local,
   generated `---@class`, `if`/`while` shorthand conversion, token-saving
   rewrites (`print` → `?`, self-assignment → compound assignment,
@@ -70,10 +70,10 @@ bugs with a minimal reproduction so they can be verified and fixed.
 ## Install
 
 v1 is distributed as checksummed GitHub release archives and `go install` for
-developers. v1.8.1 is a GitHub-only release: the VS Code extension ships as a
-VSIX asset. Marketplace and Open VSX listing is planned for a later patch.
-Homebrew and Mason packaging remain deferred to post-v1; see the
-[roadmap](docs/ROADMAP.md).
+developers. The VS Code extension ships as a VSIX asset from the same GitHub
+release. Marketplace and Open VSX publication is not currently available, so the
+VSIX is the supported VS Code channel. Homebrew and Mason packaging remain
+deferred to post-v1; see the [roadmap](docs/ROADMAP.md).
 
 Download the archive for your OS and architecture from the
 [v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1), or
@@ -98,7 +98,8 @@ The PICO-8 LSP extension (`asimmons91.pico-lsp`) adds PICO-8 support to local
 desktop VS Code and Open VSX-compatible editors and downloads the matching
 server on first use. No Go toolchain or manual server install is required.
 
-v1.8.1 is published on GitHub only. Install the VSIX from the matching
+The extension is distributed as a GitHub release VSIX. Marketplace and Open VSX
+publication is not currently available. Install the VSIX from the matching
 [v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1):
 
 1. Download `pico-lsp-vscode-1.8.1.vsix` and
@@ -107,9 +108,8 @@ v1.8.1 is published on GitHub only. Install the VSIX from the matching
    choose **Install from VSIX...**.
 3. Open a folder containing a `.p8` cart.
 
-Marketplace and Open VSX listing is planned for a later patch; see the
-[roadmap](docs/ROADMAP.md). The extension itself is unchanged when those
-listings go live.
+The VSIX remains available for pinned, offline, and registry-lag installs. See
+the [roadmap](docs/ROADMAP.md) for the parked registry work.
 
 Remote SSH, WSL, Dev Containers, Codespaces, and web extension hosts are not
 supported. Offline use requires a local `pico-lsp` binary and
@@ -210,11 +210,11 @@ documented in [docs/api.md](docs/api.md).
 
 - `.p8.png` carts are supported read-only. Edit and save an exported text `.p8`
   when you need to change the cart; the server never writes PNG carts.
-- VS Code and Open VSX-compatible editors are supported by the PICO-8 LSP
-  extension for local desktop windows only. Remote SSH, WSL, Dev Containers,
-  Codespaces, and web extension hosts are not supported. Zed remains in the
-  [post-v1 backlog](docs/post-v1-backlog.md). The server remains
-  editor-agnostic.
+- VS Code and Open VSX-compatible editors are supported through the GitHub
+  release VSIX for local desktop windows only. Remote SSH, WSL, Dev Containers,
+  Codespaces, and web extension hosts are not supported. Marketplace and Open
+  VSX publication is parked in the [post-v1 backlog](docs/post-v1-backlog.md).
+  Zed remains in that backlog too. The server remains editor-agnostic.
 - Included `.lua` auto-attachment is a Neovim helper; Helix users open the
   owning `.p8` cart or configure their own attachment strategy.
 - macOS and Windows binaries are unsigned. See

@@ -11,6 +11,9 @@ Users can annotate PICO-8 code with LuaCATS comments and get useful type informa
 
 Type checking is **gradual and low-noise**. Annotations are optional. Unannotated code should not suddenly light up with errors.
 
+> **User-facing documentation:** the LuaCATS and gradual-typing guide is
+> completed in [M24](M24-end-user-onboarding.md#3-luacats-and-type-guide).
+
 **Demo:**
 
 ```lua

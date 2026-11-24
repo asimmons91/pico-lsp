@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+- Clarify that the extension is distributed as a GitHub release VSIX and that
+  Marketplace/Open VSX publication is parked in the post-v1 backlog. No
+  language-server or extension feature behavior changed.
+
 ## 1.8.1
 
 - Prepare the extension for the VS Code Marketplace and Open VSX. v1.8.1 ships

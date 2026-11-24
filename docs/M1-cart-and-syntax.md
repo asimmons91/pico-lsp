@@ -11,6 +11,10 @@ The server understands the structure of a PICO-8 cart and the PICO-8 dialect of 
 
 **Demo:** Open a multi-tab `.p8` cart that includes `lib/player.lua`. The server reports a deliberate syntax error at the correct file and line, lists functions/tabs/includes in the outline, folds blocks and comments in clients that support LSP folding (Neovim), and counts tokens/characters that match shrinko8/PICO-8 fixtures.
 
+> **User-facing workflow:** editing carts outside PICO-8, reload/save conflicts,
+> include ownership, and read-only PNG handling are documented in
+> [M24](M24-end-user-onboarding.md#2-pico-8-workflow).
+
 ## Scope
 
 ### In scope
