@@ -478,7 +478,7 @@ func TestM33CodeLensRefreshStopsOnShutdown(t *testing.T) {
 		t.Fatal("timed out waiting for initial code lens refresh")
 	}
 
-	if err := h.server.DidChange(ctx, &protocol.DidChangeTextDocumentParams{
+	if err := h.srv.DidChange(ctx, &protocol.DidChangeTextDocumentParams{
 		TextDocument: protocol.VersionedTextDocumentIdentifier{
 			TextDocumentIdentifier: protocol.TextDocumentIdentifier{URI: root},
 			Version:                2,
