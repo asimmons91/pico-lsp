@@ -13,7 +13,7 @@
 ## Source of truth
 
 - `docs/ROADMAP.md` is the index and records locked product decisions.
-- `docs/M0-*.md` through `docs/M24-*.md` are authoritative for each active milestone's scope, interfaces, and exit criteria. `docs/M20-remote-vscode.md` is withdrawn and is not part of the roadmap.
+- `docs/M0-*.md` through `docs/M24-*.md` and `docs/M33-nvim-server-hooks.md` are authoritative for each milestone's scope, interfaces, and exit criteria. `docs/M20-remote-vscode.md` is withdrawn and is not part of the roadmap. The Neovim client specs live in `pico8.nvim`.
 - Read the relevant milestone spec before implementing anything. Do not expand v1 scope without updating the roadmap.
 - If a locked decision changes, update `docs/ROADMAP.md` and every affected spec in the same change.
 
