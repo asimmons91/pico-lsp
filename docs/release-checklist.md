@@ -37,8 +37,7 @@ packaged extension does not change. Record which path was taken. See
 - [ ] A social preview is uploaded in the repository settings.
 - [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
       install path.
-- [x] The documentation link check exists and passes locally.
-- [ ] The documentation link check passes in CI.
+- [x] The documentation link check exists and passes locally and in CI.
 - [ ] A real screenshot or recording from the manual verification is in the root
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available

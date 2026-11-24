@@ -462,8 +462,7 @@ platform as open rather than implying it passed.
       install path.
 - [x] Public docs no longer promise a Marketplace or Open VSX launch; they state
       that the GitHub VSIX is the current channel.
-- [ ] The documentation link check passes in CI. The test is implemented and
-      passes locally; the branch CI run is the remaining confirmation.
+- [x] The documentation link check passes in CI.
 - [x] Changelogs, roadmap, backlog, and `AGENTS.md` are updated.
 - [x] No LSP, server, parser, analysis, formatter, or extension feature behavior
       changed.
