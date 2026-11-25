@@ -49,8 +49,7 @@ set shipped in v1.9.0; the screenshot, manual VSIX verification, and tagged
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available
       platforms, or unverified checks are recorded as open.
-- [x] The VSIX version and changelogs are prepared for the `1.9.0` tag; the
-      tag and release assets are verified in the tag section below.
+- [x] The VSIX version and changelogs are prepared for the `1.9.0` tag.
 
 ## v1.8.1 release record
 
