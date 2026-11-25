@@ -82,11 +82,11 @@ VSIX is the supported VS Code channel. Homebrew and Mason packaging remain
 deferred to post-v1; see the [roadmap](docs/ROADMAP.md).
 
 Download the archive for your OS and architecture from the
-[v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1), or
+[v1.9.0 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.9.0), or
 install with Go:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.9.0
 ```
 
 Verify the binary:
@@ -106,10 +106,10 @@ server on first use. No Go toolchain or manual server install is required.
 
 The extension is distributed as a GitHub release VSIX. Marketplace and Open VSX
 publication is not currently available. Install the VSIX from the matching
-[v1.8.1 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1):
+[v1.9.0 release](https://github.com/asimmons91/pico-lsp/releases/tag/v1.9.0):
 
-1. Download `pico-lsp-vscode-1.8.1.vsix` and
-   `pico-lsp-vscode-1.8.1.vsix.sha256`.
+1. Download `pico-lsp-vscode-1.9.0.vsix` and
+   `pico-lsp-vscode-1.9.0.vsix.sha256`.
 2. Verify the checksum, then in VS Code open **Extensions**, select **...**, and
    choose **Install from VSIX...**.
 3. Open a folder containing a `.p8` cart.

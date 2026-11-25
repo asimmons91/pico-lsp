@@ -2,9 +2,16 @@
 
 ## Unreleased
 
+## 1.9.0
+
+- Bundle `pico-lsp` 1.9.0. The server now provides
+  `textDocument/rangeFormatting` for `gq` and other line-range formatting,
+  `textDocument/documentLink` for resolved `#include` targets, and throttled
+  `workspace/codeLens/refresh` support for the cart-budget lens. Extension
+  feature behavior is unchanged.
+- Link the quickstart and demo cart from the product page.
 - Clarify that the extension is distributed as a GitHub release VSIX and that
-  Marketplace/Open VSX publication is parked in the post-v1 backlog. No
-  language-server or extension feature behavior changed.
+  Marketplace/Open VSX publication is parked in the post-v1 backlog.
 
 ## 1.8.1
 

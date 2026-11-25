@@ -49,8 +49,8 @@ These decisions were confirmed before the spec was written:
   `^1.95.0` and integration tests run against that minimum version.
 
 > **Superseded by M24:** M24 now owns end-user documentation, onboarding, demo
-> assets, and GitHub-VSIX verification. v1.8.1 shipped as a GitHub-only release.
-> Marketplace and Open VSX publication is parked in the
+> assets, and GitHub-VSIX verification, and shipped the documentation set in
+> v1.9.0. Marketplace and Open VSX publication is parked in the
 > [post-v1 backlog](post-v1-backlog.md). The GitHub release VSIX remains the
 > supported, offline, pinned, and registry-lag fallback.
 
@@ -81,7 +81,7 @@ These decisions were confirmed before the spec was written:
 ### Out of scope
 
 - VS Code Marketplace and Open VSX publishing (parked in the post-v1 backlog;
-  v1.8.1 is GitHub-only and the VSIX is the current channel).
+  the GitHub release VSIX is the current channel).
 - Web extension hosts. Remote SSH, WSL, Dev Containers, and Codespaces are not
   supported.
 - Read-only `.p8.png` virtual documents.
@@ -490,9 +490,9 @@ Extend `.github/workflows/release.yml`:
   adds server version checks and copyable diagnostics.
 - [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md)
   implements the quickstart, PICO-8 workflow, type/CLI/migration/editor guides,
-  support files, demo assets, and the VSIX-only manual verification. v1.8.1
-  shipped GitHub-only; Marketplace/Open VSX publication is parked in the
-  [post-v1 backlog](post-v1-backlog.md).
+  support files, demo assets, and the VSIX-only manual verification. v1.9.0
+  shipped the documentation set; Marketplace/Open VSX publication is parked in
+  the [post-v1 backlog](post-v1-backlog.md).
 
 ## Risks and mitigations
 

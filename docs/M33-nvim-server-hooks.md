@@ -1,15 +1,14 @@
 # M33 — Standard LSP Hooks for Neovim
 
-**Status:** Done (2026-11-24). Implemented in `internal/cart` and
-`internal/lsp`; the canonical Neovim client is
+**Status:** Done (2026-11-24); shipped in v1.9.0 (2026-11-25). Implemented in
+`internal/cart` and `internal/lsp`; the canonical Neovim client is
 [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim).
 
 **Depends on:** M7 (formatter), M8 (`.p8.png` virtual documents), M11 (pull
 diagnostics), M14 (code actions), M25 (Neovim test job and config), M30
 (in-editor include navigation fallback)
 
-**Release target:** Proposed for the Neovim integration batch (v1.9.0);
-unscheduled.
+**Release target:** Shipped in v1.9.0.
 
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
 

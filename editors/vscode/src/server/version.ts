@@ -3,7 +3,7 @@ export type ServerVersionStatus = 'match' | 'mismatch' | 'development' | 'unknow
 const releaseVersion = /^\d+\.\d+\.\d+$/;
 
 // normalizeVersion trims surrounding whitespace and removes one leading v/V.
-// The server reports v1.8.0 while the extension manifest uses 1.8.0, so both
+// The server reports v1.9.0 while the extension manifest uses 1.9.0, so both
 // spellings must compare equal without adding semver range logic.
 export function normalizeVersion(value: string): string {
   return value.trim().replace(/^[vV]/, '');

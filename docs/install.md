@@ -12,10 +12,10 @@ Homebrew and Mason packaging are deferred to post-v1; see the
 | Server | GitHub release archive | Manual, pinned, or air-gapped installs |
 | Server | `go install` | Development and Go users |
 | Server | VS Code extension download | Normal VS Code use; the extension fetches the matching release |
-| Extension | GitHub release VSIX | Supported for v1.8.1; pinned, offline, or registry-lag installs |
+| Extension | GitHub release VSIX | Supported for v1.9.0; pinned, offline, or registry-lag installs |
 
-The extension and server versions match. Extension `1.8.1` downloads
-`pico-lsp` v1.8.1.
+The extension and server versions match. Extension `1.9.0` downloads
+`pico-lsp` v1.9.0.
 
 Marketplace and Open VSX publication is not currently available. The VSIX is the
 supported VS Code channel; registry publication is parked in the
@@ -148,14 +148,14 @@ version is listed, use the VSIX. The VSIX does not depend on either registry.
 
 ## Download a release
 
-Set `VERSION` to the release without the leading `v` (for example `1.8.1`) and
+Set `VERSION` to the release without the leading `v` (for example `1.9.0`) and
 choose the archive for your platform from the
 [releases page](https://github.com/asimmons91/pico-lsp/releases).
 
 ### Linux and macOS
 
 ```sh
-VERSION=1.8.1
+VERSION=1.9.0
 OS=linux          # or darwin
 ARCH=amd64        # or arm64
 ASSET="pico-lsp_${VERSION}_${OS}_${ARCH}.tar.gz"
@@ -183,7 +183,7 @@ In PowerShell, set the version and architecture, download the zip and
 checksums, and compare the SHA-256 hash:
 
 ```powershell
-$Version = "1.8.1"
+$Version = "1.9.0"
 $Arch = "amd64" # or arm64
 $Asset = "pico-lsp_${Version}_windows_${Arch}.zip"
 $Base = "https://github.com/asimmons91/pico-lsp/releases/download/v$Version"
@@ -208,7 +208,7 @@ Add `%LOCALAPPDATA%\pico-lsp` to your user `PATH` permanently to use
 For developers with Go 1.27.4 or newer:
 
 ```sh
-go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1
+go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.9.0
 ```
 
 `go install` reports the module version from Go build information when no

@@ -2,7 +2,7 @@
   "name": "pico-lsp",
   "displayName": "PICO-8 LSP",
   "description": "PICO-8 language support for VS Code: diagnostics, completion, navigation, formatting, and cart budgets, powered by pico-lsp.",
-  "version": "1.8.1",
+  "version": "1.9.0",
   "publisher": "asimmons91",
   "license": "MIT",
   "icon": "./icons/pico-lsp.png",

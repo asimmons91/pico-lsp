@@ -1,13 +1,12 @@
 # PICO-8 Language Server — Roadmap
 
-**Status:** v1.8.1 released as a GitHub-only release with the server archives and
-VSIX. M24 is in progress: the documentation, support files, demo cart, and link
-check are implemented. The real screenshot, manual VS Code verification, tagged
-`pico8.nvim` client, and docs/onboarding patch remain open. Marketplace/Open VSX
-publication is parked in the post-v1 backlog pending publisher account setup.
-M33 (standard LSP hooks for the Neovim client) is complete.
+**Status:** v1.9.0 released with M33 standard LSP hooks (range formatting,
+document links, and code-lens refresh) and the M24 onboarding documentation.
+M24 remains in progress for the real screenshot, manual VS Code verification, and
+the tagged `pico8.nvim` install path. Marketplace/Open VSX publication is parked
+in the post-v1 backlog pending publisher account setup.
 
-**Last updated:** 2026-11-24
+**Last updated:** 2026-11-25
 **Module:** `github.com/asimmons91/pico-lsp`  
 **Binary:** `pico-lsp`  
 **Target PICO-8 API:** 0.2.7
@@ -87,8 +86,8 @@ These decisions were made before milestone specs were written. Changing one requ
 | M21 | VS Code Settings Schema | Every server setting is discoverable and validated in VS Code Settings | M15 | Done (v1.8.0) |
 | M22 | VS Code Server Health | Version mismatch warnings and copyable server diagnostics | M15 | Done (v1.8.0) |
 | M23 | Token-Saving Quick Fixes | Conservative code actions for `?`, compound assignments, peek aliases, and shorthand | M14 | Done (v1.8.0) |
-| M24 | End-User Documentation and Onboarding | Quickstart, PICO-8 workflow, type/CLI/migration/editor guides, support files, demo assets, and VSIX verification | M15, M21, M22, M33; pico8.nvim M32–M34 | In progress (docs implemented; screenshot, verification, client tag, and patch open; registry publication parked) |
-| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14, pico8.nvim M25/M30 | Done |
+| M24 | End-User Documentation and Onboarding | Quickstart, PICO-8 workflow, type/CLI/migration/editor guides, support files, demo assets, and VSIX verification | M15, M21, M22, M33; pico8.nvim M32–M34 | In progress (docs shipped in v1.9.0; screenshot, verification, and client tag open; registry publication parked) |
+| M33 | Standard LSP Hooks for Neovim | Range formatting, document links, and code-lens refresh | M7, M8, M11, M14, pico8.nvim M25/M30 | Done (v1.9.0) |
 
 M7–M10 shipped together as **v1.1.0**. M11–M14 shipped together as **v1.2.0**.
 M15 shipped as **v1.3.0**. M16 shipped as **v1.4.0**. Post-v1.4 additions
@@ -104,7 +103,8 @@ v1.6.0 so all three packages share one supported snapshot. The v1.7.0 tag is
 now the later, additive catalog-coverage release.
 
 M21, M22, and M23 shipped together in **v1.8.0**; separate milestone specs do
-not require separate tags.
+not require separate tags. M33 shipped in **v1.9.0**, which also carried the
+M24 documentation and onboarding set.
 
 M23 adds cursor-local token-saving code actions on top of the M14 shorthand
 conversion; the pattern catalog, safety rules, deferred patterns, and resolved
@@ -113,19 +113,17 @@ decisions are in [M23](M23-token-saving-quick-fixes.md). Zero-argument
 deferred.
 
 M24 is in progress and has been reworked around end-user documentation and
-onboarding. **v1.8.1** was released on 2026-11-22 as a GitHub-only release
-containing the server archives and VSIX. The quickstart, demo cart, PICO-8
-workflow, type/CLI/migration/editor guides, support files, repository metadata,
-and documentation link check are implemented. The original artwork and opt-in
-registry automation remain, but registry publication is parked in the
-[post-v1 backlog](post-v1-backlog.md) because the `asimmons91` publisher and
-`VSCE_PAT`/`OVSX_PAT` secrets are not configured. Remaining M24 work is a real
-screenshot, the VSIX-only manual verification, a tagged `pico8.nvim` client, and
-the docs/onboarding patch; the version is chosen at release time. See
-[M24](M24-end-user-onboarding.md).
+onboarding. **v1.9.0** was released on 2026-11-25 and shipped the quickstart,
+demo cart, PICO-8 workflow, type/CLI/migration/editor guides, support files,
+repository metadata, and documentation link check, alongside M33. The original
+artwork and opt-in registry automation remain, but registry publication is parked
+in the [post-v1 backlog](post-v1-backlog.md) because the `asimmons91` publisher
+and `VSCE_PAT`/`OVSX_PAT` secrets are not configured. Remaining M24 work is a
+real screenshot, the VSIX-only manual verification, and a tagged `pico8.nvim`
+client. See [M24](M24-end-user-onboarding.md).
 
-M33 is complete. The server advertises range formatting and document links and
-sends throttled `workspace/codeLens/refresh` requests to capable clients. The
+M33 shipped in v1.9.0. The server advertises range formatting and document links
+and sends throttled `workspace/codeLens/refresh` requests to capable clients. The
 Neovim-facing client specs and tests live in
 [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim); M33 is the standard-LSP
 server dependency they consume. See [M33](M33-nvim-server-hooks.md).
@@ -155,8 +153,8 @@ Each milestone has a detailed spec:
 - [M21 — Full Server Settings Schema in the VS Code Client](M21-vscode-settings.md)
 - [M22 — VS Code Server Health and Version Reporting](M22-vscode-server-health.md)
 - [M23 — Token-Saving Quick Fixes](M23-token-saving-quick-fixes.md) — shipped in v1.8.0
-- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (docs implemented; screenshot, verification, client tag, and patch open; registry publication parked)
-- [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — done
+- [M24 — End-User Documentation and Onboarding](M24-end-user-onboarding.md) — in progress (docs shipped in v1.9.0; screenshot, verification, and client tag open; registry publication parked)
+- [M33 — Standard LSP Hooks for Neovim](M33-nvim-server-hooks.md) — shipped in v1.9.0
 
 The Neovim client milestone specs (M25–M32 and M34) live in
 [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim/tree/main/docs/milestones).
@@ -263,14 +261,15 @@ server defaults, or the editor-agnostic server contract.
 - **M22 — Server health:** the extension reports the running server version
   and source, warns once on a release-version mismatch, and copies diagnostics
   for issue reports.
-- **M24 — End-user onboarding:** v1.8.1 shipped as a GitHub-only release. M24
-  owns the quickstart, PICO-8 workflow, type/CLI/migration/editor guides, support
-  files, real demo assets, the tagged `pico8.nvim` install path, and the
-  VSIX-only manual verification. Marketplace/Open VSX publication is parked in
-  the post-v1 backlog. No server or extension feature behavior changes.
+- **M24 — End-user onboarding:** v1.9.0 shipped M33 and the M24 documentation
+  set. M24 owns the quickstart, PICO-8 workflow, type/CLI/migration/editor
+  guides, support files, real demo assets, the tagged `pico8.nvim` install path,
+  and the VSIX-only manual verification. Marketplace/Open VSX publication is
+  parked in the post-v1 backlog. No extension feature behavior changes.
 
-Each milestone has its own spec. M21 and M22 shipped in v1.8.0; M24 remains in
-progress for documentation and onboarding, not registry publication.
+Each milestone has its own spec. M21 and M22 shipped in v1.8.0; M33 shipped in
+v1.9.0; M24 remains in progress for documentation and onboarding verification,
+not registry publication.
 
 ## Cross-cutting standards
 
@@ -407,10 +406,10 @@ If a target is missed, profile before adding architectural complexity.
 These defaults were confirmed for the v1 release.
 
 - **Repository/release names:** GitHub repo `asimmons91/pico-lsp`; release archives are named `pico-lsp_<version>_<os>_<arch>`.
-- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`, `v1.8.1`). A documentation or onboarding patch may use a patch release when no user-facing behavior changes; M24 chooses its version at release time. `v1.8.1` shipped as a GitHub-only patch.
+- **Release versioning:** milestones produced `v0.x` prereleases through M6 (`v1.0.0`); post-v1 releases use minor versions (`v1.1.0`, `v1.2.0`, `v1.3.0`, `v1.4.0`, `v1.5.0`, `v1.5.1`, `v1.6.0`, `v1.7.0`, `v1.8.0`, `v1.8.1`, `v1.9.0`). A documentation or onboarding patch may use a patch release when no user-facing behavior changes; M24 chooses its version at release time. `v1.8.1` shipped as a GitHub-only patch; `v1.9.0` shipped M33 and the M24 documentation.
 - **Install channels:** v1 publishes GitHub release archives, documents `go install`, and ships the VS Code extension as a GitHub release VSIX. Marketplace and Open VSX publication is parked in the post-v1 backlog pending publisher account setup. Homebrew and Mason packaging remain deferred to post-v1.
 - **macOS/Windows signing:** not required for v1, but the unsigned-download warnings are documented in [install.md](install.md) and [troubleshooting.md](troubleshooting.md).
-- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21, M22, and M23 shipped together as v1.8.0. v1.8.1 shipped as a GitHub-only release; M24 now covers end-user documentation and onboarding, and registry publication is parked in the post-v1 backlog. Later promoted features use minor releases unless they introduce a breaking change.
+- **Post-v1 batching:** M7–M10 shipped as v1.1.0; M11–M14 shipped as v1.2.0; M15 shipped as v1.3.0; M16 shipped as v1.4.0; the post-v1.4 editor and annotation additions shipped as v1.5.0; v1.5.1 shipped formatter and VS Code fixes. M17–M19 shipped together as v1.6.0; v1.7.0 expands the glyph catalog to every printable byte. M21, M22, and M23 shipped together as v1.8.0. v1.8.1 shipped as a GitHub-only release. v1.9.0 shipped M33 and the M24 documentation; M24 remains in progress for verification and the tagged `pico8.nvim` path, and registry publication is parked in the post-v1 backlog. Later promoted features use minor releases unless they introduce a breaking change.
 
 ## How this roadmap is maintained
 
