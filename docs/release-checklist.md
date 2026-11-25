@@ -2,26 +2,33 @@
 
 This checklist covers the v1.x release process for GitHub server archives and the
 VS Code extension. Homebrew and Mason publishing are deferred to post-v1.
-**v1.8.1 was released on 2026-11-22 as a GitHub-only release.** Marketplace and
-Open VSX publication is parked in the [post-v1 backlog](post-v1-backlog.md); it
-is not a release gate for M24.
+**v1.9.0 is being prepared for 2026-11-25 with M33 standard LSP hooks and the
+M24 documentation set.** Marketplace and Open VSX publication is parked in the
+[post-v1 backlog](post-v1-backlog.md); it is not a release gate for M24.
 
-## v1.8.1 release record
+## v1.9.0 release (M33 + M24 docs)
 
-- Tag: `v1.8.1`
-- Commit: `a3bd9929f9bc80cacd7615c205b6a64d058b590d`
-- Release: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
-- Release workflow: https://github.com/asimmons91/pico-lsp/actions/runs/45039342788
-- Assets: Linux, macOS, and Windows archives for amd64 and arm64,
-  `checksums.txt`, `pico-lsp-vscode-1.8.1.vsix`, and its `.sha256`
-- Registry jobs: skipped because `PUBLISH_REGISTRIES` is unset
-- `go install ...@v1.8.1` verified: reports `v1.8.1`
+- [x] M33 range formatting, document links, and throttled code-lens refresh are
+      implemented with e2e coverage and a document-link golden fixture.
+- [x] The M24 quickstart, demo cart, workflow, type/CLI/migration/editor guides,
+      support files, and documentation link check are in the release.
+- [x] `editors/vscode/package.json` is bumped to `1.9.0` so the extension and
+      bundled server versions match.
+- [x] Root and VS Code changelogs have dated `1.9.0` sections.
+- [ ] A social preview is uploaded in the repository settings.
+- [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
+      install path.
+- [ ] A real screenshot or recording from the manual verification is in the root
+      README and `editors/vscode/README.md`.
+- [ ] The manual VS Code verification below is recorded for the available
+      platforms, or unverified checks are recorded as open.
+- [ ] Tag and publish v1.9.0, then record the tag commit and workflow run here.
 
-## M24 docs/onboarding release
+## M24 docs/onboarding status
 
-M24 is the end-user documentation and onboarding milestone. It may ship as a
-patch when the docs and VSIX are ready, or its docs may land without a tag if the
-packaged extension does not change. Record which path was taken. See
+M24 is the end-user documentation and onboarding milestone. Its documentation
+set shipped in v1.9.0; the screenshot, manual VSIX verification, and tagged
+`pico8.nvim` client remain open. See
 [M24](M24-end-user-onboarding.md).
 
 - [x] `docs/getting-started.md` and `examples/hello.p8` exist and are linked from
@@ -42,8 +49,19 @@ packaged extension does not change. Record which path was taken. See
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available
       platforms, or unverified checks are recorded as open.
-- [ ] If the VSIX changes, the version bump, changelogs, tag, and assets match;
-      otherwise record why no tag was cut.
+- [x] The VSIX version and changelogs are prepared for the same `1.9.0` tag;
+      tag and assets are verified below.
+
+## v1.8.1 release record
+
+- Tag: `v1.8.1`
+- Commit: `a3bd9929f9bc80cacd7615c205b6a64d058b590d`
+- Release: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
+- Release workflow: https://github.com/asimmons91/pico-lsp/actions/runs/45039342788
+- Assets: Linux, macOS, and Windows archives for amd64 and arm64,
+  `checksums.txt`, `pico-lsp-vscode-1.8.1.vsix`, and its `.sha256`
+- Registry jobs: skipped because `PUBLISH_REGISTRIES` is unset
+- `go install ...@v1.8.1` verified: reports `v1.8.1`
 
 ## Pre-release
 
@@ -66,16 +84,17 @@ packaged extension does not change. Record which path was taken. See
 - [x] Known limitations are documented: local-desktop-only VS Code and Open VSX
       editors, deferred registry listing, Zed, Homebrew/Mason deferral, unsigned
       binaries, and the README limitations.
-- [x] `CHANGELOG.md` has a dated `1.8.1` section.
+- [x] `CHANGELOG.md` has a dated `1.9.0` section.
 - [x] `LICENSE` and the PICO-8 trademark disclaimer are present.
 - [ ] The test cart `testdata/smoke.p8` opens and attaches in Neovim.
 - [x] The optional Neovim helper attaches included `.lua` buffers and ignores
       unrelated Lua buffers (`editors/nvim/tests/run.sh` passes).
 - [x] Helix behavior did not change; the v1.0.0 manual feature matrix remains the
       last manual run. Re-run it if Helix behavior changes.
-- [x] No stdout writes occur outside LSP framing. No server code changed.
-- [x] No telemetry or network calls are added. No server or extension feature
-      code changed.
+- [x] No stdout writes occur outside LSP framing; M33 responses are covered by
+      the LSP e2e suite.
+- [x] No telemetry or network calls are added; extension feature code is
+      unchanged.
 
 ## VS Code package
 
@@ -85,7 +104,7 @@ packaged extension does not change. Record which path was taken. See
 - [x] The listing icon is original artwork, not the official Lexaloffle logo.
       `editors/vscode/icons/README.md` records the artwork's license.
 - [x] `editors/vscode/README.md` uses absolute `https://` links and image URLs,
-      and its primary install path is the v1.8.1 VSIX.
+      and its primary install path is the v1.9.0 VSIX.
 - [x] The README states local desktop VS Code and Open VSX-compatible editors
       only, no Go requirement, no telemetry, no cart execution, and the offline
       `pico8.serverPath` path.
@@ -99,7 +118,33 @@ packaged extension does not change. Record which path was taken. See
 - [x] `vsce ls` shows no `src/`, `test/`, `scripts/`, source maps, `images/`,
       `icons/README.md`, or `icons/pico8.png`.
 - [x] CI and the release workflow run the same VSIX content assertions.
-- [x] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+
+## Tag and publish v1.9.0
+
+- [ ] Merge the release pull request into `main`.
+- [ ] Verify the merge commit is green in CI.
+- [ ] Confirm the `PUBLISH_REGISTRIES` repository variable is unset or not
+      `true`, so the registry jobs are skipped.
+- [ ] Create the annotated tag:
+
+  ```sh
+  git tag -a v1.9.0 -m "pico-lsp v1.9.0"
+  git push origin v1.9.0
+  ```
+
+- [ ] Watch the `Release` workflow complete.
+- [ ] Confirm the GitHub release contains Linux, macOS, and Windows archives for
+      amd64 and arm64 plus `checksums.txt`.
+- [ ] Confirm the release contains `pico-lsp-vscode-1.9.0.vsix` and
+      `pico-lsp-vscode-1.9.0.vsix.sha256`.
+- [ ] Download and run `pico-lsp --version` from at least one release archive.
+- [ ] Verify the archive checksum and the VSIX checksum.
+- [ ] Confirm `publish-marketplace` and `publish-openvsx` are skipped.
+- [ ] Confirm the release notes point to the GitHub VSIX and do not claim
+      registry availability.
+- [ ] Install the release VSIX and run the manual verification below, or record
+      the checks as open.
 
 ## Tag and publish v1.8.1 (GitHub-only)
 
@@ -167,7 +212,7 @@ live. Record the launch in the backlog, not as an M24 exit criterion.
 
   ```bash
   set -euo pipefail
-  version=1.8.1
+  version=1.9.0
   sha256sum -c "pico-lsp-vscode-${version}.vsix.sha256"
   # On macOS without sha256sum:
   # shasum -a 256 -c "pico-lsp-vscode-${version}.vsix.sha256"
@@ -204,8 +249,8 @@ live. Record the launch in the backlog, not as an M24 exit criterion.
 
 ## Post-release
 
-- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.8.1`
-      builds for a developer and reports `v1.8.1`.
+- [ ] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.9.0`
+      builds for a developer and reports `v1.9.0`.
 - [ ] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, the parked registry
       launch, Zed, and API version selection as needed.

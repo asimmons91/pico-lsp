@@ -62,8 +62,8 @@ listed in the VS Code Marketplace or Open VSX.
 4. Open a folder containing `hello.p8`, not just the single file. The extension
    downloads the matching server on first use.
 
-The extension version and server version match. Extension `1.8.1` downloads
-`pico-lsp` v1.8.1.
+The extension version and server version match. Extension `1.9.0` downloads
+`pico-lsp` v1.9.0.
 
 If the extension cannot download the server, set `pico8.serverPath` and
 `pico8.autoDownload: false`. See the

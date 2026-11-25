@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-25
+
 ### Added
 
 - End-user onboarding docs: a quickstart with a demo cart, the PICO-8 editing
@@ -312,7 +314,8 @@ unchanged.
 - macOS and Windows release binaries are not signed.
 - Formatter, `.p8.png`, VS Code, and Zed support are post-v1 work.
 
-[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/asimmons91/pico-lsp/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.9.0
 [1.8.1]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
 [1.8.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.0
 [1.7.0]: https://github.com/asimmons91/pico-lsp/releases/tag/v1.7.0

@@ -10,9 +10,9 @@ move into their own milestone specs.
 ## Promoted post-v1 work
 
 The following backlog items have been promoted and split into milestone specs.
-v1.8.1 shipped as a GitHub-only release. M24 was reworked around end-user
-documentation and onboarding; Marketplace/Open VSX publication is a blocked
-backlog item rather than a current milestone deliverable.
+v1.9.0 shipped the M24 documentation set alongside M33. M24 was reworked around
+end-user documentation and onboarding; Marketplace/Open VSX publication is a
+blocked backlog item rather than a current milestone deliverable.
 
 - [M7 — AST-Aware Formatter](M7-formatter.md)
 - [M8 — Read-Only `.p8.png` Carts](M8-p8png.md)
@@ -36,9 +36,10 @@ M7–M10 shipped in v1.1.0, M11–M14 in v1.2.0, M15 in v1.3.0, and M16 in
 v1.4.0. v1.5.0 shipped the post-v1.4 annotation and editor additions; v1.5.1 followed with formatter and VS Code fixes.
 M17, M18, and M19 shipped together in v1.6.0. The originally planned separate
 v1.7.0 and v1.8.0 milestones were folded into that release; v1.7.0 is the
-later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release. M24 now
-covers end-user documentation and onboarding; registry publication is blocked
-below. The unpromoted items below are not part of these releases.
+later additive catalog-coverage release. M21, M22, and M23 shipped in v1.8.0. v1.8.1 shipped as a GitHub-only release. v1.9.0 shipped M33 and the M24
+documentation set; M24 remains in progress for verification and the tagged
+`pico8.nvim` path, and registry publication is blocked below. The unpromoted
+items below are not part of these releases.
 
 ## Prioritization
 
@@ -114,7 +115,7 @@ Requirements:
 
 ## Cross-cutting requirements
 
-- No regressions in existing v1 through v1.8.1 behavior or performance
+- No regressions in existing v1 through v1.9.0 behavior or performance
   budgets.
 - Every feature is additive or explicitly opt-in.
 - Update the roadmap, README, configuration docs, diagnostic reference, and

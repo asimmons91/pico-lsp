@@ -46,7 +46,7 @@ includes, completes the PICO-8 API, and reports type diagnostics.
 
 > **Superseded by later milestones:** the VS Code client shipped in M15, and M24
 > now owns end-user documentation, onboarding, demo assets, and GitHub-VSIX
-> verification. v1.8.1 shipped as a GitHub-only release. Marketplace and Open
+> verification. v1.9.0 shipped the M24 documentation set. Marketplace and Open
 > VSX publication is parked in the
 > [post-v1 backlog](post-v1-backlog.md), not a later M24 patch. Homebrew and
 > Mason remain deferred.

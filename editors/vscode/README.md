@@ -11,13 +11,13 @@ budgets without installing Go or managing a server binary.
 
 The extension is distributed as a GitHub release VSIX. Install it:
 
-1. Download `pico-lsp-vscode-1.8.1.vsix` and
-   `pico-lsp-vscode-1.8.1.vsix.sha256` from the matching
+1. Download `pico-lsp-vscode-1.9.0.vsix` and
+   `pico-lsp-vscode-1.9.0.vsix.sha256` from the matching
    [GitHub release](https://github.com/asimmons91/pico-lsp/releases).
 2. Verify the checksum:
 
    ```sh
-   sha256sum -c pico-lsp-vscode-1.8.1.vsix.sha256
+   sha256sum -c pico-lsp-vscode-1.9.0.vsix.sha256
    ```
 
 3. In VS Code, open the Extensions view, select **...**, and choose
@@ -55,7 +55,7 @@ for platform-specific checksum commands and offline setup.
    folder contains a `.p8` cart.
 
 The extension version and server version are identical by default. Extension
-`1.8.1`, for example, downloads `pico-lsp` v1.8.1.
+`1.9.0`, for example, downloads `pico-lsp` v1.9.0.
 
 New to `pico-lsp`? See the
 [getting-started guide](https://github.com/asimmons91/pico-lsp/blob/main/docs/getting-started.md)

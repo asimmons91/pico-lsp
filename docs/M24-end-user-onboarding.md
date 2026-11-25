@@ -1,21 +1,21 @@
 # M24 — End-User Documentation and Onboarding
 
-**Status:** In progress — `v1.8.1` was released on 2026-11-22 as a GitHub-only
-release (server archives and VSIX). M24 was reworked around end-user
+**Status:** In progress — the documentation, support files, demo cart, and link
+check shipped in `v1.9.0` on 2026-11-25. M24 was reworked around end-user
 documentation and onboarding after registry publication stalled on publisher
-account setup. The documentation, support files, demo cart, and link check are
-implemented. The real screenshot, manual VS Code verification, tagged
-`pico8.nvim` release, and docs/onboarding patch remain open. Release:
-https://github.com/asimmons91/pico-lsp/releases/tag/v1.8.1
+account setup. The real screenshot, manual VS Code verification, and tagged
+`pico8.nvim` release remain open. Release:
+https://github.com/asimmons91/pico-lsp/releases/tag/v1.9.0
 
 **Depends on:** M15 (VS Code client), M21 (settings schema), M22 (server health),
 M33 (standard Neovim hooks). The Neovim client release depends on
 [`pico8.nvim`](https://github.com/asimmons91/pico8.nvim) M32–M34. A manual tag is
 acceptable for M24; `pico8.nvim` M35 adds release automation.
 
-**Release target:** the next patch after the documentation, demo assets, and
-VSIX verification are ready. The version is chosen at release time; a docs-only
-milestone may use a patch release. Extension `X.Y.Z` downloads server tag
+**Release target:** v1.9.0 shipped the documentation and onboarding set. A later
+patch or docs-only update carries the real screenshot and the manual VS Code
+verification once they are available. The version is chosen at release time.
+Extension `X.Y.Z` downloads server tag
 `vX.Y.Z`. Registry publication is not a release target.
 
 **Roadmap:** [ROADMAP.md](ROADMAP.md)
@@ -78,8 +78,8 @@ formatting. The root README shows the same install snippet.
 
 ### Resolved decisions
 
-1. **v1.8.1 remains the current release.** Do not republish or replace the 1.8.1
-   assets.
+1. **v1.8.1 assets are not republished.** v1.9.0 is the current release; the
+   earlier GitHub-only assets remain unchanged.
 2. **Icon:** original artwork; no official Lexaloffle logo is published.
 3. **VS Code channel:** GitHub release VSIX only for now.
 4. **Neovim channel:** tagged `pico8.nvim` release plus the documented binary
