@@ -2,8 +2,8 @@
 
 This checklist covers the v1.x release process for GitHub server archives and the
 VS Code extension. Homebrew and Mason publishing are deferred to post-v1.
-**v1.9.0 is being prepared for 2026-11-25 with M33 standard LSP hooks and the
-M24 documentation set.** Marketplace and Open VSX publication is parked in the
+**v1.9.0 was released on 2026-11-25 with M33 standard LSP hooks and the M24
+documentation set.** Marketplace and Open VSX publication is parked in the
 [post-v1 backlog](post-v1-backlog.md); it is not a release gate for M24.
 
 ## v1.9.0 release (M33 + M24 docs)
@@ -22,7 +22,20 @@ M24 documentation set.** Marketplace and Open VSX publication is parked in the
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available
       platforms, or unverified checks are recorded as open.
-- [ ] Tag and publish v1.9.0, then record the tag commit and workflow run here.
+- [x] Tag and publish v1.9.0, then record the tag commit and workflow run here.
+- [x] The VSIX version and changelogs match the `1.9.0` tag.
+
+## v1.9.0 release record
+
+- Tag: `v1.9.0`
+- Commit: `20e13f2ce6b537dfc1d5b814a4c3c7d3c5ebed3c`
+- Release: https://github.com/asimmons91/pico-lsp/releases/tag/v1.9.0
+- Release workflow: https://github.com/asimmons91/pico-lsp/actions/runs/45660687161
+- Assets: Linux, macOS, and Windows archives for amd64 and arm64,
+  `checksums.txt`, `pico-lsp-vscode-1.9.0.vsix`, and its `.sha256`
+- Registry jobs: skipped because `PUBLISH_REGISTRIES` is unset
+- `go install ...@v1.9.0` verified: reports `v1.9.0`
+- Manual VSIX verification and the real screenshot remain open under M24
 
 ## M24 docs/onboarding status
 
@@ -49,7 +62,6 @@ set shipped in v1.9.0; the screenshot, manual VSIX verification, and tagged
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available
       platforms, or unverified checks are recorded as open.
-- [x] The VSIX version and changelogs are prepared for the `1.9.0` tag.
 
 ## v1.8.1 release record
 
@@ -117,30 +129,30 @@ set shipped in v1.9.0; the screenshot, manual VSIX verification, and tagged
 - [x] `vsce ls` shows no `src/`, `test/`, `scripts/`, source maps, `images/`,
       `icons/README.md`, or `icons/pico8.png`.
 - [x] CI and the release workflow run the same VSIX content assertions.
-- [ ] The VSIX and `.vsix.sha256` are attached to the GitHub release.
+- [x] The VSIX and `.vsix.sha256` are attached to the GitHub release.
 
 ## Tag and publish v1.9.0
 
-- [ ] Merge the release pull request into `main`.
-- [ ] Verify the merge commit is green in CI.
-- [ ] Confirm the `PUBLISH_REGISTRIES` repository variable is unset or not
+- [x] Merge the release pull request into `main`.
+- [x] Verify the merge commit is green in CI.
+- [x] Confirm the `PUBLISH_REGISTRIES` repository variable is unset or not
       `true`, so the registry jobs are skipped.
-- [ ] Create the annotated tag:
+- [x] Create the annotated tag:
 
   ```sh
   git tag -a v1.9.0 -m "pico-lsp v1.9.0"
   git push origin v1.9.0
   ```
 
-- [ ] Watch the `Release` workflow complete.
-- [ ] Confirm the GitHub release contains Linux, macOS, and Windows archives for
+- [x] Watch the `Release` workflow complete.
+- [x] Confirm the GitHub release contains Linux, macOS, and Windows archives for
       amd64 and arm64 plus `checksums.txt`.
-- [ ] Confirm the release contains `pico-lsp-vscode-1.9.0.vsix` and
+- [x] Confirm the release contains `pico-lsp-vscode-1.9.0.vsix` and
       `pico-lsp-vscode-1.9.0.vsix.sha256`.
-- [ ] Download and run `pico-lsp --version` from at least one release archive.
-- [ ] Verify the archive checksum and the VSIX checksum.
-- [ ] Confirm `publish-marketplace` and `publish-openvsx` are skipped.
-- [ ] Confirm the release notes point to the GitHub VSIX and do not claim
+- [x] Download and run `pico-lsp --version` from at least one release archive.
+- [x] Verify the archive checksum and the VSIX checksum.
+- [x] Confirm `publish-marketplace` and `publish-openvsx` are skipped.
+- [x] Confirm the release notes point to the GitHub VSIX and do not claim
       registry availability.
 - [ ] Install the release VSIX and run the manual verification below, or record
       the checks as open.
@@ -248,9 +260,9 @@ live. Record the launch in the backlog, not as an M24 exit criterion.
 
 ## Post-release
 
-- [ ] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.9.0`
+- [x] Verify `go install github.com/asimmons91/pico-lsp/cmd/pico-lsp@v1.9.0`
       builds for a developer and reports `v1.9.0`.
-- [ ] Update any documentation that needs the released version.
+- [x] Update any documentation that needs the released version.
 - [ ] Open post-v1 tracking issues for Homebrew, Mason, the parked registry
       launch, Zed, and API version selection as needed.
 
