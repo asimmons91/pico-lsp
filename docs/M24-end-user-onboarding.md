@@ -60,7 +60,7 @@ formatting. The root README shows the same install snippet.
 | D1 | Milestone identity | M24 is **End-User Documentation and Onboarding**. The earlier Marketplace launch scope is replaced; registry publication is a backlog item, not a current milestone deliverable. |
 | D2 | VS Code distribution | The GitHub release VSIX is the only supported VS Code channel for now. Do not claim Marketplace or Open VSX availability. |
 | D3 | Registries | Out of scope until the `asimmons91` publisher and registry tokens exist. Keep the implemented, opt-in release jobs; do not remove or re-enable them as part of M24. |
-| D4 | Release timing | Ship a patch when the docs, screenshot, VSIX, and manual checks are ready. The exact version is chosen at release time. |
+| D4 | Release timing | v1.9.0 shipped the documentation set with the M33 release. Ship a later patch when the real screenshot and manual VS Code verification are ready; choose the patch version at release time. |
 | D5 | Manual verification | Run the VSIX-only checklist on a real VS Code installation and record it in `docs/release-checklist.md`. Do not mark registry checks. |
 | D6 | Demo assets | Add a real screenshot or short recording from the manual verification. The illustrative banner remains supplementary. |
 | D7 | Icon and trademark | Keep the original artwork at `editors/vscode/icons/pico-lsp.png`. The official PICO-8 logo is not published without written permission. |
@@ -84,8 +84,9 @@ formatting. The root README shows the same install snippet.
 3. **VS Code channel:** GitHub release VSIX only for now.
 4. **Neovim channel:** tagged `pico8.nvim` release plus the documented binary
    install.
-5. **Documentation patch:** version chosen when the docs and verification are
-   ready.
+5. **Documentation release:** v1.9.0 carried the documentation and VSIX
+   metadata; the real screenshot and manual verification may ride a later
+   patch.
 
 ### Parked: registry publication
 
@@ -206,9 +207,8 @@ The release workflow already contains independent, tag-only
 12. [ ] Tag `pico8.nvim` and replace the root README's unpinned plugin install
     with the tagged install, keeping the raw `vim.lsp.config` fallback.
 13. [x] Add the documentation link check to CI and fix broken links.
-14. [ ] Cut the documentation/onboarding patch if the VSIX product page or
-    extension metadata changes; otherwise ship the docs without a tag and record
-    why in the release checklist.
+14. [x] Cut the documentation/onboarding release as v1.9.0 because the VSIX
+    product page and extension metadata changed.
 15. [x] Update the roadmap, backlog, changelogs, and `AGENTS.md`.
 
 ## Detailed requirements

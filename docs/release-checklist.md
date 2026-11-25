@@ -14,7 +14,7 @@ M24 documentation set.** Marketplace and Open VSX publication is parked in the
       support files, and documentation link check are in the release.
 - [x] `editors/vscode/package.json` is bumped to `1.9.0` so the extension and
       bundled server versions match.
-- [x] Root and VS Code changelogs have dated `1.9.0` sections.
+- [x] Root and VS Code changelogs have `1.9.0` sections.
 - [ ] A social preview is uploaded in the repository settings.
 - [ ] `pico8.nvim` has a tagged release and the root README uses the tagged
       install path.
@@ -49,8 +49,8 @@ set shipped in v1.9.0; the screenshot, manual VSIX verification, and tagged
       README and `editors/vscode/README.md`.
 - [ ] The manual VS Code verification below is recorded for the available
       platforms, or unverified checks are recorded as open.
-- [x] The VSIX version and changelogs are prepared for the same `1.9.0` tag;
-      tag and assets are verified below.
+- [x] The VSIX version and changelogs are prepared for the `1.9.0` tag; the
+      tag and release assets are verified in the tag section below.
 
 ## v1.8.1 release record
 

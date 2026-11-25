@@ -14,7 +14,7 @@ body:
     attributes:
       label: pico-lsp version
       description: Output of `pico-lsp --version`.
-      placeholder: v1.8.1
+      placeholder: v1.9.0
     validations:
       required: true
   - type: dropdown
